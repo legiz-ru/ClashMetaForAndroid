@@ -80,15 +80,14 @@
                     android:paddingTop="@{self.surface.insets.top}"
                     android:paddingBottom="16dp">
 
-                    <!-- ========== HEADER: Logo + App Name ========== -->
+                    <!-- ========== HEADER: Logo + App Name (always visible) ========== -->
                     <LinearLayout
                         android:id="@+id/header_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:minHeight="@dimen/main_top_banner_height"
-                        android:orientation="horizontal"
-                        android:visibility="@{clashRunning ? View.GONE : View.VISIBLE}">
+                        android:orientation="horizontal">
 
                         <FrameLayout
                             android:layout_width="@dimen/large_item_header_layout_size"
@@ -168,7 +167,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:visibility="@{hasProfiles &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}"
-                        app:cardBackgroundColor="@color/color_card_surface"
+                        app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp">
 
@@ -194,7 +193,7 @@
                                     android:onClick="@{() -> self.request(Request.UpdateProfile)}"
                                     android:src="@drawable/ic_baseline_sync"
                                     android:contentDescription="@string/update"
-                                    app:tint="?attr/colorControlNormal" />
+                                    app:tint="?attr/colorOnSurfaceVariant" />
 
                                 <TextView
                                     android:layout_width="0dp"
@@ -213,7 +212,7 @@
                                     android:onClick="@{() -> self.request(Request.ManageProfiles)}"
                                     android:src="@drawable/ic_baseline_expand_more"
                                     android:contentDescription="@string/manage_profiles"
-                                    app:tint="?attr/colorControlNormal" />
+                                    app:tint="?attr/colorOnSurfaceVariant" />
                             </LinearLayout>
 
                             <!-- Traffic used -->
@@ -330,7 +329,7 @@
                                     android:padding="6dp"
                                     android:src="@drawable/ic_baseline_edit"
                                     android:contentDescription="@string/edit"
-                                    app:tint="?attr/colorControlNormal" />
+                                    app:tint="?attr/colorOnSurfaceVariant" />
 
                                 <ImageView
                                     android:layout_width="36dp"
@@ -343,7 +342,7 @@
                                     android:padding="6dp"
                                     android:src="@drawable/ic_baseline_delete"
                                     android:contentDescription="@string/delete"
-                                    app:tint="?attr/colorControlNormal" />
+                                    app:tint="?attr/colorOnSurfaceVariant" />
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -354,13 +353,14 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center"
-                        android:layout_marginTop="32dp"
+                        android:layout_marginTop="24dp"
+                        android:layout_marginBottom="16dp"
                         android:orientation="vertical"
                         android:visibility="@{hasProfiles &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}">
 
                         <FrameLayout
-                            android:layout_width="120dp"
-                            android:layout_height="120dp"
+                            android:layout_width="100dp"
+                            android:layout_height="100dp"
                             android:background="@drawable/bg_power_button"
                             android:clickable="true"
                             android:focusable="true"
@@ -368,8 +368,8 @@
                             android:onClick="@{() -> self.request(Request.ToggleStatus)}">
 
                             <ImageView
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_power"
                                 android:contentDescription="@string/tap_to_start"
@@ -387,16 +387,20 @@
 
                     <!-- ========== CONNECTED STATE ========== -->
 
-                    <!-- Compact profile info bar -->
+                    <!-- Compact profile info bar (clickable anywhere) -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/compact_profile_bar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-                        app:cardBackgroundColor="@color/color_card_surface"
+                        app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp">
+                        app:cardElevation="0dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:onClick="@{() -> self.request(Request.ManageProfiles)}">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -428,13 +432,9 @@
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:layout_marginStart="8dp"
-                                android:background="?attr/selectableItemBackgroundBorderless"
-                                android:clickable="true"
-                                android:focusable="true"
-                                android:onClick="@{() -> self.request(Request.ManageProfiles)}"
                                 android:src="@drawable/ic_baseline_expand_more"
                                 android:contentDescription="@string/manage_profiles"
-                                app:tint="?attr/colorControlNormal" />
+                                app:tint="?attr/colorOnSurfaceVariant" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -445,7 +445,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-                        app:cardBackgroundColor="@color/color_card_surface"
+                        app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
                         android:clickable="true"
@@ -495,54 +495,7 @@
                                 android:layout_height="24dp"
                                 android:src="@drawable/ic_baseline_chevron_right"
                                 android:contentDescription="@string/proxy"
-                                app:tint="?attr/colorControlNormal" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Providers card (connected, has providers) -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/providers_card"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:visibility="@{clashRunning &amp;&amp; hasProviders ? View.VISIBLE : View.GONE}"
-                        app:cardBackgroundColor="@color/color_card_surface"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:onClick="@{() -> self.request(Request.OpenProviders)}">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:padding="16dp">
-
-                            <ImageView
-                                android:layout_width="36dp"
-                                android:layout_height="36dp"
-                                android:padding="4dp"
-                                android:src="@drawable/ic_baseline_swap_vertical_circle"
-                                android:contentDescription="@string/providers"
-                                app:tint="?attr/colorPrimary" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="12dp"
-                                android:layout_weight="1"
-                                android:text="@string/providers"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
-
-                            <ImageView
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:src="@drawable/ic_baseline_chevron_right"
-                                android:contentDescription="@string/providers"
-                                app:tint="?attr/colorControlNormal" />
+                                app:tint="?attr/colorOnSurfaceVariant" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 

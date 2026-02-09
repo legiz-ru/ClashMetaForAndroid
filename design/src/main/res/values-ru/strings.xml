@@ -92,7 +92,7 @@
     <string name="cancel">Отмена</string>
     <string name="reset">Сброс</string>
 
-    <string name="clash_logcat">Clash Logcat</string>
+    <string name="clash_logcat">Prizrak-Box Logcat</string>
     <string name="history">История</string>
     <string name="logcat">Logcat</string>
 
@@ -106,7 +106,7 @@
     <string name="override">Переопределение</string>
 
     <string name="auto_restart">Автоматический перезапуск</string>
-    <string name="allow_clash_auto_restart">Разрешить Clash автоматически перезапускаться</string>
+    <string name="allow_clash_auto_restart">Разрешить Prizrak-Box автоматически перезапускаться</string>
 
     <string name="route_system_traffic">Маршрутизировать системный трафик</string>
     <string name="routing_via_vpn_service">Автоматически маршрутизировать весь системный трафик через VPN</string>
@@ -126,7 +126,7 @@
     <string name="access_control_packages">Приложения с контролируемым доступом</string>
     <string name="access_control_packages_summary">Настройте доступ для приложения</string>
 
-    <string name="options_unavailable">Настройки недоступны, пока Clash не будет остановлен</string>
+    <string name="options_unavailable">Настройки недоступны, пока Prizrak-Box не будет остановлен</string>
 
     <string name="general">Основные</string>
     <string name="dns">DNS</string>
@@ -193,22 +193,22 @@
     <string name="import_from_clipboard">Импорт из буфера обмена</string>
     <string name="export_to_clipboard">Экспорт в буфер обмена</string>
 
-    <string name="clash_meta_for_android">Clash Meta для Android</string>
+    <string name="clash_meta_for_android">Prizrak-Box</string>
 
     <string name="document">Документ</string>
     <string name="feedback">Обратная связь</string>
     <string name="sources">Исходный код</string>
     <string name="donate">Сделать пожертвование</string>
-    <string name="clash_wiki">Clash Wiki</string>
+    <string name="clash_wiki">Prizrak-Box Wiki</string>
     <string name="github_issues">Сообщения об ошибках на GitHub</string>
     <string name="google_play">Google Play</string>
-    <string name="clash_meta_core">Ядро Clash Meta</string>
+    <string name="clash_meta_core">Ядро Prizrak-Box</string>
     <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
     <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
 
-    <string name="tips_properties"><![CDATA[Принимается только <strong>конфиг Clash</strong> (включая <strong>Прокси</strong>/<strong>Правила</strong>)]]></string>
-    <string name="tips_help"><![CDATA[Clash Meta для Android — <strong>бесплатен</strong> и мы <strong>НЕ</strong> предоставляем по нему поддержку]]></string>
+    <string name="tips_properties"><![CDATA[Принимается только <strong>конфиг Prizrak-Box</strong> (включая <strong>Прокси</strong>/<strong>Правила</strong>)]]></string>
+    <string name="tips_help"><![CDATA[Prizrak-Box — <strong>бесплатен</strong> и мы <strong>НЕ</strong> предоставляем по нему поддержку]]></string>
 
     <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
 
@@ -272,7 +272,7 @@
 
     <string name="mode_switch_tips">Действует только для текущей сессии</string>
 
-    <string name="clash_meta_wiki">Clash Meta Wiki</string>
+    <string name="clash_meta_wiki">Prizrak-Box Wiki</string>
     <string name="clash_meta_wiki_url" translatable="false">https://docs.metacubex.one/</string>
 
     <string name="meta_features">Функции Meta</string>
@@ -310,11 +310,37 @@
     <string name="toast_profile_updated_complete">Update profile %s completed</string>
     <string name="toast_profile_updated_failed">Update profile %1$s failed: %2$s</string>
     <string name="external_control_activity">External Control</string>
-    <string name="external_control_started">Clash.Meta service started</string>
-    <string name="external_control_stopped">Clash.Meta service stopped</string>
+    <string name="external_control_started">Сервис Prizrak-Box запущен</string>
+    <string name="external_control_stopped">Сервис Prizrak-Box остановлен</string>
     <string name="force_dns_mapping">Force DNS Mapping</string>
     <string name="parse_pure_ip">Parse Pure IP</string>
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">Доступ к камере ограничен. Разрешите его в настройках.</string>
     <string name="import_from_qr_exception">Произошла не обрабатываемая системная ошибка.</string>
+
+    <!-- Material 3 Redesign Strings -->
+    <string name="welcome">Добро пожаловать!</string>
+    <string name="add_first_profile">Добавьте свой первый профиль</string>
+    <string name="add_profile">Добавить профиль</string>
+    <string name="home">Главная</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="traffic_used">Использовано</string>
+    <string name="traffic_available">Доступно</string>
+    <string name="expires">Истекает</string>
+    <string name="updated">Обновлено</string>
+    <string name="disconnect">Отключить</string>
+    <string name="add_from_clipboard">Из буфера обмена</string>
+    <string name="scan_qr_code">Сканировать QR</string>
+    <string name="add_manually">Добавить вручную</string>
+    <string name="manage_profiles">Профили</string>
+    <string name="new_profile_btn">Новый профиль</string>
+    <string name="update_subscriptions">Обновить подписки</string>
+    <string name="format_traffic_compact">%1$s / %2$s</string>
+    <string name="hide_app_icon_title">Скрыть иконку приложения</string>
+    <string name="hide_app_icon_desc">Наберите *#*#252746382#*#* для открытия приложения</string>
+    <string name="hide_from_recents_title">Скрыть из недавних</string>
+    <string name="hide_from_recents_desc">Скрыть приложение из списка недавних</string>
+    <string name="toast_profile_updated_complete">Обновление профиля %s завершено</string>
+    <string name="toast_profile_updated_failed">Обновление профиля %1$s не удалось: %2$s</string>
+    <string name="external_control_activity">Внешнее управление</string>
 </resources>
