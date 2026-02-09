@@ -22,11 +22,13 @@
             android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
             android:visibility="gone" />
 
-        <androidx.viewpager2.widget.ViewPager2
-            android:id="@+id/pages_view"
+        <com.github.kr328.clash.design.view.AppRecyclerView
+            android:id="@+id/group_list_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal" />
+            android:clipToPadding="false"
+            android:paddingTop="@{(float) self.surface.insets.top + @dimen/toolbar_height}"
+            android:paddingBottom="@{self.surface.insets.bottom}" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -96,15 +98,6 @@
 
                 </RelativeLayout>
             </com.github.kr328.clash.design.view.ActivityBarLayout>
-
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tab_layout_view"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/tab_layout_height"
-                android:alpha="0.96"
-                android:background="?android:windowBackground"
-                app:tabBackground="@android:color/transparent"
-                app:tabMode="scrollable" />
 
             <View
                 android:id="@+id/elevation_view"

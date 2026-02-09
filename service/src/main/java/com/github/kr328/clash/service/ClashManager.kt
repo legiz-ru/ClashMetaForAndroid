@@ -9,6 +9,7 @@ import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.remote.IClashManager
 import com.github.kr328.clash.service.remote.ILogObserver
 import com.github.kr328.clash.service.store.ServiceStore
+import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.sendOverrideChanged
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -27,7 +28,12 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override fun queryProxyGroupNames(excludeNotSelectable: Boolean): List<String> {
-        return Clash.queryGroupNames(excludeNotSelectable)
+        val names = Clash.queryGroupNames(excludeNotSelectable)
+        val hidden = loadHiddenProxyGroups()
+
+        if (hidden.isEmpty()) return names
+
+        return names.filterNot { it in hidden }
     }
 
     override fun queryProxyGroup(name: String, proxySort: ProxySort): ProxyGroup {
@@ -107,5 +113,86 @@ class ClashManager(private val context: Context) : IClashManager,
                 }
             }
         }
+    }
+
+    private fun loadHiddenProxyGroups(): Set<String> {
+        val activeProfile = store.activeProfile ?: return emptySet()
+        val configFile = context.importedDir
+            .resolve(activeProfile.toString())
+            .resolve("config.yaml")
+
+        if (!configFile.exists()) return emptySet()
+
+        return parseHiddenProxyGroups(configFile.readLines())
+    }
+
+    private fun parseHiddenProxyGroups(lines: List<String>): Set<String> {
+        val hiddenGroups = mutableSetOf<String>()
+        var inProxyGroups = false
+        var currentName: String? = null
+        var currentHidden = false
+
+        fun commitCurrent() {
+            val name = currentName?.takeIf { it.isNotBlank() } ?: return
+            if (currentHidden) hiddenGroups.add(name)
+        }
+
+        for (line in lines) {
+            if (line.isBlank() || line.trimStart().startsWith("#")) continue
+
+            val isTopLevel = line.indexOfFirst { !it.isWhitespace() } == 0
+            val trimmed = line.trimStart()
+
+            if (isTopLevel) {
+                if (trimmed.startsWith("proxy-groups:")) {
+                    inProxyGroups = true
+                    currentName = null
+                    currentHidden = false
+                    continue
+                }
+
+                if (inProxyGroups) {
+                    commitCurrent()
+                    break
+                }
+            }
+
+            if (!inProxyGroups) continue
+
+            if (trimmed.startsWith("-")) {
+                commitCurrent()
+                currentName = null
+                currentHidden = false
+
+                val remainder = trimmed.removePrefix("-").trim()
+                if (remainder.startsWith("name:")) {
+                    currentName = parseYamlValue(remainder.removePrefix("name:"))
+                } else if (remainder.startsWith("hidden:")) {
+                    currentHidden = parseYamlValue(remainder.removePrefix("hidden:"))
+                        .equals("true", ignoreCase = true)
+                }
+                continue
+            }
+
+            if (trimmed.startsWith("name:")) {
+                currentName = parseYamlValue(trimmed.removePrefix("name:"))
+                continue
+            }
+
+            if (trimmed.startsWith("hidden:")) {
+                currentHidden = parseYamlValue(trimmed.removePrefix("hidden:"))
+                    .equals("true", ignoreCase = true)
+            }
+        }
+
+        if (inProxyGroups) {
+            commitCurrent()
+        }
+
+        return hiddenGroups
+    }
+
+    private fun parseYamlValue(value: String): String {
+        return value.trim().trim('"', '\'')
     }
 }

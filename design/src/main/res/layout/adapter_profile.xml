@@ -67,8 +67,15 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
-                >
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_mdi_chart_timeline_variant"
+                    android:visibility="@{profile.download &lt;2 ? View.GONE : View.VISIBLE}" />
 
                 <TextView
                     android:textSize="12sp"
@@ -78,6 +85,15 @@
                     android:text='@{profile.download >1  ?I18nKt.toBytesString(profile.download+profile.upload)+"/" :""}'
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_mdi_database_check"
+                    android:visibility="@{profile.download &lt;2 ? View.GONE : View.VISIBLE}" />
+
                 <TextView
                     android:textSize="12sp"
                     android:layout_width="wrap_content"
@@ -86,13 +102,27 @@
                     android:text='@{profile.total >1 ?I18nKt.toBytesString(profile.total) : ""}'
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
             </LinearLayout>
-            <TextView
-                android:textSize="12sp"
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:visibility="@{profile.expire==0 ? View.GONE : View.VISIBLE}"
-                android:text='@{profile.expire>0 ? I18nKt.toDateStr(profile.expire):""}'
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+                android:orientation="horizontal"
+                android:visibility="@{profile.expire==0 ? View.GONE : View.VISIBLE}">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_mdi_calendar_alert" />
+
+                <TextView
+                    android:textSize="12sp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text='@{profile.expire>0 ? I18nKt.toDateStr(profile.expire):""}'
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+            </LinearLayout>
             <ProgressBar
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
@@ -103,15 +133,28 @@
                 />
         </LinearLayout>
 
-        <TextView
+        <LinearLayout
             android:id="@+id/elapsed_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_marginEnd="@dimen/item_midden_margin"
             android:layout_toStartOf="@id/menu_view"
-            android:text="@{IntervalKt.elapsedIntervalString(currentTime.value - profile.updatedAt, context)}"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Tooltip" />
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_gravity="center_vertical"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_mdi_update" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{IntervalKt.elapsedIntervalString(currentTime.value - profile.updatedAt, context)}"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Tooltip" />
+        </LinearLayout>
 
         <View
             android:layout_width="2dp"
@@ -135,7 +178,7 @@
                 android:layout_width="@dimen/item_tailing_component_size"
                 android:layout_height="@dimen/item_tailing_component_size"
                 android:layout_margin="@dimen/item_tailing_margin"
-                android:background="@drawable/ic_baseline_more_vert" />
+                android:background="@drawable/ic_mdi_arrange_bring_forward" />
         </FrameLayout>
     </RelativeLayout>
 </layout>
