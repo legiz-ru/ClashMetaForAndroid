@@ -37,15 +37,6 @@ type ProxyGroup struct {
 	Proxies []*Proxy `json:"proxies"`
 }
 
-// Optional interfaces for accessing group extra info from mihomo
-type iconProvider interface {
-	Icon() string
-}
-
-type hiddenProvider interface {
-	Hidden() bool
-}
-
 type sortableProxyList struct {
 	list []*Proxy
 	less func(a, b *Proxy) bool
@@ -80,8 +71,19 @@ func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 
 	for _, p := range proxies {
 		if g, ok := p.Adapter().(outboundgroup.ProxyGroup); ok {
-			// Skip hidden groups
-			if hp, ok := g.(hiddenProvider); ok && hp.Hidden() {
+			// Skip hidden groups using concrete type assertions
+			hidden := false
+			switch v := g.(type) {
+			case *outboundgroup.Selector:
+				hidden = v.Hidden
+			case *outboundgroup.URLTest:
+				hidden = v.Hidden
+			case *outboundgroup.Fallback:
+				hidden = v.Hidden
+			case *outboundgroup.LoadBalance:
+				hidden = v.Hidden
+			}
+			if hidden {
 				continue
 			}
 			if !excludeNotSelectable || p.Type() == C.Selector {
@@ -136,12 +138,20 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 	}
 
 	icon := ""
-	if ip, ok := g.(iconProvider); ok {
-		icon = ip.Icon()
-	}
 	hidden := false
-	if hp, ok := g.(hiddenProvider); ok {
-		hidden = hp.Hidden()
+	switch v := g.(type) {
+	case *outboundgroup.Selector:
+		icon = v.Icon
+		hidden = v.Hidden
+	case *outboundgroup.URLTest:
+		icon = v.Icon
+		hidden = v.Hidden
+	case *outboundgroup.Fallback:
+		icon = v.Icon
+		hidden = v.Hidden
+	case *outboundgroup.LoadBalance:
+		icon = v.Icon
+		hidden = v.Hidden
 	}
 
 	return &ProxyGroup{

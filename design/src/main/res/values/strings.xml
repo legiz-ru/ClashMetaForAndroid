@@ -365,6 +365,7 @@
     <string name="add_from_clipboard">Add from Clipboard</string>
     <string name="scan_qr_code">Scan QR Code</string>
     <string name="add_manually">Add Manually</string>
+    <string name="add_from_file">Add from File</string>
     <string name="manage_profiles">Profiles</string>
     <string name="new_profile_btn">New Profile</string>
     <string name="update_subscriptions">Update Subscriptions</string>

@@ -329,6 +329,7 @@
     <string name="add_from_clipboard">Из буфера обмена</string>
     <string name="scan_qr_code">Сканировать QR</string>
     <string name="add_manually">Добавить вручную</string>
+    <string name="add_from_file">Добавить из файла</string>
     <string name="manage_profiles">Профили</string>
     <string name="new_profile_btn">Новый профиль</string>
     <string name="update_subscriptions">Обновить подписки</string>

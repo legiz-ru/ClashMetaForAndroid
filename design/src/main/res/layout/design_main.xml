@@ -431,18 +431,20 @@
 
         </LinearLayout>
 
-        <!-- ========== DISCONNECT FAB (connected state, anchored above bottom nav) ========== -->
+        <!-- ========== DISCONNECT FAB (connected state, above bottom nav, right-aligned) ========== -->
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/disconnect_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|center_horizontal"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="8dp"
             android:onClick="@{() -> self.request(Request.ToggleStatus)}"
             android:text="@string/disconnect"
             android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
             app:icon="@drawable/ic_mdi_power"
             app:layout_anchor="@id/bottom_nav"
-            app:layout_anchorGravity="top|center" />
+            app:layout_anchorGravity="top|end" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
