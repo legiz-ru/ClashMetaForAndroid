@@ -2,6 +2,13 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -9,7 +16,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
 import com.github.kr328.clash.core.model.ProxyGroup
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
@@ -25,9 +31,12 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 
 class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     enum class Request {
@@ -54,6 +63,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     val bottomNav: BottomNavigationView
         get() = binding.bottomNav
+
+    // Track expanded state of accordion groups
+    private val expandedGroups = mutableSetOf<String>()
+
+    // Cache for loaded icons
+    private val iconCache = ConcurrentHashMap<String, Bitmap?>()
+    private val iconExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
@@ -122,6 +139,32 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    private fun loadIconAsync(url: String, imageView: ImageView) {
+        val cached = iconCache[url]
+        if (cached != null) {
+            imageView.setImageBitmap(cached)
+            imageView.imageTintList = null
+            return
+        }
+
+        iconExecutor.execute {
+            try {
+                val stream = URL(url).openStream()
+                val bitmap = BitmapFactory.decodeStream(stream)
+                stream.close()
+                if (bitmap != null) {
+                    iconCache[url] = bitmap
+                    mainHandler.post {
+                        imageView.setImageBitmap(bitmap)
+                        imageView.imageTintList = null
+                    }
+                }
+            } catch (_: Exception) {
+                // Keep default icon
+            }
+        }
+    }
+
     suspend fun setProxyGroups(groups: List<Pair<String, ProxyGroup>>) {
         withContext(Dispatchers.Main) {
             val container = binding.proxyGroupsContainer
@@ -133,7 +176,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
             val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
 
-            for ((name, group) in groups) {
+            // Filter hidden groups on Kotlin side as safety net
+            val visibleGroups = groups.filter { !it.second.hidden }
+
+            for ((name, group) in visibleGroups) {
+                val isExpanded = expandedGroups.contains(name)
+
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
@@ -148,157 +196,217 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 val cardContent = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
                 }
 
-                // Group header row
+                // ======= COLLAPSED HEADER (always visible) =======
                 val headerRow = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
+                    setPadding((16 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt())
+                    isClickable = true
+                    isFocusable = true
+                    background = context.getDrawable(android.R.drawable.list_selector_background)
                 }
 
+                // Group icon (from URL or default)
                 val groupIcon = ImageView(context).apply {
-                    layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
-                        marginEnd = (8 * dp).toInt()
+                    layoutParams = LinearLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt()).apply {
+                        marginEnd = (12 * dp).toInt()
                     }
-                    setImageResource(R.drawable.ic_baseline_vpn_lock)
-                    imageTintList = ColorStateList.valueOf(primaryColor)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
                 }
 
-                val groupName = TextView(context).apply {
+                if (group.icon.isNotEmpty()) {
+                    // Load icon from URL
+                    groupIcon.setImageResource(R.drawable.ic_baseline_vpn_lock)
+                    groupIcon.imageTintList = ColorStateList.valueOf(primaryColor)
+                    loadIconAsync(group.icon, groupIcon)
+                } else {
+                    // No icon - don't show the globe icon
+                    groupIcon.visibility = View.GONE
+                }
+
+                // Group name and selected proxy info
+                val nameColumn = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+
+                val groupNameView = TextView(context).apply {
                     text = name
                     setTextColor(onSurfaceColor)
-                    textSize = 14f
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    textSize = 15f
+                    setTypeface(typeface, Typeface.BOLD)
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                 }
 
-                val selectedLabel = TextView(context).apply {
+                val selectedInfo = TextView(context).apply {
                     text = group.now
-                    setTextColor(primaryColor)
+                    setTextColor(onSurfaceVariantColor)
                     textSize = 12f
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
+                }
+
+                nameColumn.addView(groupNameView)
+                nameColumn.addView(selectedInfo)
+
+                // Proxy count badge
+                val countBadge = TextView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = (8 * dp).toInt()
+                    }
+                    text = "${group.proxies.size}"
+                    textSize = 12f
+                    setTextColor(primaryColor)
+                    gravity = Gravity.CENTER
+                    setPadding((8 * dp).toInt(), (2 * dp).toInt(), (8 * dp).toInt(), (2 * dp).toInt())
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 10 * dp
+                        setStroke((1 * dp).toInt(), primaryColor)
+                    }
+                }
+
+                // Chevron indicator (rotates when expanded)
+                val chevron = ImageView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
+                    setImageResource(R.drawable.ic_mdi_chevron_right)
+                    imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+                    rotation = if (isExpanded) 90f else 0f
                 }
 
                 headerRow.addView(groupIcon)
-                headerRow.addView(groupName)
-                headerRow.addView(selectedLabel)
+                headerRow.addView(nameColumn)
+                headerRow.addView(countBadge)
+                headerRow.addView(chevron)
                 cardContent.addView(headerRow)
 
-                // Show proxies (limit to first 6 to keep it compact)
-                val proxiesToShow = group.proxies.take(6)
-                if (proxiesToShow.isNotEmpty()) {
-                    val proxyGrid = LinearLayout(context).apply {
+                // ======= EXPANDED PROXY LIST (accordion content) =======
+                val proxyListContainer = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    visibility = if (isExpanded) View.VISIBLE else View.GONE
+                }
+
+                // Divider
+                val divider = View(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
+                    ).apply {
+                        marginStart = (16 * dp).toInt()
+                        marginEnd = (16 * dp).toInt()
+                    }
+                    setBackgroundColor(onSurfaceVariantColor and 0x1FFFFFFF)
+                }
+                proxyListContainer.addView(divider)
+
+                for (proxy in group.proxies) {
+                    val isSelected = proxy.name == group.now
+                    val proxyRow = LinearLayout(context).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (10 * dp).toInt())
+                    }
+
+                    // Checkmark for selected
+                    val checkIcon = ImageView(context).apply {
+                        layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
+                            marginEnd = (8 * dp).toInt()
+                        }
+                        if (isSelected) {
+                            setImageResource(R.drawable.ic_baseline_check)
+                            imageTintList = ColorStateList.valueOf(primaryColor)
+                        } else {
+                            visibility = View.INVISIBLE
+                        }
+                    }
+
+                    // Proxy name + subtitle column
+                    val proxyInfo = LinearLayout(context).apply {
                         orientation = LinearLayout.VERTICAL
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply {
-                            topMargin = (8 * dp).toInt()
+                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    }
+
+                    val proxyNameView = TextView(context).apply {
+                        text = proxy.title.ifEmpty { proxy.name }
+                        textSize = 14f
+                        setTextColor(if (isSelected) primaryColor else onSurfaceColor)
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                    }
+
+                    val proxySubtitle = TextView(context).apply {
+                        text = proxy.subtitle.ifEmpty { proxy.type.name }
+                        textSize = 11f
+                        setTextColor(onSurfaceVariantColor)
+                        maxLines = 1
+                    }
+
+                    proxyInfo.addView(proxyNameView)
+                    proxyInfo.addView(proxySubtitle)
+
+                    // Delay
+                    val delayView = TextView(context).apply {
+                        textSize = 13f
+                        when {
+                            proxy.delay <= 0 -> visibility = View.GONE
+                            proxy.delay < 200 -> {
+                                text = context.getString(R.string.format_delay_ms, proxy.delay)
+                                setTextColor(0xFF4CAF50.toInt())
+                            }
+                            proxy.delay < 500 -> {
+                                text = context.getString(R.string.format_delay_ms, proxy.delay)
+                                setTextColor(0xFFFF9800.toInt())
+                            }
+                            else -> {
+                                text = context.getString(R.string.format_delay_ms, proxy.delay)
+                                setTextColor(0xFFF44336.toInt())
+                            }
                         }
                     }
 
-                    // Two proxies per row
-                    for (i in proxiesToShow.indices step 2) {
-                        val row = LinearLayout(context).apply {
-                            orientation = LinearLayout.HORIZONTAL
+                    proxyRow.addView(checkIcon)
+                    proxyRow.addView(proxyInfo)
+                    proxyRow.addView(delayView)
+
+                    // Row separator
+                    if (proxy != group.proxies.last()) {
+                        val rowDivider = View(context).apply {
                             layoutParams = LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                LinearLayout.LayoutParams.WRAP_CONTENT
+                                LinearLayout.LayoutParams.MATCH_PARENT, 1
                             ).apply {
-                                topMargin = (4 * dp).toInt()
+                                marginStart = (44 * dp).toInt()
+                                marginEnd = (16 * dp).toInt()
                             }
+                            setBackgroundColor(onSurfaceVariantColor and 0x0FFFFFFF)
                         }
-
-                        for (j in 0..1) {
-                            val idx = i + j
-                            if (idx < proxiesToShow.size) {
-                                val proxy = proxiesToShow[idx]
-                                val isSelected = proxy.name == group.now
-
-                                val proxyChip = LinearLayout(context).apply {
-                                    orientation = LinearLayout.HORIZONTAL
-                                    gravity = Gravity.CENTER_VERTICAL
-                                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                                        if (j == 0) marginEnd = (4 * dp).toInt()
-                                        else marginStart = (4 * dp).toInt()
-                                    }
-                                    setPadding((8 * dp).toInt(), (6 * dp).toInt(), (8 * dp).toInt(), (6 * dp).toInt())
-                                    background = context.getDrawable(R.drawable.bg_proxy_item)?.mutate()?.apply {
-                                        if (isSelected) {
-                                            setTint(primaryColor)
-                                        }
-                                    }
-                                }
-
-                                val proxyName = TextView(context).apply {
-                                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                                    text = proxy.title.ifEmpty { proxy.name }
-                                    textSize = 11f
-                                    maxLines = 1
-                                    setTextColor(if (isSelected) ContextCompat.getColor(context, android.R.color.white) else onSurfaceVariantColor)
-                                }
-
-                                val delayText = TextView(context).apply {
-                                    textSize = 10f
-                                    when {
-                                        proxy.delay <= 0 -> {
-                                            text = context.getString(R.string.no_delay)
-                                            setTextColor(onSurfaceVariantColor)
-                                        }
-                                        proxy.delay < 200 -> {
-                                            text = context.getString(R.string.format_delay_ms, proxy.delay)
-                                            setTextColor(if (isSelected) ContextCompat.getColor(context, android.R.color.white) else 0xFF4CAF50.toInt())
-                                        }
-                                        proxy.delay < 500 -> {
-                                            text = context.getString(R.string.format_delay_ms, proxy.delay)
-                                            setTextColor(if (isSelected) ContextCompat.getColor(context, android.R.color.white) else 0xFFFF9800.toInt())
-                                        }
-                                        else -> {
-                                            text = context.getString(R.string.format_delay_ms, proxy.delay)
-                                            setTextColor(if (isSelected) ContextCompat.getColor(context, android.R.color.white) else 0xFFF44336.toInt())
-                                        }
-                                    }
-                                }
-
-                                proxyChip.addView(proxyName)
-                                proxyChip.addView(delayText)
-                                row.addView(proxyChip)
-                            } else {
-                                // Empty spacer
-                                row.addView(View(context).apply {
-                                    layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
-                                })
-                            }
-                        }
-                        proxyGrid.addView(row)
+                        proxyListContainer.addView(proxyRow)
+                        proxyListContainer.addView(rowDivider)
+                    } else {
+                        proxyListContainer.addView(proxyRow)
                     }
+                }
 
-                    cardContent.addView(proxyGrid)
+                cardContent.addView(proxyListContainer)
 
-                    // "N more..." label if there are more proxies
-                    if (group.proxies.size > 6) {
-                        val moreLabel = TextView(context).apply {
-                            layoutParams = LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                LinearLayout.LayoutParams.WRAP_CONTENT
-                            ).apply {
-                                topMargin = (4 * dp).toInt()
-                            }
-                            text = "+${group.proxies.size - 6} ${context.getString(R.string.more)}"
-                            textSize = 11f
-                            setTextColor(onSurfaceVariantColor)
-                            gravity = Gravity.CENTER
-                        }
-                        cardContent.addView(moreLabel)
+                // Toggle accordion on header click
+                headerRow.setOnClickListener {
+                    if (expandedGroups.contains(name)) {
+                        expandedGroups.remove(name)
+                        proxyListContainer.visibility = View.GONE
+                        chevron.animate().rotation(0f).setDuration(200).start()
+                    } else {
+                        expandedGroups.add(name)
+                        proxyListContainer.visibility = View.VISIBLE
+                        chevron.animate().rotation(90f).setDuration(200).start()
                     }
                 }
 
                 card.addView(cardContent)
-
-                card.setOnClickListener {
-                    requests.trySend(Request.OpenProxy)
-                }
-
                 container.addView(card)
             }
         }

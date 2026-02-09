@@ -32,7 +32,18 @@ type Proxy struct {
 type ProxyGroup struct {
 	Type    string   `json:"type"`
 	Now     string   `json:"now"`
+	Icon    string   `json:"icon"`
+	Hidden  bool     `json:"hidden"`
 	Proxies []*Proxy `json:"proxies"`
+}
+
+// Optional interfaces for accessing group extra info from mihomo
+type iconProvider interface {
+	Icon() string
+}
+
+type hiddenProvider interface {
+	Hidden() bool
 }
 
 type sortableProxyList struct {
@@ -68,7 +79,11 @@ func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 	}
 
 	for _, p := range proxies {
-		if _, ok := p.Adapter().(outboundgroup.ProxyGroup); ok {
+		if g, ok := p.Adapter().(outboundgroup.ProxyGroup); ok {
+			// Skip hidden groups
+			if hp, ok := g.(hiddenProvider); ok && hp.Hidden() {
+				continue
+			}
 			if !excludeNotSelectable || p.Type() == C.Selector {
 				result = append(result, p.Name())
 			}
@@ -120,9 +135,20 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 	default:
 	}
 
+	icon := ""
+	if ip, ok := g.(iconProvider); ok {
+		icon = ip.Icon()
+	}
+	hidden := false
+	if hp, ok := g.(hiddenProvider); ok {
+		hidden = hp.Hidden()
+	}
+
 	return &ProxyGroup{
 		Type:    g.Type().String(),
 		Now:     g.Now(),
+		Icon:    icon,
+		Hidden:  hidden,
 		Proxies: proxies,
 	}
 }

@@ -129,7 +129,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val names = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
                 val groups = names.map { name ->
                     name to queryProxyGroup(name, uiStore.proxySort)
-                }
+                }.filter { !it.second.hidden }
                 setProxyGroups(groups)
             }
         } catch (_: Exception) {

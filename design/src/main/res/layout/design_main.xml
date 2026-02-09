@@ -157,13 +157,13 @@
                             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
                     </LinearLayout>
 
-                    <!-- ========== PROFILE CARD (disconnected state) ========== -->
+                    <!-- ========== PROFILE CARD (visible when has profiles, both connected and disconnected) ========== -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/profile_card"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:visibility="@{hasProfiles &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}"
+                        android:visibility="@{hasProfiles ? View.VISIBLE : View.GONE}"
                         app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp">
@@ -174,7 +174,7 @@
                             android:orientation="vertical"
                             android:padding="16dp">
 
-                            <!-- Profile header: refresh + name + dropdown -->
+                            <!-- Profile header row: sync + name + edit/delete/expand on right -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -196,23 +196,50 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:gravity="center"
+                                    android:layout_marginStart="8dp"
                                     android:text="@{profileName != null ? profileName : @string/profile}"
                                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
                                 <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_baseline_edit"
+                                    android:contentDescription="@string/edit"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                                <ImageView
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="2dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:onClick="@{() -> self.request(Request.DeleteProfile)}"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_baseline_delete"
+                                    android:contentDescription="@string/delete"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                                <ImageView
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="2dp"
                                     android:background="?attr/selectableItemBackgroundBorderless"
                                     android:clickable="true"
                                     android:focusable="true"
                                     android:onClick="@{() -> self.request(Request.ManageProfiles)}"
-                                    android:src="@drawable/ic_baseline_expand_more"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_mdi_arrange_bring_forward"
                                     android:contentDescription="@string/manage_profiles"
                                     app:tint="?attr/colorOnSurfaceVariant" />
                             </LinearLayout>
 
-                            <!-- Traffic used -->
+                            <!-- Traffic used with MDI icon -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -221,10 +248,17 @@
                                 android:orientation="horizontal"
                                 android:visibility="@{hasTrafficInfo ? View.VISIBLE : View.GONE}">
 
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:src="@drawable/ic_mdi_chart_timeline_variant"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
                                 <TextView
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
+                                    android:layout_marginStart="8dp"
                                     android:text="@string/traffic_used"
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                                     android:alpha="0.7" />
@@ -236,7 +270,7 @@
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
                             </LinearLayout>
 
-                            <!-- Traffic available -->
+                            <!-- Traffic available with MDI icon -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -245,10 +279,17 @@
                                 android:orientation="horizontal"
                                 android:visibility="@{hasTrafficInfo ? View.VISIBLE : View.GONE}">
 
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:src="@drawable/ic_mdi_database_check"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
                                 <TextView
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
+                                    android:layout_marginStart="8dp"
                                     android:text="@string/traffic_available"
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                                     android:alpha="0.7" />
@@ -260,7 +301,7 @@
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
                             </LinearLayout>
 
-                            <!-- Expires -->
+                            <!-- Expires with MDI icon -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -269,10 +310,17 @@
                                 android:orientation="horizontal"
                                 android:visibility="@{hasExpireInfo ? View.VISIBLE : View.GONE}">
 
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:src="@drawable/ic_mdi_calendar_alert"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
                                 <TextView
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
+                                    android:layout_marginStart="8dp"
                                     android:text="@string/expires"
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                                     android:alpha="0.7" />
@@ -284,7 +332,7 @@
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
                             </LinearLayout>
 
-                            <!-- Updated -->
+                            <!-- Updated with MDI icon -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -292,10 +340,17 @@
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal">
 
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:src="@drawable/ic_mdi_update"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
                                 <TextView
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
+                                    android:layout_marginStart="8dp"
                                     android:text="@string/updated"
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                                     android:alpha="0.7" />
@@ -305,41 +360,6 @@
                                     android:layout_height="wrap_content"
                                     android:text="@{profileUpdated}"
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
-                            </LinearLayout>
-
-                            <!-- Action icons row -->
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="16dp"
-                                android:gravity="center"
-                                android:orientation="horizontal">
-
-                                <ImageView
-                                    android:layout_width="36dp"
-                                    android:layout_height="36dp"
-                                    android:layout_marginHorizontal="12dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
-                                    android:clickable="true"
-                                    android:focusable="true"
-                                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
-                                    android:padding="6dp"
-                                    android:src="@drawable/ic_baseline_edit"
-                                    android:contentDescription="@string/edit"
-                                    app:tint="?attr/colorOnSurfaceVariant" />
-
-                                <ImageView
-                                    android:layout_width="36dp"
-                                    android:layout_height="36dp"
-                                    android:layout_marginHorizontal="12dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
-                                    android:clickable="true"
-                                    android:focusable="true"
-                                    android:onClick="@{() -> self.request(Request.DeleteProfile)}"
-                                    android:padding="6dp"
-                                    android:src="@drawable/ic_baseline_delete"
-                                    android:contentDescription="@string/delete"
-                                    app:tint="?attr/colorOnSurfaceVariant" />
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -368,7 +388,7 @@
                                 android:layout_width="40dp"
                                 android:layout_height="40dp"
                                 android:layout_gravity="center"
-                                android:src="@drawable/ic_power"
+                                android:src="@drawable/ic_mdi_power"
                                 android:contentDescription="@string/tap_to_start"
                                 app:tint="@android:color/white" />
                         </FrameLayout>
@@ -377,65 +397,12 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:text="Off"
+                            android:text="@string/tap_to_start"
                             android:alpha="0.7"
                             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
                     </LinearLayout>
 
-                    <!-- ========== CONNECTED STATE ========== -->
-
-                    <!-- Compact subscription info bar (clickable anywhere) -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/compact_profile_bar"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-                        app:cardBackgroundColor="?attr/colorSurfaceVariant"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:onClick="@{() -> self.request(Request.ManageProfiles)}">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:padding="14dp">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:drawableStart="@drawable/ic_baseline_swap_vert"
-                                android:drawablePadding="8dp"
-                                android:text="@{hasTrafficInfo ? @string/format_traffic_compact(profileTrafficUsed, profileTrafficTotal) : profileName}"
-                                android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="16dp"
-                                android:drawableStart="@drawable/ic_baseline_update"
-                                android:drawablePadding="8dp"
-                                android:text="@{profileExpire}"
-                                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                                android:visibility="@{hasExpireInfo ? View.VISIBLE : View.GONE}" />
-
-                            <ImageView
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_marginStart="8dp"
-                                android:src="@drawable/ic_baseline_expand_more"
-                                android:contentDescription="@string/manage_profiles"
-                                app:tint="?attr/colorOnSurfaceVariant" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Proxy groups container (connected, populated dynamically) -->
+                    <!-- ========== CONNECTED STATE: Proxy groups (accordion) ========== -->
                     <LinearLayout
                         android:id="@+id/proxy_groups_container"
                         android:layout_width="match_parent"
@@ -444,52 +411,11 @@
                         android:orientation="vertical"
                         android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}" />
 
-                    <!-- Open full proxy screen button -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/proxy_card"
+                    <!-- Spacer so content doesn't hide behind FAB -->
+                    <View
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-                        app:cardBackgroundColor="?attr/colorSurfaceVariant"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?attr/selectableItemBackground"
-                        android:onClick="@{() -> self.request(Request.OpenProxy)}">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:padding="16dp">
-
-                            <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
-                                android:padding="2dp"
-                                android:src="@drawable/ic_baseline_vpn_lock"
-                                android:contentDescription="@string/proxy"
-                                app:tint="?attr/colorPrimary" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="12dp"
-                                android:layout_weight="1"
-                                android:text="@string/proxy_groups"
-                                android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
-
-                            <ImageView
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:src="@drawable/ic_baseline_chevron_right"
-                                android:contentDescription="@string/proxy"
-                                app:tint="?attr/colorOnSurfaceVariant" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
+                        android:layout_height="72dp"
+                        android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}" />
 
                 </LinearLayout>
             </ScrollView>
@@ -505,18 +431,18 @@
 
         </LinearLayout>
 
-        <!-- ========== DISCONNECT FAB (connected state) ========== -->
+        <!-- ========== DISCONNECT FAB (connected state, anchored above bottom nav) ========== -->
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
             android:id="@+id/disconnect_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="80dp"
+            android:layout_gravity="bottom|center_horizontal"
             android:onClick="@{() -> self.request(Request.ToggleStatus)}"
             android:text="@string/disconnect"
             android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-            app:icon="@drawable/ic_power" />
+            app:icon="@drawable/ic_mdi_power"
+            app:layout_anchor="@id/bottom_nav"
+            app:layout_anchorGravity="top|center" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
