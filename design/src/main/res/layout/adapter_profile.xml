@@ -20,9 +20,13 @@
         <variable
             name="deleteAction"
             type="android.view.View.OnClickListener" />
+        <variable
+            name="updateAction"
+            type="android.view.View.OnClickListener" />
         <import type="android.view.View" />
         <import type="com.github.kr328.clash.design.util.I18nKt" />
         <import type="com.github.kr328.clash.design.util.IntervalKt" />
+        <import type="com.github.kr328.clash.service.model.Profile" />
     </data>
 
     <com.google.android.material.card.MaterialCardView
@@ -45,7 +49,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Profile header: name + active indicator -->
+            <!-- Profile header: sync + name + checkmark on right -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -53,11 +57,16 @@
                 android:orientation="horizontal">
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_baseline_check"
-                    android:visibility="@{profile.active ? View.VISIBLE : View.GONE}"
-                    app:tint="?attr/colorPrimary" />
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:onClick="@{updateAction}"
+                    android:src="@drawable/ic_baseline_sync"
+                    android:contentDescription="@string/update"
+                    android:visibility="@{profile.imported &amp;&amp; profile.type != Profile.Type.File ? View.VISIBLE : View.GONE}"
+                    app:tint="?attr/colorOnSurfaceVariant" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -67,12 +76,12 @@
                     android:text="@{profile.name}"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@{profile.pending ? @string/format_type_unsaved(I18nKt.toString(profile.type, context)) : I18nKt.toString(profile.type, context)}"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                    android:alpha="0.7" />
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_baseline_check"
+                    android:visibility="@{profile.active ? View.VISIBLE : View.INVISIBLE}"
+                    app:tint="?attr/colorPrimary" />
             </LinearLayout>
 
             <!-- Traffic used row with MDI icon -->

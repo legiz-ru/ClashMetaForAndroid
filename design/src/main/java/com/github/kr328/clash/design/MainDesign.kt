@@ -11,6 +11,7 @@ import android.os.Looper
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -51,6 +52,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         DeleteProfile,
         AddFromClipboard,
         ScanQrCode,
+        AddFromFile,
         AddManually,
         OpenHelp,
         OpenAbout,
@@ -150,9 +152,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         iconExecutor.execute {
             try {
-                val stream = URL(url).openStream()
-                val bitmap = BitmapFactory.decodeStream(stream)
-                stream.close()
+                val bitmap = if (url.startsWith("file://")) {
+                    val path = url.removePrefix("file://")
+                    val file = java.io.File(path)
+                    if (file.exists()) BitmapFactory.decodeFile(path) else null
+                } else {
+                    val stream = URL(url).openStream()
+                    val b = BitmapFactory.decodeStream(stream)
+                    stream.close()
+                    b
+                }
                 if (bitmap != null) {
                     iconCache[url] = bitmap
                     mainHandler.post {
@@ -473,13 +482,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
         }
 
-        // Position disconnect FAB above bottom nav dynamically
-        binding.bottomNav.post {
-            val dp = context.resources.displayMetrics.density
-            val params = binding.disconnectFab.layoutParams as CoordinatorLayout.LayoutParams
-            params.bottomMargin = binding.bottomNav.height + (12 * dp).toInt()
-            binding.disconnectFab.layoutParams = params
-        }
+        // Position disconnect FAB above bottom nav dynamically after layout
+        binding.bottomNav.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                binding.bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                val dp = context.resources.displayMetrics.density
+                val params = binding.disconnectFab.layoutParams as CoordinatorLayout.LayoutParams
+                params.bottomMargin = binding.bottomNav.height + (12 * dp).toInt()
+                binding.disconnectFab.layoutParams = params
+            }
+        })
     }
 
     fun request(request: Request) {

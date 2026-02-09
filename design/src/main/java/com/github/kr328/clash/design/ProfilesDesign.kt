@@ -35,6 +35,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         this::showMenu,
         onEditClicked = { requests.trySend(Request.Edit(it)) },
         onDeleteClicked = { requests.trySend(Request.Delete(it)) },
+        onUpdateClicked = { requests.trySend(Request.Update(it)) },
     )
 
     private var allUpdating: Boolean

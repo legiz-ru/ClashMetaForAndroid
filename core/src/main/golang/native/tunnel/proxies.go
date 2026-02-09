@@ -1,8 +1,14 @@
 package tunnel
 
 import (
+	"crypto/md5"
+	"fmt"
+	"os"
+	P "path"
 	"sort"
 	"strings"
+
+	"cfa/native/config"
 
 	"github.com/dlclark/regexp2"
 
@@ -152,6 +158,15 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 	case *outboundgroup.LoadBalance:
 		icon = v.Icon
 		hidden = v.Hidden
+	}
+
+	// Check for cached icon file
+	if icon != "" && config.CurrentProfileDir != "" {
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(icon)))
+		cachedPath := P.Join(config.CurrentProfileDir, "icons", hash)
+		if _, err := os.Stat(cachedPath); err == nil {
+			icon = "file://" + cachedPath
+		}
 	}
 
 	return &ProxyGroup{

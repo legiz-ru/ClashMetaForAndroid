@@ -14,6 +14,10 @@ import (
 	"github.com/metacubex/mihomo/log"
 )
 
+// CurrentProfileDir holds the path of the currently loaded profile directory,
+// used by the tunnel package to resolve cached icons.
+var CurrentProfileDir string
+
 func logDns(cfg *config.RawConfig) {
 	bytes, err := yaml.Marshal(&cfg.DNS)
 	if err != nil {
@@ -74,6 +78,8 @@ func Load(path string) error {
 
 		return err
 	}
+
+	CurrentProfileDir = path
 
 	// like hub.Parse()
 	hub.ApplyConfig(cfg)

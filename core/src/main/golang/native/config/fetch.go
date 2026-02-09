@@ -148,6 +148,9 @@ func FetchAndValid(
 		_ = fetch(url, ps)
 	})
 
+	// Fetch proxy group icons
+	fetchProxyGroupIcons(rawCfg, path, reportStatus)
+
 	bytes, _ := json.Marshal(&Status{
 		Action:      "Verifying",
 		Args:        []string{},

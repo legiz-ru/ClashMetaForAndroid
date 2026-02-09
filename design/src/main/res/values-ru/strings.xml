@@ -325,6 +325,7 @@
     <string name="traffic_available">Доступно</string>
     <string name="expires">Истекает</string>
     <string name="updated">Обновлено</string>
+    <string name="empty_clipboard">Буфер обмена пуст</string>
     <string name="disconnect">Отключить</string>
     <string name="add_from_clipboard">Из буфера обмена</string>
     <string name="scan_qr_code">Сканировать QR</string>

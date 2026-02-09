@@ -18,6 +18,7 @@ class ProfileAdapter(
     private val onMenuClicked: (Profile) -> Unit,
     private val onEditClicked: ((Profile) -> Unit)? = null,
     private val onDeleteClicked: ((Profile) -> Unit)? = null,
+    private val onUpdateClicked: ((Profile) -> Unit)? = null,
 ) : RecyclerView.Adapter<ProfileAdapter.Holder>() {
     class Holder(val binding: AdapterProfileBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -57,6 +58,9 @@ class ProfileAdapter(
         }
         binding.setDeleteAction {
             (onDeleteClicked ?: onMenuClicked)(current)
+        }
+        binding.setUpdateAction {
+            (onUpdateClicked ?: onMenuClicked)(current)
         }
 
         // Active profile card gets a primary-colored stroke
