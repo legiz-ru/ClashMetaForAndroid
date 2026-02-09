@@ -27,6 +27,7 @@ import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
 import com.github.kr328.clash.design.util.toBytesString
+import com.github.kr328.clash.design.util.elapsedIntervalString
 import com.github.kr328.clash.service.model.Profile
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -129,8 +130,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     binding.profileExpire = sdf.format(Date(profile.expire))
                 }
 
-                val updateSdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-                binding.profileUpdated = updateSdf.format(Date(profile.updatedAt))
+                val elapsed = System.currentTimeMillis() - profile.updatedAt
+                binding.profileUpdated = elapsed.elapsedIntervalString(context)
             } else {
                 binding.hasTrafficInfo = false
                 binding.hasExpireInfo = false
