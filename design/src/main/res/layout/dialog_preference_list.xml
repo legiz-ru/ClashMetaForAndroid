@@ -29,7 +29,7 @@
                 android:layout_marginHorizontal="@dimen/item_header_margin"
                 android:layout_toStartOf="@id/new_view"
                 android:gravity="center_vertical"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
+                android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
             <ImageView
                 android:id="@+id/new_view"

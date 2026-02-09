@@ -56,14 +56,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@{profile.name}"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/item_text_margin"
                 android:text="@{profile.pending ? @string/format_type_unsaved(I18nKt.toString(profile.type, context)) : I18nKt.toString(profile.type, context)}"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2" />
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -76,7 +76,7 @@
                     android:layout_height="wrap_content"
                     android:visibility="@{profile.download &lt;2 ? View.GONE : View.VISIBLE}"
                     android:text='@{profile.download >1  ?I18nKt.toBytesString(profile.download+profile.upload)+"/" :""}'
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
 
                 <TextView
                     android:textSize="12sp"
@@ -84,7 +84,7 @@
                     android:layout_height="wrap_content"
                     android:visibility="@{profile.download &lt;2 ? View.GONE : View.VISIBLE}"
                     android:text='@{profile.total >1 ?I18nKt.toBytesString(profile.total) : ""}'
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
             </LinearLayout>
             <TextView
                 android:textSize="12sp"
@@ -92,7 +92,7 @@
                 android:layout_height="wrap_content"
                 android:visibility="@{profile.expire==0 ? View.GONE : View.VISIBLE}"
                 android:text='@{profile.expire>0 ? I18nKt.toDateStr(profile.expire):""}'
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
             <ProgressBar
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
@@ -111,7 +111,7 @@
             android:layout_marginEnd="@dimen/item_midden_margin"
             android:layout_toStartOf="@id/menu_view"
             android:text="@{IntervalKt.elapsedIntervalString(currentTime.value - profile.updatedAt, context)}"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Tooltip" />
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall" />
 
         <View
             android:layout_width="2dp"

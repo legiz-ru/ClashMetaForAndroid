@@ -369,4 +369,9 @@
     <string name="new_profile_btn">New Profile</string>
     <string name="update_subscriptions">Update Subscriptions</string>
     <string name="format_traffic_compact">%1$s / %2$s</string>
+    <string name="proxy_groups">Proxy Groups</string>
+    <string name="format_delay_ms">%d ms</string>
+    <string name="no_delay">-</string>
+    <string name="timeout">Timeout</string>
+    <string name="selected_node">Selected: %s</string>
 </resources>

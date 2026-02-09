@@ -60,6 +60,13 @@
     <color name="md3_light_surfaceVariant">#FFE0E2EC</color>
     <color name="md3_light_onSurfaceVariant">#FF44474E</color>
     <color name="md3_light_outline">#FF74777F</color>
+    <color name="md3_light_outlineVariant">#FFC4C6CF</color>
+    <color name="md3_light_surfaceContainer">#FFF0F0F3</color>
+    <color name="md3_light_surfaceContainerHigh">#FFE8E8EB</color>
+    <color name="md3_light_surfaceContainerHighest">#FFE0E0E3</color>
+
+    <!-- Dark theme additional -->
+    <color name="md3_dark_outlineVariant">#FF44474E</color>
 
     <!-- Special UI Colors -->
     <color name="color_power_off">#FF3A3A3A</color>

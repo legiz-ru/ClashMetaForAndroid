@@ -12,9 +12,6 @@
             name="hasProfiles"
             type="boolean" />
         <variable
-            name="forwarded"
-            type="String" />
-        <variable
             name="mode"
             type="String" />
         <variable
@@ -387,7 +384,7 @@
 
                     <!-- ========== CONNECTED STATE ========== -->
 
-                    <!-- Compact profile info bar (clickable anywhere) -->
+                    <!-- Compact subscription info bar (clickable anywhere) -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/compact_profile_bar"
                         android:layout_width="match_parent"
@@ -415,7 +412,7 @@
                                 android:layout_weight="1"
                                 android:drawableStart="@drawable/ic_baseline_swap_vert"
                                 android:drawablePadding="8dp"
-                                android:text="@{forwarded}"
+                                android:text="@{hasTrafficInfo ? @string/format_traffic_compact(profileTrafficUsed, profileTrafficTotal) : profileName}"
                                 android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
 
                             <TextView
@@ -424,7 +421,7 @@
                                 android:layout_marginStart="16dp"
                                 android:drawableStart="@drawable/ic_baseline_update"
                                 android:drawablePadding="8dp"
-                                android:text="@{profileExpire != null ? profileExpire : @string/running}"
+                                android:text="@{profileExpire}"
                                 android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                                 android:visibility="@{hasExpireInfo ? View.VISIBLE : View.GONE}" />
 
@@ -438,12 +435,21 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Proxy card (connected) -->
+                    <!-- Proxy groups container (connected, populated dynamically) -->
+                    <LinearLayout
+                        android:id="@+id/proxy_groups_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical"
+                        android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}" />
+
+                    <!-- Open full proxy screen button -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/proxy_card"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="8dp"
                         android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
                         app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         app:cardCornerRadius="16dp"
@@ -461,34 +467,20 @@
                             android:padding="16dp">
 
                             <ImageView
-                                android:layout_width="36dp"
-                                android:layout_height="36dp"
-                                android:padding="4dp"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:padding="2dp"
                                 android:src="@drawable/ic_baseline_vpn_lock"
                                 android:contentDescription="@string/proxy"
                                 app:tint="?attr/colorPrimary" />
 
-                            <LinearLayout
+                            <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="12dp"
                                 android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/proxy"
-                                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:alpha="0.7"
-                                    android:text="@{mode}"
-                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
-                            </LinearLayout>
+                                android:text="@string/proxy_groups"
+                                android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
 
                             <ImageView
                                 android:layout_width="24dp"

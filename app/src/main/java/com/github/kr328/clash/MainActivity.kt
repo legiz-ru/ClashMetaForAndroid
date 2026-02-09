@@ -31,7 +31,7 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         design.fetch()
 
-        val ticker = ticker(TimeUnit.SECONDS.toMillis(1))
+        val ticker = ticker(TimeUnit.SECONDS.toMillis(5))
 
         while (isActive) {
             select<Unit> {
@@ -91,7 +91,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 }
                 if (clashRunning) {
                     ticker.onReceive {
-                        design.fetchTraffic()
+                        design.fetchProxyGroups()
                     }
                 }
             }
@@ -117,11 +117,23 @@ class MainActivity : BaseActivity<MainDesign>() {
             setHasProfiles(queryAll().isNotEmpty())
             setActiveProfileInfo(active)
         }
+
+        if (clashRunning) {
+            fetchProxyGroups()
+        }
     }
 
-    private suspend fun MainDesign.fetchTraffic() {
-        withClash {
-            setForwarded(queryTrafficTotal())
+    private suspend fun MainDesign.fetchProxyGroups() {
+        try {
+            withClash {
+                val names = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
+                val groups = names.map { name ->
+                    name to queryProxyGroup(name, uiStore.proxySort)
+                }
+                setProxyGroups(groups)
+            }
+        } catch (_: Exception) {
+            // Proxy groups may not be available yet
         }
     }
 

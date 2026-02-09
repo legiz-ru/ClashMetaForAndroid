@@ -170,6 +170,10 @@
         <item name="colorError">@color/md3_light_error</item>
         <item name="colorOnError">@color/md3_light_onError</item>
         <item name="colorOutline">@color/md3_light_outline</item>
+        <item name="colorSurfaceContainer">@color/md3_light_surfaceContainer</item>
+        <item name="colorSurfaceContainerHigh">@color/md3_light_surfaceContainerHigh</item>
+        <item name="colorSurfaceContainerHighest">@color/md3_light_surfaceContainerHighest</item>
+        <item name="colorOutlineVariant">@color/md3_light_outlineVariant</item>
         <item name="colorControlNormal">@android:color/black</item>
         <item name="colorClashStopped">@color/color_light_clash_stopped</item>
         <item name="colorControlDisabled">@color/color_light_control_disabled</item>
@@ -207,6 +211,10 @@
         <item name="colorError">@color/md3_dark_error</item>
         <item name="colorOnError">@color/md3_dark_onError</item>
         <item name="colorOutline">@color/md3_dark_outline</item>
+        <item name="colorSurfaceContainer">@color/md3_dark_surfaceContainer</item>
+        <item name="colorSurfaceContainerHigh">@color/md3_dark_surfaceContainerHigh</item>
+        <item name="colorSurfaceContainerHighest">@color/md3_dark_surfaceContainerHighest</item>
+        <item name="colorOutlineVariant">@color/md3_dark_outlineVariant</item>
         <item name="colorControlNormal">@android:color/white</item>
         <item name="colorControlDisabled">@color/color_dark_control_disabled</item>
 

@@ -19,7 +19,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="@string/proxy_empty_tips"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
             android:visibility="gone" />
 
         <androidx.viewpager2.widget.ViewPager2
