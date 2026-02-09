@@ -5,7 +5,14 @@
         <variable
             name="self"
             type="com.github.kr328.clash.design.SettingsDesign" />
+        <variable
+            name="clashRunning"
+            type="boolean" />
+        <variable
+            name="hasProviders"
+            type="boolean" />
 
+        <import type="android.view.View" />
         <import type="com.github.kr328.clash.design.SettingsDesign.Request" />
     </data>
 
@@ -55,6 +62,35 @@
                     android:onClick="@{() -> self.request(Request.StartMetaFeature)}"
                     app:icon="@drawable/ic_baseline_meta"
                     app:text="@string/meta_features" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.StartProviders)}"
+                    android:visibility="@{clashRunning &amp;&amp; hasProviders ? View.VISIBLE : View.GONE}"
+                    app:icon="@drawable/ic_baseline_swap_vertical_circle"
+                    app:text="@string/providers" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.StartLogs)}"
+                    app:icon="@drawable/ic_baseline_assignment"
+                    app:text="@string/logs" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.StartHelp)}"
+                    app:icon="@drawable/ic_baseline_help_center"
+                    app:text="@string/help" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.StartAbout)}"
+                    app:icon="@drawable/ic_baseline_info"
+                    app:text="@string/about" />
 
             </LinearLayout>
         </com.github.kr328.clash.design.view.ObservableScrollView>
