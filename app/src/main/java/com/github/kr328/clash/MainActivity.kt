@@ -3,10 +3,8 @@ package com.github.kr328.clash
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.PersistableBundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
@@ -17,6 +15,7 @@ import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.core.bridge.*
+import com.github.kr328.clash.service.model.Profile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
@@ -59,15 +58,31 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(ProfilesActivity::class.intent)
                         MainDesign.Request.OpenProviders ->
                             startActivity(ProvidersActivity::class.intent)
-                        MainDesign.Request.OpenLogs -> {
-                            if (LogcatService.running) {
-                                startActivity(LogcatActivity::class.intent)
-                            } else {
-                                startActivity(LogsActivity::class.intent)
-                            }
-                        }
                         MainDesign.Request.OpenSettings ->
                             startActivity(SettingsActivity::class.intent)
+                        MainDesign.Request.ManageProfiles ->
+                            startActivity(ProfilesActivity::class.intent)
+                        MainDesign.Request.UpdateProfile -> {
+                            val active = withProfile { queryActive() }
+                            if (active != null && active.imported && active.type != Profile.Type.File) {
+                                withProfile { update(active.uuid) }
+                            }
+                        }
+                        MainDesign.Request.DeleteProfile -> {
+                            val active = withProfile { queryActive() }
+                            if (active != null) {
+                                withProfile { delete(active.uuid) }
+                            }
+                        }
+                        MainDesign.Request.AddFromClipboard -> {
+                            startActivity(NewProfileActivity::class.intent)
+                        }
+                        MainDesign.Request.ScanQrCode -> {
+                            startActivity(NewProfileActivity::class.intent)
+                        }
+                        MainDesign.Request.AddManually -> {
+                            startActivity(NewProfileActivity::class.intent)
+                        }
                         MainDesign.Request.OpenHelp ->
                             startActivity(HelpActivity::class.intent)
                         MainDesign.Request.OpenAbout ->
@@ -97,7 +112,10 @@ class MainActivity : BaseActivity<MainDesign>() {
         setHasProviders(providers.isNotEmpty())
 
         withProfile {
-            setProfileName(queryActive()?.name)
+            val active = queryActive()
+            setProfileName(active?.name)
+            setHasProfiles(queryAll().isNotEmpty())
+            setActiveProfileInfo(active)
         }
     }
 

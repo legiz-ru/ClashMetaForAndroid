@@ -350,4 +350,23 @@
     <string name="hide_from_recents_desc">Hide app from the Recent apps screen</string>
     <string name="import_from_qr_no_permission">Camera access is restricted. Please enable it in Settings.</string>
     <string name="import_from_qr_exception">An unhandled system exception occurred.</string>
+
+    <!-- Material 3 Redesign Strings -->
+    <string name="welcome">Welcome!</string>
+    <string name="add_first_profile">Add your first profile to get started</string>
+    <string name="add_profile">Add Profile</string>
+    <string name="home">Home</string>
+    <string name="nav_settings">Settings</string>
+    <string name="traffic_used">Used</string>
+    <string name="traffic_available">Available</string>
+    <string name="expires">Expires</string>
+    <string name="updated">Updated</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="add_from_clipboard">Add from Clipboard</string>
+    <string name="scan_qr_code">Scan QR Code</string>
+    <string name="add_manually">Add Manually</string>
+    <string name="manage_profiles">Profiles</string>
+    <string name="new_profile_btn">New Profile</string>
+    <string name="update_subscriptions">Update Subscriptions</string>
+    <string name="format_traffic_compact">%1$s / %2$s</string>
 </resources>

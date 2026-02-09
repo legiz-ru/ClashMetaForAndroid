@@ -1,13 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Legacy colors (kept for compatibility) -->
     <color name="color_clash_light">#1e4376</color>
     <color name="color_clash_dark">#1976d2</color>
     <color name="color_system_ui_overlay">#50000000</color>
     <color name="color_light_background">#FFFAFAFA</color>
-    <color name="color_dark_background">#FF121212</color>
-    <color name="color_dark_surface">#FF202020</color>
+    <color name="color_dark_background">#FF0F0F0F</color>
+    <color name="color_dark_surface">#FF1A1A1A</color>
     <color name="color_light_clash_stopped">#FF808080</color>
     <color name="color_light_control_disabled">#FFD3D3D3</color>
-    <color name="color_dark_control_disabled">#FF808080</color>
+    <color name="color_dark_control_disabled">#FF606060</color>
     <color name="color_error">#FFB00020</color>
+
+    <!-- Material 3 Dark Theme Colors -->
+    <color name="md3_dark_primary">#FF8AB4F8</color>
+    <color name="md3_dark_onPrimary">#FF002D6D</color>
+    <color name="md3_dark_primaryContainer">#FF004397</color>
+    <color name="md3_dark_onPrimaryContainer">#FFD4E3FF</color>
+    <color name="md3_dark_secondary">#FFBBC7DB</color>
+    <color name="md3_dark_onSecondary">#FF253140</color>
+    <color name="md3_dark_secondaryContainer">#FF3B4858</color>
+    <color name="md3_dark_onSecondaryContainer">#FFD7E3F8</color>
+    <color name="md3_dark_tertiary">#FFD4BDE6</color>
+    <color name="md3_dark_onTertiary">#FF392849</color>
+    <color name="md3_dark_tertiaryContainer">#FF503F61</color>
+    <color name="md3_dark_onTertiaryContainer">#FFF0DBFF</color>
+    <color name="md3_dark_error">#FFFFB4AB</color>
+    <color name="md3_dark_onError">#FF690005</color>
+    <color name="md3_dark_background">#FF0F0F0F</color>
+    <color name="md3_dark_onBackground">#FFE3E2E6</color>
+    <color name="md3_dark_surface">#FF0F0F0F</color>
+    <color name="md3_dark_onSurface">#FFE3E2E6</color>
+    <color name="md3_dark_surfaceVariant">#FF44474E</color>
+    <color name="md3_dark_onSurfaceVariant">#FFC4C6CF</color>
+    <color name="md3_dark_outline">#FF8E9099</color>
+    <color name="md3_dark_surfaceContainer">#FF1E1E1E</color>
+    <color name="md3_dark_surfaceContainerHigh">#FF2B2B2B</color>
+    <color name="md3_dark_surfaceContainerHighest">#FF363636</color>
+
+    <!-- Material 3 Light Theme Colors -->
+    <color name="md3_light_primary">#FF1A5FAC</color>
+    <color name="md3_light_onPrimary">#FFFFFFFF</color>
+    <color name="md3_light_primaryContainer">#FFD4E3FF</color>
+    <color name="md3_light_onPrimaryContainer">#FF001C3A</color>
+    <color name="md3_light_secondary">#FF535F70</color>
+    <color name="md3_light_onSecondary">#FFFFFFFF</color>
+    <color name="md3_light_secondaryContainer">#FFD7E3F8</color>
+    <color name="md3_light_onSecondaryContainer">#FF101C2B</color>
+    <color name="md3_light_tertiary">#FF6B5778</color>
+    <color name="md3_light_onTertiary">#FFFFFFFF</color>
+    <color name="md3_light_tertiaryContainer">#FFF0DBFF</color>
+    <color name="md3_light_onTertiaryContainer">#FF251432</color>
+    <color name="md3_light_error">#FFB3261E</color>
+    <color name="md3_light_onError">#FFFFFFFF</color>
+    <color name="md3_light_background">#FFFAFAFA</color>
+    <color name="md3_light_onBackground">#FF1B1B1F</color>
+    <color name="md3_light_surface">#FFFAFAFA</color>
+    <color name="md3_light_onSurface">#FF1B1B1F</color>
+    <color name="md3_light_surfaceVariant">#FFE0E2EC</color>
+    <color name="md3_light_onSurfaceVariant">#FF44474E</color>
+    <color name="md3_light_outline">#FF74777F</color>
+
+    <!-- Special UI Colors -->
+    <color name="color_power_off">#FF3A3A3A</color>
+    <color name="color_power_on">#FF4CAF50</color>
+    <color name="color_card_surface">#FF2B2B2B</color>
+    <color name="color_bottom_nav_dark">#FF141414</color>
+    <color name="color_bottom_nav_indicator">#FF2A3A4A</color>
 </resources>

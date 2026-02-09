@@ -26,6 +26,21 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(OverrideSettingsActivity::class.intent)
                         SettingsDesign.Request.StartMetaFeature ->
                             startActivity(MetaFeatureSettingsActivity::class.intent)
+                        SettingsDesign.Request.StartProviders ->
+                            startActivity(ProvidersActivity::class.intent)
+                        SettingsDesign.Request.StartLogs -> {
+                            if (LogcatService.running) {
+                                startActivity(LogcatActivity::class.intent)
+                            } else {
+                                startActivity(LogsActivity::class.intent)
+                            }
+                        }
+                        SettingsDesign.Request.StartHelp ->
+                            startActivity(HelpActivity::class.intent)
+                        SettingsDesign.Request.StartAbout -> {
+                            // About is handled here directly
+                            startActivity(HelpActivity::class.intent)
+                        }
                     }
                 }
             }

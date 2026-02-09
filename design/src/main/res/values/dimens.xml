@@ -13,12 +13,12 @@
 
     <!--  Toolbar  -->
     <dimen name="toolbar_height">56dp</dimen>
-    <dimen name="toolbar_elevation">5dp</dimen>
+    <dimen name="toolbar_elevation">0dp</dimen>
     <dimen name="toolbar_image_action_padding">5dp</dimen>
 
     <!--  Tab Layout  -->
     <dimen name="tab_layout_height">48dp</dimen>
-    <dimen name="tab_layout_elevation">5dp</dimen>
+    <dimen name="tab_layout_elevation">0dp</dimen>
 
     <!--  Bottom Sheet  -->
     <dimen name="bottom_sheet_background_padding_top">10dp</dimen>
@@ -45,8 +45,8 @@
     <dimen name="item_midden_margin">10dp</dimen>
 
     <!-- Large Card -->
-    <dimen name="large_action_card_radius">8dp</dimen>
-    <dimen name="large_action_card_elevation">5dp</dimen>
+    <dimen name="large_action_card_radius">16dp</dimen>
+    <dimen name="large_action_card_elevation">0dp</dimen>
     <dimen name="large_action_card_min_height">85dp</dimen>
 
     <!-- Tips -->
@@ -59,7 +59,7 @@
     <!-- Main Design -->
     <dimen name="main_card_margin_vertical">5dp</dimen>
     <dimen name="main_label_margin_vertical">2dp</dimen>
-    <dimen name="main_padding_horizontal">30dp</dimen>
+    <dimen name="main_padding_horizontal">20dp</dimen>
     <dimen name="main_logo_size">50dp</dimen>
     <dimen name="main_top_banner_height">90dp</dimen>
 
@@ -71,7 +71,7 @@
     <dimen name="proxy_text_margin_grid3">5dp</dimen>
     <dimen name="proxy_text_size">12sp</dimen>
     <dimen name="proxy_text_size_grid3">11sp</dimen>
-    <dimen name="proxy_card_radius">5dp</dimen>
+    <dimen name="proxy_card_radius">12dp</dimen>
     <dimen name="proxy_card_offset">0dp</dimen>
 
     <!-- Properties Design -->

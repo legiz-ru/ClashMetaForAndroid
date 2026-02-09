@@ -9,6 +9,9 @@
             name="clashRunning"
             type="boolean" />
         <variable
+            name="hasProfiles"
+            type="boolean" />
+        <variable
             name="forwarded"
             type="String" />
         <variable
@@ -18,13 +21,31 @@
             name="profileName"
             type="String" />
         <variable
+            name="hasProviders"
+            type="boolean" />
+        <variable
             name="colorClashStarted"
             type="int" />
         <variable
             name="colorClashStopped"
             type="int" />
         <variable
-            name="hasProviders"
+            name="profileTrafficUsed"
+            type="String" />
+        <variable
+            name="profileTrafficTotal"
+            type="String" />
+        <variable
+            name="profileExpire"
+            type="String" />
+        <variable
+            name="profileUpdated"
+            type="String" />
+        <variable
+            name="hasTrafficInfo"
+            type="boolean" />
+        <variable
+            name="hasExpireInfo"
             type="boolean" />
 
         <import type="android.view.View" />
@@ -37,117 +58,520 @@
         android:paddingStart="@{self.surface.insets.start}"
         android:paddingEnd="@{self.surface.insets.end}">
 
-        <ScrollView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scrollbars="none">
+            android:orientation="vertical">
 
-            <LinearLayout
+            <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:animateLayoutChanges="true"
-                android:clipToPadding="false"
-                android:orientation="vertical"
-                android:paddingHorizontal="@dimen/main_padding_horizontal"
-                android:paddingTop="@{self.surface.insets.top}"
-                android:paddingBottom="@{self.surface.insets.bottom}">
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:scrollbars="none"
+                android:fillViewport="true">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:minHeight="@dimen/main_top_banner_height"
-                    android:orientation="horizontal">
+                    android:animateLayoutChanges="true"
+                    android:clipToPadding="false"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/main_padding_horizontal"
+                    android:paddingTop="@{self.surface.insets.top}"
+                    android:paddingBottom="16dp">
 
-                    <FrameLayout
-                        android:layout_width="@dimen/large_item_header_layout_size"
-                        android:layout_height="@dimen/large_item_header_layout_size">
-
-                        <View
-                            android:layout_width="@dimen/main_logo_size"
-                            android:layout_height="@dimen/main_logo_size"
-                            android:layout_gravity="center"
-                            android:background="@drawable/ic_clash" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- ========== HEADER: Logo + App Name ========== -->
+                    <LinearLayout
+                        android:id="@+id/header_layout"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/application_name"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6" />
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/main_top_banner_height"
+                        android:orientation="horizontal"
+                        android:visibility="@{clashRunning ? View.GONE : View.VISIBLE}">
+
+                        <FrameLayout
+                            android:layout_width="@dimen/large_item_header_layout_size"
+                            android:layout_height="@dimen/large_item_header_layout_size">
+
+                            <View
+                                android:layout_width="@dimen/main_logo_size"
+                                android:layout_height="@dimen/main_logo_size"
+                                android:layout_gravity="center"
+                                android:background="@drawable/ic_clash" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/application_name"
+                            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
+                    </LinearLayout>
+
+                    <!-- ========== ONBOARDING STATE (no profiles) ========== -->
+                    <LinearLayout
+                        android:id="@+id/onboarding_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:visibility="@{!hasProfiles &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="48dp"
+                            android:text="@string/welcome"
+                            android:textAppearance="@style/TextAppearance.Material3.HeadlineLarge"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:alpha="0.7"
+                            android:text="@string/add_first_profile"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
+                        <FrameLayout
+                            android:layout_width="120dp"
+                            android:layout_height="120dp"
+                            android:layout_marginTop="48dp"
+                            android:background="@drawable/bg_power_button"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackgroundBorderless"
+                            android:onClick="@{() -> self.request(Request.OpenProfiles)}">
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_baseline_add"
+                                android:contentDescription="@string/add_profile"
+                                app:tint="@android:color/white" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:alpha="0.7"
+                            android:text="@string/add_profile"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                    </LinearLayout>
+
+                    <!-- ========== PROFILE CARD (disconnected state) ========== -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/profile_card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:visibility="@{hasProfiles &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}"
+                        app:cardBackgroundColor="@color/color_card_surface"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <!-- Profile header: refresh + name + dropdown -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:onClick="@{() -> self.request(Request.UpdateProfile)}"
+                                    android:src="@drawable/ic_baseline_sync"
+                                    android:contentDescription="@string/update"
+                                    app:tint="?attr/colorControlNormal" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:gravity="center"
+                                    android:text="@{profileName != null ? profileName : @string/profile}"
+                                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:onClick="@{() -> self.request(Request.ManageProfiles)}"
+                                    android:src="@drawable/ic_baseline_expand_more"
+                                    android:contentDescription="@string/manage_profiles"
+                                    app:tint="?attr/colorControlNormal" />
+                            </LinearLayout>
+
+                            <!-- Traffic used -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:visibility="@{hasTrafficInfo ? View.VISIBLE : View.GONE}">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/traffic_used"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                                    android:alpha="0.7" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@{profileTrafficUsed}"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                            </LinearLayout>
+
+                            <!-- Traffic available -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:visibility="@{hasTrafficInfo ? View.VISIBLE : View.GONE}">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/traffic_available"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                                    android:alpha="0.7" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@{profileTrafficTotal}"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                            </LinearLayout>
+
+                            <!-- Expires -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:visibility="@{hasExpireInfo ? View.VISIBLE : View.GONE}">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/expires"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                                    android:alpha="0.7" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@{profileExpire}"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                            </LinearLayout>
+
+                            <!-- Updated -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/updated"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                                    android:alpha="0.7" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@{profileUpdated}"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                            </LinearLayout>
+
+                            <!-- Action icons row -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp"
+                                android:gravity="center"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:layout_marginHorizontal="12dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
+                                    android:padding="6dp"
+                                    android:src="@drawable/ic_baseline_edit"
+                                    android:contentDescription="@string/edit"
+                                    app:tint="?attr/colorControlNormal" />
+
+                                <ImageView
+                                    android:layout_width="36dp"
+                                    android:layout_height="36dp"
+                                    android:layout_marginHorizontal="12dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:onClick="@{() -> self.request(Request.DeleteProfile)}"
+                                    android:padding="6dp"
+                                    android:src="@drawable/ic_baseline_delete"
+                                    android:contentDescription="@string/delete"
+                                    app:tint="?attr/colorControlNormal" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- ========== POWER BUTTON (disconnected, has profile) ========== -->
+                    <LinearLayout
+                        android:id="@+id/power_button_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_marginTop="32dp"
+                        android:orientation="vertical"
+                        android:visibility="@{hasProfiles &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}">
+
+                        <FrameLayout
+                            android:layout_width="120dp"
+                            android:layout_height="120dp"
+                            android:background="@drawable/bg_power_button"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackgroundBorderless"
+                            android:onClick="@{() -> self.request(Request.ToggleStatus)}">
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_power"
+                                android:contentDescription="@string/tap_to_start"
+                                app:tint="@android:color/white" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Off"
+                            android:alpha="0.7"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                    </LinearLayout>
+
+                    <!-- ========== CONNECTED STATE ========== -->
+
+                    <!-- Compact profile info bar -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/compact_profile_bar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
+                        app:cardBackgroundColor="@color/color_card_surface"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:drawableStart="@drawable/ic_baseline_swap_vert"
+                                android:drawablePadding="8dp"
+                                android:text="@{forwarded}"
+                                android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="16dp"
+                                android:drawableStart="@drawable/ic_baseline_update"
+                                android:drawablePadding="8dp"
+                                android:text="@{profileExpire != null ? profileExpire : @string/running}"
+                                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                                android:visibility="@{hasExpireInfo ? View.VISIBLE : View.GONE}" />
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="8dp"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:onClick="@{() -> self.request(Request.ManageProfiles)}"
+                                android:src="@drawable/ic_baseline_expand_more"
+                                android:contentDescription="@string/manage_profiles"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Proxy card (connected) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/proxy_card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
+                        app:cardBackgroundColor="@color/color_card_surface"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:onClick="@{() -> self.request(Request.OpenProxy)}">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:padding="16dp">
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:padding="4dp"
+                                android:src="@drawable/ic_baseline_vpn_lock"
+                                android:contentDescription="@string/proxy"
+                                app:tint="?attr/colorPrimary" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/proxy"
+                                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:alpha="0.7"
+                                    android:text="@{mode}"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
+                            </LinearLayout>
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_baseline_chevron_right"
+                                android:contentDescription="@string/proxy"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Providers card (connected, has providers) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/providers_card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="@{clashRunning &amp;&amp; hasProviders ? View.VISIBLE : View.GONE}"
+                        app:cardBackgroundColor="@color/color_card_surface"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:onClick="@{() -> self.request(Request.OpenProviders)}">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:padding="16dp">
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:padding="4dp"
+                                android:src="@drawable/ic_baseline_swap_vertical_circle"
+                                android:contentDescription="@string/providers"
+                                app:tint="?attr/colorPrimary" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:layout_weight="1"
+                                android:text="@string/providers"
+                                android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_baseline_chevron_right"
+                                android:contentDescription="@string/providers"
+                                app:tint="?attr/colorControlNormal" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                 </LinearLayout>
+            </ScrollView>
 
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.ToggleStatus)}"
-                    android:theme="@style/AppThemeDark"
-                    app:cardBackgroundColor="@{clashRunning ? colorClashStarted : colorClashStopped}"
-                    app:icon="@{clashRunning ? @drawable/ic_outline_check_circle : @drawable/ic_outline_not_interested}"
-                    app:subtext="@{clashRunning ? @string/format_traffic_forwarded(forwarded) : @string/tap_to_start}"
-                    app:text="@{clashRunning ? @string/running : @string/stopped}" />
+            <!-- ========== BOTTOM NAVIGATION BAR ========== -->
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottom_nav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="@{self.surface.insets.bottom}"
+                app:menu="@menu/bottom_nav_menu"
+                app:labelVisibilityMode="labeled" />
 
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenProxy)}"
-                    android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-                    app:icon="@drawable/ic_baseline_apps"
-                    app:subtext="@{mode}"
-                    app:text="@string/proxy" />
+        </LinearLayout>
 
-                <com.github.kr328.clash.design.view.LargeActionCard
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_card_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenProfiles)}"
-                    app:icon="@drawable/ic_baseline_view_list"
-                    app:subtext="@{profileName != null ? @string/format_profile_activated(profileName) : @string/not_selected}"
-                    app:text="@string/profile" />
+        <!-- ========== DISCONNECT FAB (connected state) ========== -->
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/disconnect_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="80dp"
+            android:onClick="@{() -> self.request(Request.ToggleStatus)}"
+            android:text="@string/disconnect"
+            android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
+            app:icon="@drawable/ic_power" />
 
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenProviders)}"
-                    android:visibility="@{clashRunning &amp;&amp; hasProviders ? View.VISIBLE : View.GONE}"
-                    app:icon="@drawable/ic_baseline_swap_vertical_circle"
-                    app:text="@string/providers" />
-
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenLogs)}"
-                    app:icon="@drawable/ic_baseline_assignment"
-                    app:text="@string/logs" />
-
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenSettings)}"
-                    app:icon="@drawable/ic_baseline_settings"
-                    app:text="@string/settings" />
-
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenHelp)}"
-                    app:icon="@drawable/ic_baseline_help_center"
-                    app:text="@string/help" />
-
-                <com.github.kr328.clash.design.view.LargeActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="@dimen/main_label_margin_vertical"
-                    android:onClick="@{() -> self.request(Request.OpenAbout)}"
-                    app:icon="@drawable/ic_baseline_info"
-                    app:text="@string/about" />
-            </LinearLayout>
-        </ScrollView>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
