@@ -2,7 +2,7 @@
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
     <data>
         <variable
-            name="groupName"
+            name="groupTitle"
             type="String" />
     </data>
 
@@ -29,7 +29,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@{groupName}"
+                android:text="@{groupTitle}"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body1" />
 
             <ImageView

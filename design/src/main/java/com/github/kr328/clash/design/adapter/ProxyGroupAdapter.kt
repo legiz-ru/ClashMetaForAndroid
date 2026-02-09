@@ -45,7 +45,7 @@ class ProxyGroupAdapter(
         val binding = holder.binding
         val expanded = expandedStates[position]
 
-        binding.groupName = groupNames[position]
+        binding.groupTitle = groupNames[position]
         binding.proxyList.adapter = adapters[position]
         binding.proxyList.visibility = if (expanded) View.VISIBLE else View.GONE
         binding.expandIcon.rotation = if (expanded) 90f else 0f
