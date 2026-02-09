@@ -29,6 +29,7 @@ import com.github.kr328.clash.design.util.toBytesString
 import com.github.kr328.clash.service.model.Profile
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -172,6 +173,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
             val dp = context.resources.displayMetrics.density
             val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+            val primaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimaryContainer)
+            val onPrimaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimaryContainer)
             val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
             val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
@@ -191,7 +194,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     }
                     radius = 16 * dp
                     cardElevation = 0f
-                    setCardBackgroundColor(surfaceVariantColor)
+                    setCardBackgroundColor(if (isExpanded) primaryContainerColor else surfaceVariantColor)
                 }
 
                 val cardContent = LinearLayout(context).apply {
@@ -234,7 +237,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 val groupNameView = TextView(context).apply {
                     text = name
-                    setTextColor(onSurfaceColor)
+                    setTextColor(if (isExpanded) onPrimaryContainerColor else onSurfaceColor)
                     textSize = 15f
                     setTypeface(typeface, Typeface.BOLD)
                     maxLines = 1
@@ -243,7 +246,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 val selectedInfo = TextView(context).apply {
                     text = group.now
-                    setTextColor(onSurfaceVariantColor)
+                    setTextColor(if (isExpanded) onPrimaryContainerColor else onSurfaceVariantColor)
                     textSize = 12f
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
@@ -253,6 +256,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 nameColumn.addView(selectedInfo)
 
                 // Proxy count badge
+                val badgeColor = if (isExpanded) onPrimaryContainerColor else primaryColor
                 val countBadge = TextView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -262,13 +266,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     }
                     text = "${group.proxies.size}"
                     textSize = 12f
-                    setTextColor(primaryColor)
+                    setTextColor(badgeColor)
                     gravity = Gravity.CENTER
                     setPadding((8 * dp).toInt(), (2 * dp).toInt(), (8 * dp).toInt(), (2 * dp).toInt())
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = 10 * dp
-                        setStroke((1 * dp).toInt(), primaryColor)
+                        setStroke((1 * dp).toInt(), badgeColor)
                     }
                 }
 
@@ -276,7 +280,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 val chevron = ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
                     setImageResource(R.drawable.ic_mdi_chevron_right)
-                    imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+                    imageTintList = ColorStateList.valueOf(if (isExpanded) onPrimaryContainerColor else onSurfaceVariantColor)
                     rotation = if (isExpanded) 90f else 0f
                 }
 
@@ -399,10 +403,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         expandedGroups.remove(name)
                         proxyListContainer.visibility = View.GONE
                         chevron.animate().rotation(0f).setDuration(200).start()
+                        card.setCardBackgroundColor(surfaceVariantColor)
+                        groupNameView.setTextColor(onSurfaceColor)
+                        selectedInfo.setTextColor(onSurfaceVariantColor)
+                        chevron.imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+                        countBadge.setTextColor(primaryColor)
+                        (countBadge.background as GradientDrawable).setStroke((1 * dp).toInt(), primaryColor)
                     } else {
                         expandedGroups.add(name)
                         proxyListContainer.visibility = View.VISIBLE
                         chevron.animate().rotation(90f).setDuration(200).start()
+                        card.setCardBackgroundColor(primaryContainerColor)
+                        groupNameView.setTextColor(onPrimaryContainerColor)
+                        selectedInfo.setTextColor(onPrimaryContainerColor)
+                        chevron.imageTintList = ColorStateList.valueOf(onPrimaryContainerColor)
+                        countBadge.setTextColor(onPrimaryContainerColor)
+                        (countBadge.background as GradientDrawable).setStroke((1 * dp).toInt(), onPrimaryContainerColor)
                     }
                 }
 
@@ -455,6 +471,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
                 else -> false
             }
+        }
+
+        // Position disconnect FAB above bottom nav dynamically
+        binding.bottomNav.post {
+            val dp = context.resources.displayMetrics.density
+            val params = binding.disconnectFab.layoutParams as CoordinatorLayout.LayoutParams
+            params.bottomMargin = binding.bottomNav.height + (12 * dp).toInt()
+            binding.disconnectFab.layoutParams = params
         }
     }
 
