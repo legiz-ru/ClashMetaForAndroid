@@ -20,7 +20,7 @@
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
-        android:banner="@mipmap/ic_banner"
+        android:banner="@drawable/ic_banner"
         android:fullBackupContent="@xml/full_backup_content"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/application_name"
@@ -76,6 +76,7 @@
 
                 <data android:scheme="clash"/>
                 <data android:scheme="clashmeta"/>
+                <data android:scheme="prizrak-box"/>
                 <data android:host="install-config"/>
             </intent-filter>
             <intent-filter>
@@ -211,7 +212,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SECRET_CODE" />
-                <!-- 252746382 is the name of Clash Meta in T9 -->
+                <!-- 252746382 is the name of Prizrak-Box in T9 -->
                 <data android:scheme="android_secret_code" android:host="252746382" />
             </intent-filter>
         </receiver>
