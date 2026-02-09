@@ -4,9 +4,13 @@
     <data>
         <variable
             name="master"
-            type="com.github.kr328.clash.design.MainDesign" />
+            type="com.github.kr328.clash.design.ProfilesDesign" />
 
-        <import type="com.github.kr328.clash.design.MainDesign.Request" />
+        <variable
+            name="dialog"
+            type="android.app.Dialog" />
+
+        <import type="com.github.kr328.clash.design.ProfilesDesign.Request" />
     </data>
 
     <LinearLayout
@@ -44,7 +48,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
-                android:onClick="@{() -> master.request(Request.AddFromClipboard)}">
+                android:onClick="@{() -> master.requestSheet(dialog, Request.AddFromClipboard.INSTANCE)}">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -83,7 +87,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
-                android:onClick="@{() -> master.request(Request.ScanQrCode)}">
+                android:onClick="@{() -> master.requestSheet(dialog, Request.ScanQrCode.INSTANCE)}">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -122,7 +126,7 @@
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
-            android:onClick="@{() -> master.request(Request.AddFromFile)}">
+            android:onClick="@{() -> master.requestSheet(dialog, Request.AddFromFile.INSTANCE)}">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -160,7 +164,7 @@
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
-            android:onClick="@{() -> master.request(Request.AddManually)}">
+            android:onClick="@{() -> master.requestSheet(dialog, Request.AddManually.INSTANCE)}">
 
             <LinearLayout
                 android:layout_width="match_parent"

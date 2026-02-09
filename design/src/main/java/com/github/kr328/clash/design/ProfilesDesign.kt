@@ -8,6 +8,7 @@ import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import com.github.kr328.clash.design.adapter.ProfileAdapter
 import com.github.kr328.clash.design.databinding.DesignProfilesBinding
+import com.github.kr328.clash.design.databinding.DesignSheetAddProfileProfilesBinding
 import com.github.kr328.clash.design.databinding.DialogProfilesMenuBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.github.kr328.clash.design.ui.ToastDuration
@@ -20,6 +21,10 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
     sealed class Request {
         object UpdateAll : Request()
         object Create : Request()
+        object AddFromClipboard : Request()
+        object ScanQrCode : Request()
+        object AddFromFile : Request()
+        object AddManually : Request()
         data class Active(val profile: Profile) : Request()
         data class Update(val profile: Profile) : Request()
         data class Edit(val profile: Profile) : Request()
@@ -111,7 +116,25 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
     }
 
     fun requestCreate() {
-        requests.trySend(Request.Create)
+        showAddProfileSheet()
+    }
+
+    private fun showAddProfileSheet() {
+        val dialog = AppBottomSheetDialog(context)
+
+        val sheetBinding = DesignSheetAddProfileProfilesBinding
+            .inflate(context.layoutInflater, dialog.window?.decorView as ViewGroup?, false)
+
+        sheetBinding.master = this
+        sheetBinding.dialog = dialog
+
+        dialog.setContentView(sheetBinding.root)
+        dialog.show()
+    }
+
+    fun requestSheet(dialog: Dialog, request: Request) {
+        dialog.dismiss()
+        requests.trySend(request)
     }
 
     private fun requestActive(profile: Profile) {
