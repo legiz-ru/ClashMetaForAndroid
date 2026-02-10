@@ -369,14 +369,29 @@ object ProfileProcessor {
                     .readTimeout(10, TimeUnit.SECONDS)
                     .build()
                 val baseRequest = buildProfileRequest(context, url)
-                val request = baseRequest.newBuilder().head().build()
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext UrlHeaders()
-                    val title = response.headers["profile-title"]?.let {
-                        decodeHeaderValue(it)
-                    } ?: ""
+
+                fun parse(response: okhttp3.Response): UrlHeaders {
+                    if (!response.isSuccessful) return UrlHeaders()
+                    val title = response.headers["profile-title"]?.let { decodeHeaderValue(it) } ?: ""
                     val interval = response.headers["profile-update-interval"]?.trim()?.toIntOrNull() ?: 0
-                    UrlHeaders(title, interval)
+                    return UrlHeaders(title, interval)
+                }
+
+                // Some servers don't support HEAD correctly. Fallback to lightweight GET.
+                val headRequest = baseRequest.newBuilder().head().build()
+                client.newCall(headRequest).execute().use { response ->
+                    val headers = parse(response)
+                    if (headers.title.isNotEmpty() || headers.updateIntervalHours > 0) {
+                        return@withContext headers
+                    }
+                }
+
+                val getRequest = baseRequest.newBuilder()
+                    .header("Range", "bytes=0-0")
+                    .get()
+                    .build()
+                client.newCall(getRequest).execute().use { response ->
+                    parse(response)
                 }
             } catch (_: Exception) {
                 UrlHeaders()

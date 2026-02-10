@@ -110,7 +110,6 @@ class AppSettingsDesign(
 
             switch(
                 value = uiStore::sendHwid,
-                icon = R.drawable.ic_baseline_fingerprint,
                 title = R.string.send_hwid_title,
                 summary = R.string.send_hwid_desc,
             )

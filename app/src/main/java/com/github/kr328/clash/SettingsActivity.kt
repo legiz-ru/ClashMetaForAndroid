@@ -41,6 +41,12 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(HelpActivity::class.intent)
                         }
                         SettingsDesign.Request.GoHome -> {
+                            startActivity(
+                                MainActivity::class.intent
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                            )
                             finish()
                             overridePendingTransition(0, 0)
                         }

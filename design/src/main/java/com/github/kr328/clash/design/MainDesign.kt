@@ -1,5 +1,6 @@
 package com.github.kr328.clash.design
 
+import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -539,6 +540,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             .inflate(context.layoutInflater, dialog.window?.decorView as ViewGroup?, false)
 
         sheetBinding.master = this
+        sheetBinding.dialog = dialog
 
         dialog.setContentView(sheetBinding.root)
         dialog.show()
@@ -575,6 +577,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.disconnectFab.layoutParams = params
             }
         })
+    }
+
+    fun requestSheet(dialog: Dialog, request: Request) {
+        dialog.dismiss()
+        requests.trySend(request)
     }
 
     fun request(request: Request) {

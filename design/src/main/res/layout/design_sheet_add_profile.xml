@@ -5,6 +5,9 @@
         <variable
             name="master"
             type="com.github.kr328.clash.design.MainDesign" />
+        <variable
+            name="dialog"
+            type="android.app.Dialog" />
 
         <import type="com.github.kr328.clash.design.MainDesign.Request" />
     </data>
@@ -44,7 +47,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
-                android:onClick="@{() -> master.request(Request.AddFromClipboard)}">
+                android:onClick="@{() -> master.requestSheet(dialog, Request.AddFromClipboard)}">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -83,7 +86,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
-                android:onClick="@{() -> master.request(Request.ScanQrCode)}">
+                android:onClick="@{() -> master.requestSheet(dialog, Request.ScanQrCode)}">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -122,7 +125,7 @@
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
-            android:onClick="@{() -> master.request(Request.AddFromFile)}">
+            android:onClick="@{() -> master.requestSheet(dialog, Request.AddFromFile)}">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -160,7 +163,7 @@
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
-            android:onClick="@{() -> master.request(Request.AddManually)}">
+            android:onClick="@{() -> master.requestSheet(dialog, Request.AddManually)}">
 
             <LinearLayout
                 android:layout_width="match_parent"
