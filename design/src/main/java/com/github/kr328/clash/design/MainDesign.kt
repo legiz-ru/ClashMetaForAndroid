@@ -86,6 +86,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var pendingSelectName: String? = null
     private var pendingUrlTestGroup: String? = null
 
+    // Easter egg: tap counter for summer mode
+    private var logoTapCount = 0
+    private val logoTapTimeout = 2000L // 2 seconds timeout between taps
+    private var logoTapTimeoutRunnable: Runnable? = null
+
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
             binding.profileName = name
@@ -596,6 +601,32 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         binding.colorClashStarted = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         binding.colorClashStopped = context.resolveThemedColor(R.attr.colorClashStopped)
+
+        // Easter egg: 15 taps on logo unlocks Summer mode
+        binding.appLogo.setOnClickListener {
+            logoTapTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+
+            logoTapCount++
+
+            if (logoTapCount >= 15) {
+                val uiStore = com.github.kr328.clash.design.store.UiStore(context)
+                uiStore.summerModeUnlocked = true
+                logoTapCount = 0
+
+                android.widget.Toast.makeText(
+                    context,
+                    "🥒 Всегда Лето разблокирован! Проверьте настройки темы",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            } else {
+                // Reset counter if timeout
+                logoTapTimeoutRunnable = Runnable {
+                    logoTapCount = 0
+                }.also {
+                    mainHandler.postDelayed(it, logoTapTimeout)
+                }
+            }
+        }
 
         binding.hasProfiles = false
         binding.hasTrafficInfo = false

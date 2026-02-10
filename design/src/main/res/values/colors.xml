@@ -74,4 +74,31 @@
     <color name="color_card_surface">#FF2B2B2B</color>
     <color name="color_bottom_nav_dark">#FF141414</color>
     <color name="color_bottom_nav_indicator">#FF2A3A4A</color>
+
+    <!-- Summer Theme Colors (Green palette) 🥒 -->
+    <color name="md3_summer_primary">#FF43A047</color>
+    <color name="md3_summer_onPrimary">#FFFFFFFF</color>
+    <color name="md3_summer_primaryContainer">#FFC8E6C9</color>
+    <color name="md3_summer_onPrimaryContainer">#FF1B5E20</color>
+    <color name="md3_summer_secondary">#FF66BB6A</color>
+    <color name="md3_summer_onSecondary">#FFFFFFFF</color>
+    <color name="md3_summer_secondaryContainer">#FFE8F5E9</color>
+    <color name="md3_summer_onSecondaryContainer">#FF2E7D32</color>
+    <color name="md3_summer_tertiary">#FF81C784</color>
+    <color name="md3_summer_onTertiary">#FFFFFFFF</color>
+    <color name="md3_summer_tertiaryContainer">#FFA5D6A7</color>
+    <color name="md3_summer_onTertiaryContainer">#FF388E3C</color>
+    <color name="md3_summer_error">#FFB3261E</color>
+    <color name="md3_summer_onError">#FFFFFFFF</color>
+    <color name="md3_summer_background">#FFFFFBF5</color>
+    <color name="md3_summer_onBackground">#FF1B1B1F</color>
+    <color name="md3_summer_surface">#FFFAFFF8</color>
+    <color name="md3_summer_onSurface">#FF1B1B1F</color>
+    <color name="md3_summer_surfaceVariant">#FFE0F2E9</color>
+    <color name="md3_summer_onSurfaceVariant">#FF37474F</color>
+    <color name="md3_summer_outline">#FF689F38</color>
+    <color name="md3_summer_outlineVariant">#FFC5E1A5</color>
+    <color name="md3_summer_surfaceContainer">#FFF1F8F4</color>
+    <color name="md3_summer_surfaceContainerHigh">#FFE8F5E9</color>
+    <color name="md3_summer_surfaceContainerHighest">#FFDCEDC8</color>
 </resources>

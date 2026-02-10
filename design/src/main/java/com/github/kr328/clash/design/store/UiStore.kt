@@ -82,6 +82,11 @@ class UiStore(context: Context) {
         defaultValue = true,
     )
 
+    var summerModeUnlocked: Boolean by store.boolean(
+        key = "summer_mode_unlocked",
+        defaultValue = false,
+    )
+
     companion object {
         private const val PREFERENCE_NAME = "ui"
     }
