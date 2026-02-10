@@ -43,23 +43,23 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
-    sealed class Request {
-        object ToggleStatus : Request()
-        object OpenProxy : Request()
-        object OpenProfiles : Request()
-        object OpenProviders : Request()
-        object OpenSettings : Request()
-        object ManageProfiles : Request()
-        object UpdateProfile : Request()
-        object DeleteProfile : Request()
-        object AddFromClipboard : Request()
-        object ScanQrCode : Request()
-        object AddFromFile : Request()
-        object AddManually : Request()
-        object OpenHelp : Request()
-        object OpenAbout : Request()
-        object SelectProxy : Request()
-        data class UrlTest(val groupName: String) : Request()
+    enum class Request {
+        ToggleStatus,
+        OpenProxy,
+        OpenProfiles,
+        OpenProviders,
+        OpenSettings,
+        ManageProfiles,
+        UpdateProfile,
+        DeleteProfile,
+        AddFromClipboard,
+        ScanQrCode,
+        AddFromFile,
+        AddManually,
+        OpenHelp,
+        OpenAbout,
+        SelectProxy,
+        UrlTest,
     }
 
     private val binding = DesignMainBinding
@@ -84,6 +84,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     private var pendingSelectGroup: String? = null
     private var pendingSelectName: String? = null
+    private var pendingUrlTestGroup: String? = null
 
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
@@ -406,7 +407,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                     setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
                     setOnClickListener {
-                        requests.trySend(Request.UrlTest(name))
+                        pendingUrlTestGroup = name
+                        requests.trySend(Request.UrlTest)
                     }
                 }
 
@@ -640,6 +642,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         pendingSelectName = null
 
         return group to name
+    }
+
+    fun consumePendingUrlTestGroup(): String? {
+        val group = pendingUrlTestGroup ?: return null
+        pendingUrlTestGroup = null
+        return group
     }
 
     fun request(request: Request) {

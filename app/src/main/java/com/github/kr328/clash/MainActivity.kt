@@ -154,10 +154,11 @@ class MainActivity : BaseActivity<MainDesign>() {
                             }
                             design.fetchProxyGroups()
                         }
-                        is MainDesign.Request.UrlTest -> {
+                        MainDesign.Request.UrlTest -> {
+                            val groupName = design.consumePendingUrlTestGroup() ?: return@onReceive
                             launch {
                                 withClash {
-                                    healthCheck(it.groupName)
+                                    healthCheck(groupName)
                                 }
                                 design.fetchProxyGroups()
                             }
