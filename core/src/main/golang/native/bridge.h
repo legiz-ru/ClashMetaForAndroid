@@ -51,3 +51,10 @@ extern void log_warn(char *msg);
 extern void log_debug(char *msg);
 
 extern void log_verbose(char *msg);
+
+// Profile conversion functions
+extern char *detectProfileFormat(c_string content);
+
+extern void convertProfileToClash(void *completable, c_string content, c_string source_format);
+
+extern char *validateClashProfile(c_string content);

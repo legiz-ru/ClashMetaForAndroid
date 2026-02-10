@@ -522,8 +522,46 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
 JNIEXPORT jstring JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeCoreVersion(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
-    
+
     char* Version = make_String(GIT_VERSION);
 
     return new_string(Version);
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeDetectProfileFormat(JNIEnv *env, jobject thiz,
+                                                                         jstring content) {
+    TRACE_METHOD();
+
+    scoped_string _content = get_string(content);
+
+    scoped_string format = detectProfileFormat(_content);
+
+    return new_string(format);
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeConvertProfileToClash(JNIEnv *env, jobject thiz,
+                                                                           jobject completable,
+                                                                           jstring content,
+                                                                           jstring source_format) {
+    TRACE_METHOD();
+
+    jobject _completable = new_global(completable);
+    scoped_string _content = get_string(content);
+    scoped_string _source_format = get_string(source_format);
+
+    convertProfileToClash(_completable, _content, _source_format);
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeValidateClashProfile(JNIEnv *env, jobject thiz,
+                                                                          jstring content) {
+    TRACE_METHOD();
+
+    scoped_string _content = get_string(content);
+
+    scoped_string result = validateClashProfile(_content);
+
+    return new_string(result);
 }

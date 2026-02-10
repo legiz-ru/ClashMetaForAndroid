@@ -50,6 +50,15 @@ object Bridge {
     external fun nativeSubscribeLogcat(callback: LogcatInterface)
     external fun nativeCoreVersion(): String
 
+    // Profile conversion functions
+    external fun nativeDetectProfileFormat(content: String): String
+    external fun nativeConvertProfileToClash(
+        completable: CompletableDeferred<String>,
+        content: String,
+        sourceFormat: String
+    )
+    external fun nativeValidateClashProfile(content: String): String
+
     private external fun nativeInit(home: String, versionName: String, sdkVersion: Int)
 
     init {
