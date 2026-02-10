@@ -87,8 +87,10 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(ProfilesActivity::class.intent)
                         MainDesign.Request.OpenProviders ->
                             startActivity(ProvidersActivity::class.intent)
-                        MainDesign.Request.OpenSettings ->
+                        MainDesign.Request.OpenSettings -> {
                             startActivity(SettingsActivity::class.intent)
+                            overridePendingTransition(0, 0)
+                        }
                         MainDesign.Request.ManageProfiles ->
                             startActivity(ProfilesActivity::class.intent)
                         MainDesign.Request.UpdateProfile -> {

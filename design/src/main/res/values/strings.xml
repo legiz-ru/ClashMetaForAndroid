@@ -81,6 +81,8 @@
     <string name="unavailable">Unavailable</string>
     <string name="empty_name">Empty Name</string>
     <string name="invalid_url">Invalid URL</string>
+    <string name="import_loading_activating">Loading and activating profile</string>
+    <string name="import_profile_failed">Profile import failed. Please check the configuration.</string>
     <string name="loading">Loading</string>
 
     <string name="format_fetching_configuration">Fetching configuration from \'%s\'</string>

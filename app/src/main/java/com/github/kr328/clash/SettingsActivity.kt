@@ -42,6 +42,7 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                         }
                         SettingsDesign.Request.GoHome -> {
                             finish()
+                            overridePendingTransition(0, 0)
                         }
                     }
                 }

@@ -1,9 +1,12 @@
 package com.github.kr328.clash.util
 
 import android.content.Context
+import android.widget.Toast
+import com.github.kr328.clash.MainActivity
 import com.github.kr328.clash.PropertiesActivity
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
+import com.github.kr328.clash.design.dialog.withModelProgressBar
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.model.Profile
 import java.util.UUID
@@ -25,12 +28,35 @@ suspend fun Context.importProfileFromUrl(url: String): UUID {
         }
     }
 
-    if (headers.title.isNotEmpty() && headers.updateIntervalHours > 0) {
-        // Auto-import: commit and activate
-        withProfile { commit(uuid, null) }
-        withProfile { setActive(queryByUUID(uuid)!!) }
+    val autoImported = headers.title.isNotEmpty() && headers.updateIntervalHours > 0
+
+    if (autoImported) {
+        withModelProgressBar {
+            configure {
+                isIndeterminate = true
+                text = getString(com.github.kr328.clash.design.R.string.import_loading_activating)
+            }
+
+            try {
+                withProfile { commit(uuid, null) }
+                withProfile { queryByUUID(uuid)?.let { setActive(it) } }
+            } catch (_: Exception) {
+                Toast.makeText(
+                    this@importProfileFromUrl,
+                    getString(com.github.kr328.clash.design.R.string.import_profile_failed),
+                    Toast.LENGTH_LONG
+                ).show()
+                startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                return@withModelProgressBar
+            }
+        }
+
+        startActivity(
+            MainActivity::class.intent
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        )
     } else {
-        // Open properties for manual editing
         startActivity(PropertiesActivity::class.intent.setUUID(uuid))
     }
 

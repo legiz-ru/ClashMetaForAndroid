@@ -25,8 +25,8 @@ import okhttp3.Request
 import android.provider.Settings
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.math.BigDecimal
-import java.net.URL
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -53,6 +53,33 @@ object ProfileProcessor {
     private val profileLock = Mutex()
     private val processLock = Mutex()
 
+    private fun prefetchProfileConfig(context: Context, source: String, targetConfigFile: File): Boolean {
+        return try {
+            val request = buildProfileRequest(context, source)
+            val client = OkHttpClient.Builder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return false
+
+                val body = response.body ?: return false
+                targetConfigFile.parentFile?.mkdirs()
+                targetConfigFile.outputStream().use { output ->
+                    body.byteStream().use { input ->
+                        input.copyTo(output)
+                    }
+                }
+                true
+            }
+        } catch (_: IOException) {
+            false
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     suspend fun apply(context: Context, uuid: UUID, callback: IFetchObserver? = null) {
         withContext(NonCancellable) {
             processLock.withLock {
@@ -71,10 +98,19 @@ object ProfileProcessor {
                     pending
                 }
 
-                val force = snapshot.type != Profile.Type.File
+                val prefetched = snapshot.type == Profile.Type.Url &&
+                        (snapshot.source.startsWith("https://", true) || snapshot.source.startsWith("http://", true)) &&
+                        prefetchProfileConfig(context, snapshot.source, context.processingDir.resolve("config.yaml"))
+
+                val fetchSource = if (prefetched) {
+                    context.processingDir.resolve("config.yaml").toURI().toString()
+                } else {
+                    snapshot.source
+                }
+                val force = if (prefetched) false else snapshot.type != Profile.Type.File
                 var cb = callback
 
-                Clash.fetchAndValid(context.processingDir, snapshot.source, force) {
+                Clash.fetchAndValid(context.processingDir, fetchSource, force) {
                     try {
                         cb?.updateStatus(it)
                     } catch (e: Exception) {
@@ -202,9 +238,19 @@ object ProfileProcessor {
                     imported
                 }
 
+                val prefetched = snapshot.type == Profile.Type.Url &&
+                        (snapshot.source.startsWith("https://", true) || snapshot.source.startsWith("http://", true)) &&
+                        prefetchProfileConfig(context, snapshot.source, context.processingDir.resolve("config.yaml"))
+
                 var cb = callback
 
-                Clash.fetchAndValid(context.processingDir, snapshot.source, true) {
+                val fetchSource = if (prefetched) {
+                    context.processingDir.resolve("config.yaml").toURI().toString()
+                } else {
+                    snapshot.source
+                }
+
+                Clash.fetchAndValid(context.processingDir, fetchSource, !prefetched) {
                     try {
                         cb?.updateStatus(it)
                     } catch (e: Exception) {

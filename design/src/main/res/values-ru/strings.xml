@@ -75,6 +75,8 @@
     <string name="unavailable">Недоступен</string>
     <string name="empty_name">Пустое название</string>
     <string name="invalid_url">Неверный URL</string>
+    <string name="import_loading_activating">Загрузка и активация профиля</string>
+    <string name="import_profile_failed">Не удалось импортировать профиль. Проверьте конфигурацию.</string>
     <string name="loading">Загрузка</string>
 
     <string name="format_fetching_configuration">Загрузка настроек из \'%s\'</string>
