@@ -14,13 +14,13 @@
     <!-- Left eye -->
     <path
         android:pathData="M436,206.1A41.5,74 7.04,1,1 519,215.3A41.5,74 7.04,1,1 436,206.1Z"
-        android:fillColor="#00000000"/>
+        android:fillColor="#000000"/>
     <!-- Right eye -->
     <path
         android:pathData="M582.2,196.4A41.5,74 352.96,1,1 664.7,186.2A41.5,74 352.96,1,1 582.2,196.4Z"
-        android:fillColor="#00000000"/>
+        android:fillColor="#000000"/>
     <!-- Mouth -->
     <path
         android:pathData="M504,364A30.5,54 0,1,1 565,364A30.5,54 0,1,1 504,364Z"
-        android:fillColor="#00000000"/>
+        android:fillColor="#000000"/>
 </vector>

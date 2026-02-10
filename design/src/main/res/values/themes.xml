@@ -175,7 +175,7 @@
         <item name="colorPrimaryDark">?attr/colorPrimary</item>
         <item name="colorControlActivated">?attr/colorPrimary</item>
         <item name="android:textColor">?attr/colorControlNormal</item>
-        <item name="android:windowBackground">@color/md3_summer_background</item>
+        <item name="android:windowBackground">@drawable/bg_summer_cucumber</item>
     </style>
 
     <style name="AppFullScreenDialogSummer" parent="AppFullScreenDialogSummerBase">
@@ -311,7 +311,7 @@
     </style>
 
     <style name="AppThemeSummerBase" parent="Theme.Material3.Light.NoActionBar">
-        <item name="android:windowBackground">@color/md3_summer_background</item>
+        <item name="android:windowBackground">@drawable/bg_summer_cucumber</item>
         <item name="android:ambientShadowAlpha">0.08</item>
         <item name="android:spotShadowAlpha">0.08</item>
 
