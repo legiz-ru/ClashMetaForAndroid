@@ -13,11 +13,11 @@
         android:fillColor="#E0E0E0"/>
     <!-- Left eye -->
     <path
-        android:pathData="M436,206.1A41.5,74 7.04,1,1 519,215.3A41.5,74 7.04,1,1 436,206.1Z"
+        android:pathData="M428,230A42,74 0,1,1 512,230A42,74 0,1,1 428,230Z"
         android:fillColor="#000000"/>
     <!-- Right eye -->
     <path
-        android:pathData="M582.2,196.4A41.5,74 352.96,1,1 664.7,186.2A41.5,74 352.96,1,1 582.2,196.4Z"
+        android:pathData="M578,230A42,74 0,1,1 662,230A42,74 0,1,1 578,230Z"
         android:fillColor="#000000"/>
     <!-- Mouth -->
     <path
