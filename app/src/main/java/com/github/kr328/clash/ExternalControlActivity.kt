@@ -25,7 +25,7 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
                 val url = uri.getQueryParameter("url") ?: return finish()
 
                 launch {
-                    importProfileFromUrl(url)
+                    importProfileFromUrl(url, forceAutoImport = true)
                     finish()
                 }
                 return

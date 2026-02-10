@@ -278,13 +278,31 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
             // Filter hidden groups on Kotlin side as safety net
             val visibleGroups = groups.filter { !it.second.hidden }
+            val groupMap = visibleGroups.toMap()
+
+            fun resolveSelectedLeaf(groupName: String, now: String, visited: MutableSet<String> = mutableSetOf()): Pair<String, Int> {
+                if (!visited.add(groupName)) return now to 0
+
+                val currentGroup = groupMap[groupName] ?: return now to 0
+                val selected = currentGroup.proxies.find { it.name == now }
+                    ?: return now to 0
+
+                if (!selected.type.group) {
+                    val selectedName = selected.title.ifEmpty { selected.name }
+                    return selectedName to selected.delay
+                }
+
+                val nestedGroupName = selected.name
+                val nestedGroup = groupMap[nestedGroupName] ?: return (selected.title.ifEmpty { selected.name }) to selected.delay
+                return resolveSelectedLeaf(nestedGroupName, nestedGroup.now, visited)
+            }
 
             for ((name, group) in visibleGroups) {
                 val isExpanded = expandedGroups.contains(name)
 
-                // Find the delay of the currently selected proxy
-                val selectedProxy = group.proxies.find { it.name == group.now }
-                val groupDelay = selectedProxy?.delay ?: 0
+                // Resolve selected leaf proxy (supports nested groups)
+                val (leafName, groupDelay) = resolveSelectedLeaf(name, group.now)
+                val selectedInfoText = "${leafName}·${name}"
 
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
@@ -344,7 +362,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
 
                 val selectedInfo = TextView(context).apply {
-                    text = group.now
+                    text = selectedInfoText
                     setTextColor(if (isExpanded) onPrimaryContainerColor else onSurfaceVariantColor)
                     textSize = 12f
                     maxLines = 1
@@ -363,28 +381,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     )).apply {
                     marginEnd = (8 * dp).toInt()
                 }
-
-                // Proxy count badge
-                val badgeColor = if (isExpanded) onPrimaryContainerColor else primaryColor
-                val countBadge = TextView(context).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        marginEnd = (8 * dp).toInt()
-                    }
-                    text = "${group.proxies.size}"
-                    textSize = 12f
-                    setTextColor(badgeColor)
-                    gravity = Gravity.CENTER
-                    setPadding((8 * dp).toInt(), (2 * dp).toInt(), (8 * dp).toInt(), (2 * dp).toInt())
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = 10 * dp
-                        setStroke((1 * dp).toInt(), badgeColor)
-                    }
-                }
-
                 // Chevron indicator (rotates when expanded)
                 val chevron = ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
@@ -396,7 +392,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 headerRow.addView(groupIcon)
                 headerRow.addView(nameColumn)
                 headerRow.addView(groupDelayView)
-                headerRow.addView(countBadge)
                 headerRow.addView(chevron)
                 cardContent.addView(headerRow)
 
@@ -420,6 +415,18 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 for (proxy in group.proxies) {
                     val isSelected = proxy.name == group.now
+                    val (proxyDisplayName, proxyDelay) = if (proxy.type.group) {
+                        val nestedGroup = groupMap[proxy.name]
+                        if (nestedGroup != null) {
+                            val (nestedLeafName, nestedDelay) = resolveSelectedLeaf(proxy.name, nestedGroup.now)
+                            "${nestedLeafName}·${proxy.name}" to nestedDelay
+                        } else {
+                            (proxy.title.ifEmpty { proxy.name }) to proxy.delay
+                        }
+                    } else {
+                        (proxy.title.ifEmpty { proxy.name }) to proxy.delay
+                    }
+
                     val proxyRow = LinearLayout(context).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
@@ -446,7 +453,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     }
 
                     val proxyNameView = TextView(context).apply {
-                        text = proxy.title.ifEmpty { proxy.name }
+                        text = proxyDisplayName
                         textSize = 14f
                         setTextColor(if (isSelected) primaryColor else onSurfaceColor)
                         maxLines = 1
@@ -464,7 +471,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     proxyInfo.addView(proxySubtitle)
 
                     // Delay indicator
-                    val delayView = createDelayText(dp, proxy.delay, useDots)
+                    val delayView = createDelayText(dp, proxyDelay, useDots)
 
                     proxyRow.addView(checkIcon)
                     proxyRow.addView(proxyInfo)
@@ -500,8 +507,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         groupNameView.setTextColor(onSurfaceColor)
                         selectedInfo.setTextColor(onSurfaceVariantColor)
                         chevron.imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
-                        countBadge.setTextColor(primaryColor)
-                        (countBadge.background as GradientDrawable).setStroke((1 * dp).toInt(), primaryColor)
                     } else {
                         expandedGroups.add(name)
                         proxyListContainer.visibility = View.VISIBLE
@@ -510,8 +515,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         groupNameView.setTextColor(onPrimaryContainerColor)
                         selectedInfo.setTextColor(onPrimaryContainerColor)
                         chevron.imageTintList = ColorStateList.valueOf(onPrimaryContainerColor)
-                        countBadge.setTextColor(onPrimaryContainerColor)
-                        (countBadge.background as GradientDrawable).setStroke((1 * dp).toInt(), onPrimaryContainerColor)
                     }
                 }
 

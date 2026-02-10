@@ -11,13 +11,18 @@ import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.model.Profile
 import java.util.UUID
 
+data class ProfileImportResult(
+    val uuid: UUID,
+    val autoImported: Boolean,
+)
+
 /**
- * Import a profile from URL. Checks profile-title and profile-update-interval headers.
- * If both are present, auto-commits and activates without showing PropertiesActivity.
- * Otherwise opens PropertiesActivity for manual editing.
- * Returns the UUID of the created profile.
+ * Import a profile from URL.
+ * - Auto-imports (commit + activate) when both headers are present.
+ * - If [forceAutoImport] is true (used for deeplink flow), it will also auto-import
+ *   even when headers are absent.
  */
-suspend fun Context.importProfileFromUrl(url: String): UUID {
+suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean = false): ProfileImportResult {
     val headers = ProfileProcessor.fetchUrlHeaders(this, url)
     val name = headers.title.ifEmpty { getString(com.github.kr328.clash.design.R.string.new_profile) }
     val intervalMs = if (headers.updateIntervalHours > 0) headers.updateIntervalHours.toLong() * 60 * 60 * 1000 else 0L
@@ -28,7 +33,8 @@ suspend fun Context.importProfileFromUrl(url: String): UUID {
         }
     }
 
-    val autoImported = headers.title.isNotEmpty() && headers.updateIntervalHours > 0
+    val hasAutoHeaders = headers.title.isNotEmpty() && headers.updateIntervalHours > 0
+    val autoImported = hasAutoHeaders || forceAutoImport
 
     if (autoImported) {
         withModelProgressBar {
@@ -60,5 +66,5 @@ suspend fun Context.importProfileFromUrl(url: String): UUID {
         startActivity(PropertiesActivity::class.intent.setUUID(uuid))
     }
 
-    return uuid
+    return ProfileImportResult(uuid, autoImported)
 }
