@@ -154,6 +154,14 @@ class MainActivity : BaseActivity<MainDesign>() {
                             }
                             design.fetchProxyGroups()
                         }
+                        is MainDesign.Request.UrlTest -> {
+                            launch {
+                                withClash {
+                                    healthCheck(it.groupName)
+                                }
+                                design.fetchProxyGroups()
+                            }
+                        }
                     }
                 }
                 if (clashRunning) {

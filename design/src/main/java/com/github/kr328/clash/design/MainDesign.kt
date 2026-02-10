@@ -43,22 +43,23 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
-    enum class Request {
-        ToggleStatus,
-        OpenProxy,
-        OpenProfiles,
-        OpenProviders,
-        OpenSettings,
-        ManageProfiles,
-        UpdateProfile,
-        DeleteProfile,
-        AddFromClipboard,
-        ScanQrCode,
-        AddFromFile,
-        AddManually,
-        OpenHelp,
-        OpenAbout,
-        SelectProxy,
+    sealed class Request {
+        object ToggleStatus : Request()
+        object OpenProxy : Request()
+        object OpenProfiles : Request()
+        object OpenProviders : Request()
+        object OpenSettings : Request()
+        object ManageProfiles : Request()
+        object UpdateProfile : Request()
+        object DeleteProfile : Request()
+        object AddFromClipboard : Request()
+        object ScanQrCode : Request()
+        object AddFromFile : Request()
+        object AddManually : Request()
+        object OpenHelp : Request()
+        object OpenAbout : Request()
+        object SelectProxy : Request()
+        data class UrlTest(val groupName: String) : Request()
     }
 
     private val binding = DesignMainBinding
@@ -72,6 +73,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     // Track expanded state of accordion groups
     private val expandedGroups = mutableSetOf<String>()
+
+    // Track URL testing state for each group
+    private val urlTestingGroups = mutableSetOf<String>()
 
     // Cache for loaded icons
     private val iconCache = ConcurrentHashMap<String, Bitmap?>()
@@ -274,8 +278,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
             val dp = context.resources.displayMetrics.density
             val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
-            val primaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimaryContainer)
-            val onPrimaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimaryContainer)
+            val secondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSecondaryContainer)
+            val onSecondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSecondaryContainer)
             val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
             val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
@@ -284,35 +288,33 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val visibleGroups = groups.filter { !it.second.hidden }
             val groupMap = visibleGroups.toMap()
 
-            fun resolveSelectedLeaf(groupName: String, now: String, visited: MutableSet<String> = mutableSetOf()): Pair<String, Int> {
-                if (!visited.add(groupName)) return now to 0
+            fun resolveSelectedLeaf(groupName: String, now: String, visited: MutableSet<String> = mutableSetOf()): Triple<String, String, Int> {
+                if (!visited.add(groupName)) return Triple(now, groupName, 0)
 
-                val currentGroup = groupMap[groupName] ?: return now to 0
+                val currentGroup = groupMap[groupName] ?: return Triple(now, groupName, 0)
                 val selected = currentGroup.proxies.find { it.name == now }
-                    ?: return now to 0
+                    ?: return Triple(now, groupName, 0)
+
+                val selectedDisplayName = selected.title.ifEmpty { selected.name }
 
                 if (!selected.type.group) {
-                    val selectedName = selected.title.ifEmpty { selected.name }
-                    return selectedName to selected.delay
+                    // This is a final proxy, not a group
+                    return Triple(selectedDisplayName, groupName, selected.delay)
                 }
 
+                // This is a nested group - recurse to find the final proxy
                 val nestedGroupName = selected.name
-                val nestedGroup = groupMap[nestedGroupName] ?: return (selected.title.ifEmpty { selected.name }) to selected.delay
-                return resolveSelectedLeaf(nestedGroupName, nestedGroup.now, visited)
+                val nestedGroup = groupMap[nestedGroupName] ?: return Triple(selectedDisplayName, selectedDisplayName, selected.delay)
+                val (finalProxyName, _, finalDelay) = resolveSelectedLeaf(nestedGroupName, nestedGroup.now, visited)
+                return Triple(finalProxyName, selectedDisplayName, finalDelay)
             }
 
             for ((name, group) in visibleGroups) {
                 val isExpanded = expandedGroups.contains(name)
 
                 // Resolve selected leaf proxy (supports nested groups)
-                val selectedProxy = group.proxies.find { it.name == group.now }
-                val (leafName, groupDelay) = resolveSelectedLeaf(name, group.now)
-                val selectedGroupPart = if (selectedProxy?.type?.group == true) {
-                    selectedProxy.name
-                } else {
-                    name
-                }
-                val selectedInfoText = "${leafName}·${selectedGroupPart}"
+                val (leafName, immediateSelection, groupDelay) = resolveSelectedLeaf(name, group.now)
+                val selectedInfoText = "${leafName}·${immediateSelection}"
 
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
@@ -323,7 +325,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     }
                     radius = 16 * dp
                     cardElevation = 0f
-                    setCardBackgroundColor(if (isExpanded) primaryContainerColor else surfaceVariantColor)
+                    setCardBackgroundColor(if (isExpanded) secondaryContainerColor else surfaceVariantColor)
                 }
 
                 val cardContent = LinearLayout(context).apply {
@@ -337,7 +339,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     setPadding((16 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt())
                     isClickable = true
                     isFocusable = true
-                    background = context.getDrawable(android.R.drawable.list_selector_background)
+                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                 }
 
                 // Group icon (from URL or default)
@@ -364,7 +366,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 val groupNameView = TextView(context).apply {
                     text = name
-                    setTextColor(if (isExpanded) onPrimaryContainerColor else onSurfaceColor)
+                    setTextColor(if (isExpanded) onSecondaryContainerColor else onSurfaceColor)
                     textSize = 15f
                     setTypeface(typeface, Typeface.BOLD)
                     maxLines = 1
@@ -373,7 +375,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 val selectedInfo = TextView(context).apply {
                     text = selectedInfoText
-                    setTextColor(if (isExpanded) onPrimaryContainerColor else onSurfaceVariantColor)
+                    setTextColor(if (isExpanded) onSecondaryContainerColor else onSurfaceVariantColor)
                     textSize = 12f
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
@@ -391,17 +393,35 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     )).apply {
                     marginEnd = (8 * dp).toInt()
                 }
+
+                // URL Test button (tests delay for this group)
+                val urlTestButton = ImageView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt()).apply {
+                        marginEnd = (8 * dp).toInt()
+                    }
+                    setImageResource(R.drawable.ic_baseline_speed)
+                    imageTintList = ColorStateList.valueOf(if (isExpanded) onSecondaryContainerColor else onSurfaceVariantColor)
+                    isClickable = true
+                    isFocusable = true
+                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                    setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
+                    setOnClickListener {
+                        requests.trySend(Request.UrlTest(name))
+                    }
+                }
+
                 // Chevron indicator (rotates when expanded)
                 val chevron = ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
                     setImageResource(R.drawable.ic_mdi_chevron_right)
-                    imageTintList = ColorStateList.valueOf(if (isExpanded) onPrimaryContainerColor else onSurfaceVariantColor)
+                    imageTintList = ColorStateList.valueOf(if (isExpanded) onSecondaryContainerColor else onSurfaceVariantColor)
                     rotation = if (isExpanded) 90f else 0f
                 }
 
                 headerRow.addView(groupIcon)
                 headerRow.addView(nameColumn)
                 headerRow.addView(groupDelayView)
+                headerRow.addView(urlTestButton)
                 headerRow.addView(chevron)
                 cardContent.addView(headerRow)
 
@@ -428,8 +448,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     val (proxyDisplayName, proxyDelay) = if (proxy.type.group) {
                         val nestedGroup = groupMap[proxy.name]
                         if (nestedGroup != null) {
-                            val (nestedLeafName, nestedDelay) = resolveSelectedLeaf(proxy.name, nestedGroup.now)
-                            "${nestedLeafName}·${proxy.name}" to nestedDelay
+                            val (nestedLeafName, nestedImmediateSelection, nestedDelay) = resolveSelectedLeaf(proxy.name, nestedGroup.now)
+                            "${nestedLeafName}·${nestedImmediateSelection}" to nestedDelay
                         } else {
                             (proxy.title.ifEmpty { proxy.name }) to proxy.delay
                         }
@@ -443,7 +463,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (10 * dp).toInt())
                         isClickable = true
                         isFocusable = true
-                        background = context.getDrawable(android.R.drawable.list_selector_background)
+                        background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                     }
 
                     // Checkmark for selected
@@ -524,14 +544,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         groupNameView.setTextColor(onSurfaceColor)
                         selectedInfo.setTextColor(onSurfaceVariantColor)
                         chevron.imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+                        urlTestButton.imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
                     } else {
                         expandedGroups.add(name)
                         proxyListContainer.visibility = View.VISIBLE
                         chevron.animate().rotation(90f).setDuration(200).start()
-                        card.setCardBackgroundColor(primaryContainerColor)
-                        groupNameView.setTextColor(onPrimaryContainerColor)
-                        selectedInfo.setTextColor(onPrimaryContainerColor)
-                        chevron.imageTintList = ColorStateList.valueOf(onPrimaryContainerColor)
+                        card.setCardBackgroundColor(secondaryContainerColor)
+                        groupNameView.setTextColor(onSecondaryContainerColor)
+                        selectedInfo.setTextColor(onSecondaryContainerColor)
+                        chevron.imageTintList = ColorStateList.valueOf(onSecondaryContainerColor)
+                        urlTestButton.imageTintList = ColorStateList.valueOf(onSecondaryContainerColor)
                     }
                 }
 
