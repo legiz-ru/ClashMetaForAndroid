@@ -347,4 +347,12 @@
     <string name="no_delay">-</string>
     <string name="timeout">Таймаут</string>
     <string name="selected_node">Выбран: %s</string>
+
+    <string name="fetching_icons">Загрузка иконок</string>
+    <string name="privacy">Конфиденциальность</string>
+    <string name="send_hwid_title">Отправка HWID</string>
+    <string name="send_hwid_desc">Отправлять идентификатор устройства при запросах профиля</string>
+    <string name="delay_display">Отображение задержки</string>
+    <string name="delay_display_dots">Цветные точки</string>
+    <string name="delay_display_ms">Миллисекунды</string>
 </resources>

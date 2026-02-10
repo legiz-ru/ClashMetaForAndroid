@@ -67,6 +67,13 @@ class AppSettingsDesign(
             }
 
             switch(
+                value = uiStore::delayDisplayDots,
+                icon = R.drawable.ic_baseline_speed,
+                title = R.string.delay_display,
+                summary = R.string.delay_display_dots,
+            )
+
+            switch(
                 value = uiStore::hideAppIcon,
                 icon = R.drawable.ic_baseline_hide,
                 title = R.string.hide_app_icon_title,
@@ -98,6 +105,15 @@ class AppSettingsDesign(
             ) {
                 enabled = !running
             }
+
+            category(R.string.privacy)
+
+            switch(
+                value = uiStore::sendHwid,
+                icon = R.drawable.ic_baseline_fingerprint,
+                title = R.string.send_hwid_title,
+                summary = R.string.send_hwid_desc,
+            )
         }
 
         binding.content.addView(screen.root)

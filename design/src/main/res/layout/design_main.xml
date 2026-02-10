@@ -44,8 +44,24 @@
         <variable
             name="hasExpireInfo"
             type="boolean" />
+        <variable
+            name="profileSupportUrl"
+            type="String" />
+        <variable
+            name="profileWebPageUrl"
+            type="String" />
+        <variable
+            name="profileAnnounce"
+            type="String" />
+        <variable
+            name="profileLogoUrl"
+            type="String" />
+        <variable
+            name="profileTitleOverride"
+            type="String" />
 
         <import type="android.view.View" />
+        <import type="android.text.TextUtils" />
         <import type="com.github.kr328.clash.design.MainDesign.Request" />
     </data>
 
@@ -90,14 +106,17 @@
                             android:layout_width="@dimen/large_item_header_layout_size"
                             android:layout_height="@dimen/large_item_header_layout_size">
 
-                            <View
+                            <ImageView
+                                android:id="@+id/app_logo"
                                 android:layout_width="@dimen/main_logo_size"
                                 android:layout_height="@dimen/main_logo_size"
                                 android:layout_gravity="center"
-                                android:background="@drawable/ic_clash" />
+                                android:src="@drawable/ic_clash"
+                                android:scaleType="fitCenter" />
                         </FrameLayout>
 
                         <TextView
+                            android:id="@+id/app_title"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/application_name"
@@ -334,6 +353,51 @@
                                     android:layout_height="wrap_content"
                                     android:text="@{profileUpdated}"
                                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+                            </LinearLayout>
+
+                            <!-- Announce text for active profile -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="@{profileAnnounce}"
+                                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                                android:alpha="0.8"
+                                android:visibility="@{TextUtils.isEmpty(profileAnnounce) ? View.GONE : View.VISIBLE}" />
+
+                            <!-- Link icons row -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:gravity="end|center_vertical"
+                                android:orientation="horizontal"
+                                android:visibility="@{TextUtils.isEmpty(profileSupportUrl) &amp;&amp; TextUtils.isEmpty(profileWebPageUrl) ? View.GONE : View.VISIBLE}">
+
+                                <ImageView
+                                    android:id="@+id/profile_support_icon"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_mdi_face_agent"
+                                    android:visibility="@{TextUtils.isEmpty(profileSupportUrl) ? View.GONE : View.VISIBLE}"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                                <ImageView
+                                    android:id="@+id/profile_webpage_icon"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="4dp"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_mdi_home_import_outline"
+                                    android:visibility="@{TextUtils.isEmpty(profileWebPageUrl) ? View.GONE : View.VISIBLE}"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>

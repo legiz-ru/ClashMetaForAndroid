@@ -87,6 +87,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     }
 
     fun inputName() {
+        if (profile.profileTitle.isNotEmpty()) return
         launch {
             val name = context.requestModelTextInput(
                 initial = profile.name,
@@ -122,6 +123,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     }
 
     fun inputInterval() {
+        if (profile.profileUpdateInterval > 0) return
         launch {
             var minutes = TimeUnit.MILLISECONDS.toMinutes(profile.interval)
 
@@ -157,6 +159,12 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
             }
             FetchStatus.Action.FetchProviders -> {
                 text = context.getString(R.string.format_fetching_provider, status.args[0])
+                isIndeterminate = false
+                max = status.max
+                progress = status.progress
+            }
+            FetchStatus.Action.FetchIcons -> {
+                text = context.getString(R.string.fetching_icons)
                 isIndeterminate = false
                 max = status.max
                 progress = status.progress

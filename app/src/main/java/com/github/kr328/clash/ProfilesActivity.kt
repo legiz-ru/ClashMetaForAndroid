@@ -8,6 +8,7 @@ import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.ProfilesDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.withProfile
 import io.github.g00fy2.quickie.QRResult
 import io.github.g00fy2.quickie.ScanQRCode
@@ -29,12 +30,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                     val url = result.content.rawValue
                         ?: result.content.rawBytes?.let { String(it) }.orEmpty()
                     if (url.isNotEmpty()) {
-                        val uuid = withProfile {
-                            create(Profile.Type.Url, getString(R.string.new_profile)).also {
-                                patch(it, getString(R.string.new_profile), url, 0)
-                            }
-                        }
-                        startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                        importProfileFromUrl(url)
                     }
                 }
                 QRResult.QRUserCanceled -> {}
@@ -72,12 +68,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.trim() ?: ""
                             if (clipText.isNotEmpty()) {
-                                val uuid = withProfile {
-                                    create(Profile.Type.Url, getString(R.string.new_profile)).also {
-                                        patch(it, getString(R.string.new_profile), clipText, 0)
-                                    }
-                                }
-                                startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                                importProfileFromUrl(clipText)
                             } else {
                                 design.showToast(R.string.empty_clipboard, ToastDuration.Long)
                             }
@@ -130,6 +121,22 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
 
                             startActivity(PropertiesActivity::class.intent.setUUID(uuid))
                         }
+                        is ProfilesDesign.Request.OpenUrl -> {
+                            try {
+                                startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(it.url)))
+                            } catch (_: Exception) {}
+                        }
+                        is ProfilesDesign.Request.ShowAnnounce -> {
+                            val profile = it.profile
+                            if (profile.announce.isNotEmpty()) {
+                                val text = profile.announce.replace("\\n", "\n")
+                                androidx.appcompat.app.AlertDialog.Builder(this@ProfilesActivity)
+                                    .setTitle(profile.name)
+                                    .setMessage(text)
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show()
+                            }
+                        }
                     }
                 }
                 if (activityStarted) {
@@ -147,20 +154,6 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
         }
     }
 
-    override fun onProfileUpdateCompleted(uuid: UUID?) {
-        if(uuid == null)
-            return;
-        launch {
-            var name: String? = null;
-            withProfile {
-                name = queryByUUID(uuid)?.name
-            }
-            design?.showToast(
-                getString(R.string.toast_profile_updated_complete, name),
-                ToastDuration.Long
-            )
-        }
-    }
     override fun onProfileUpdateFailed(uuid: UUID?, reason: String?) {
         if(uuid == null)
             return;

@@ -139,13 +139,23 @@ class ProfileManager(private val context: Context) : IProfileManager,
     suspend fun updateFlow(old: Imported) {
         val client = OkHttpClient()
         try {
-            val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName
-            val request = Request.Builder()
-                .url(old.source)
-                .header("User-Agent", "ClashMetaForAndroid/$versionName")
-                .build()
+            val request = ProfileProcessor.buildProfileRequest(context, old.source)
 
             client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    ProfileProcessor.saveProfileHeaders(
+                        context.importedDir.resolve(old.uuid.toString()),
+                        response.headers
+                    )
+                    // Update name/interval from headers if specified
+                    val hdrs = ProfileProcessor.readProfileHeaders(context.importedDir.resolve(old.uuid.toString()))
+                    if (hdrs.profileTitle.isNotEmpty() || hdrs.profileUpdateInterval > 0) {
+                        val newName = if (hdrs.profileTitle.isNotEmpty()) hdrs.profileTitle else old.name
+                        val newInterval = if (hdrs.profileUpdateInterval > 0) hdrs.profileUpdateInterval.toLong() * 60 * 60 * 1000 else old.interval
+                        val updated = old.copy(name = newName, interval = newInterval)
+                        ImportedDao().update(updated)
+                    }
+                }
                 if (!response.isSuccessful || response.headers["subscription-userinfo"] == null) return
 
                 var upload: Long = 0
@@ -265,6 +275,9 @@ class ProfileManager(private val context: Context) : IProfileManager,
         val total = pending?.total ?: imported?.total ?: return null
         val expire = pending?.expire ?: imported?.expire ?: return null
 
+        val profileDir = context.importedDir.resolve(uuid.toString())
+        val hdrs = ProfileProcessor.readProfileHeaders(profileDir)
+
         return Profile(
             uuid,
             name,
@@ -278,7 +291,13 @@ class ProfileManager(private val context: Context) : IProfileManager,
             expire,
             resolveUpdatedAt(uuid),
             imported != null,
-            pending != null
+            pending != null,
+            hdrs.supportUrl,
+            hdrs.profileWebPageUrl,
+            hdrs.profileTitle,
+            hdrs.profileLogo,
+            hdrs.profileUpdateInterval,
+            hdrs.announce,
         )
     }
 

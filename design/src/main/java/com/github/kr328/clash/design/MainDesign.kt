@@ -132,6 +132,43 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 val elapsed = System.currentTimeMillis() - profile.updatedAt
                 binding.profileUpdated = elapsed.elapsedIntervalString(context)
+
+                binding.profileSupportUrl = profile.supportUrl
+                binding.profileWebPageUrl = profile.profileWebPageUrl
+                binding.profileAnnounce = profile.announce.replace("\\n", "\n")
+                binding.profileLogoUrl = profile.profileLogo
+                binding.profileTitleOverride = profile.profileTitle
+
+                // Wire click listeners for support/webpage icons
+                binding.profileSupportIcon?.setOnClickListener {
+                    if (profile.supportUrl.isNotEmpty()) {
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(profile.supportUrl))
+                            context.startActivity(intent)
+                        } catch (_: Exception) {}
+                    }
+                }
+                binding.profileWebpageIcon?.setOnClickListener {
+                    if (profile.profileWebPageUrl.isNotEmpty()) {
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(profile.profileWebPageUrl))
+                            context.startActivity(intent)
+                        } catch (_: Exception) {}
+                    }
+                }
+
+                // Override logo and title from profile headers
+                if (profile.profileLogo.isNotEmpty()) {
+                    loadIconAsync(profile.profileLogo, binding.appLogo)
+                } else {
+                    binding.appLogo.setImageResource(R.drawable.ic_clash)
+                    binding.appLogo.imageTintList = null
+                }
+                if (profile.profileTitle.isNotEmpty()) {
+                    binding.appTitle.text = profile.profileTitle
+                } else {
+                    binding.appTitle.setText(R.string.application_name)
+                }
             } else {
                 binding.hasTrafficInfo = false
                 binding.hasExpireInfo = false
@@ -139,6 +176,15 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileTrafficTotal = null
                 binding.profileExpire = null
                 binding.profileUpdated = null
+                binding.profileSupportUrl = null
+                binding.profileWebPageUrl = null
+                binding.profileAnnounce = null
+                binding.profileLogoUrl = null
+                binding.profileTitleOverride = null
+                // Reset logo and title to defaults
+                binding.appLogo.setImageResource(R.drawable.ic_clash)
+                binding.appLogo.imageTintList = null
+                binding.appTitle.setText(R.string.application_name)
             }
         }
     }
@@ -176,7 +222,47 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
-    suspend fun setProxyGroups(groups: List<Pair<String, ProxyGroup>>) {
+    private fun delayColor(delay: Int): Int {
+        return when {
+            delay <= 0 -> 0x00000000
+            delay < 200 -> 0xFF4CAF50.toInt() // green
+            delay < 500 -> 0xFFFF9800.toInt() // orange
+            else -> 0xFFF44336.toInt() // red
+        }
+    }
+
+    private fun createDelayDot(dp: Float, delay: Int): View {
+        val size = (10 * dp).toInt()
+        return View(context).apply {
+            layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                marginStart = (4 * dp).toInt()
+            }
+            if (delay > 0) {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(delayColor(delay))
+                }
+            } else {
+                visibility = View.GONE
+            }
+        }
+    }
+
+    private fun createDelayText(dp: Float, delay: Int, useDots: Boolean): View {
+        if (useDots) return createDelayDot(dp, delay)
+        return TextView(context).apply {
+            textSize = 13f
+            when {
+                delay <= 0 -> visibility = View.GONE
+                else -> {
+                    text = context.getString(R.string.format_delay_ms, delay)
+                    setTextColor(delayColor(delay))
+                }
+            }
+        }
+    }
+
+    suspend fun setProxyGroups(groups: List<Pair<String, ProxyGroup>>, useDots: Boolean = true) {
         withContext(Dispatchers.Main) {
             val container = binding.proxyGroupsContainer
             container.removeAllViews()
@@ -194,6 +280,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
             for ((name, group) in visibleGroups) {
                 val isExpanded = expandedGroups.contains(name)
+
+                // Find the delay of the currently selected proxy
+                val selectedProxy = group.proxies.find { it.name == group.now }
+                val groupDelay = selectedProxy?.delay ?: 0
 
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
@@ -230,12 +320,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
 
                 if (group.icon.isNotEmpty()) {
-                    // Load icon from URL
                     groupIcon.setImageResource(R.drawable.ic_baseline_vpn_lock)
                     groupIcon.imageTintList = ColorStateList.valueOf(primaryColor)
                     loadIconAsync(group.icon, groupIcon)
                 } else {
-                    // No icon - don't show the globe icon
                     groupIcon.visibility = View.GONE
                 }
 
@@ -264,6 +352,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 nameColumn.addView(groupNameView)
                 nameColumn.addView(selectedInfo)
+
+                // Group delay indicator (delay of the currently selected proxy)
+                val groupDelayView = createDelayText(dp, groupDelay, useDots)
+                groupDelayView.layoutParams = (groupDelayView.layoutParams as? LinearLayout.LayoutParams
+                    ?: LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )).apply {
+                    marginEnd = (8 * dp).toInt()
+                }
 
                 // Proxy count badge
                 val badgeColor = if (isExpanded) onPrimaryContainerColor else primaryColor
@@ -296,6 +394,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 headerRow.addView(groupIcon)
                 headerRow.addView(nameColumn)
+                headerRow.addView(groupDelayView)
                 headerRow.addView(countBadge)
                 headerRow.addView(chevron)
                 cardContent.addView(headerRow)
@@ -363,25 +462,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     proxyInfo.addView(proxyNameView)
                     proxyInfo.addView(proxySubtitle)
 
-                    // Delay
-                    val delayView = TextView(context).apply {
-                        textSize = 13f
-                        when {
-                            proxy.delay <= 0 -> visibility = View.GONE
-                            proxy.delay < 200 -> {
-                                text = context.getString(R.string.format_delay_ms, proxy.delay)
-                                setTextColor(0xFF4CAF50.toInt())
-                            }
-                            proxy.delay < 500 -> {
-                                text = context.getString(R.string.format_delay_ms, proxy.delay)
-                                setTextColor(0xFFFF9800.toInt())
-                            }
-                            else -> {
-                                text = context.getString(R.string.format_delay_ms, proxy.delay)
-                                setTextColor(0xFFF44336.toInt())
-                            }
-                        }
-                    }
+                    // Delay indicator
+                    val delayView = createDelayText(dp, proxy.delay, useDots)
 
                     proxyRow.addView(checkIcon)
                     proxyRow.addView(proxyInfo)

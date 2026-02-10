@@ -21,12 +21,34 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import android.provider.Settings
+import org.json.JSONObject
+import java.io.File
 import java.math.BigDecimal
 import java.net.URL
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 object ProfileProcessor {
+
+    fun buildProfileRequest(context: Context, url: String): Request {
+        val uiPrefs = context.getSharedPreferences("ui", Context.MODE_PRIVATE)
+        val sendHwid = uiPrefs.getBoolean("send_hwid", true)
+        val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+
+        val builder = Request.Builder().url(url)
+
+        if (sendHwid) {
+            builder.header("User-Agent", "prizrak-box/$versionName")
+            val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
+            builder.header("x-device-id", deviceId)
+            builder.header("x-device-os", "Android")
+        } else {
+            builder.header("User-Agent", "ClashMetaForAndroid/$versionName")
+        }
+
+        return builder.build()
+    }
     private val profileLock = Mutex()
     private val processLock = Mutex()
 
@@ -76,11 +98,7 @@ object ProfileProcessor {
                         if (snapshot?.type == Profile.Type.Url) {
                             if (snapshot.source.startsWith("https://", true)) {
                                 val client = OkHttpClient()
-                                val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName
-                                val request = Request.Builder()
-                                    .url(snapshot.source)
-                                    .header("User-Agent", "ClashMetaForAndroid/$versionName")
-                                    .build()
+                                val request = buildProfileRequest(context, snapshot.source)
 
                                 client.newCall(request).execute().use { response ->
                                     val userinfo = response.headers["subscription-userinfo"]
@@ -102,6 +120,12 @@ object ProfileProcessor {
                                                     (info[1].toDouble() * 1000).toLong()
                                             }
                                         }
+                                    }
+                                    if (response.isSuccessful) {
+                                        saveProfileHeaders(
+                                            context.importedDir.resolve(snapshot.uuid.toString()),
+                                            response.headers
+                                        )
                                     }
                                 }
                             }
@@ -241,6 +265,57 @@ object ProfileProcessor {
                 }
             }
         }
+    }
+
+    data class ProfileHeaders(
+        val supportUrl: String = "",
+        val profileWebPageUrl: String = "",
+        val profileTitle: String = "",
+        val profileLogo: String = "",
+        val profileUpdateInterval: Int = 0,
+        val announce: String = "",
+    )
+
+    fun saveProfileHeaders(profileDir: File, headers: okhttp3.Headers) {
+        try {
+            val json = JSONObject()
+            headers["support-url"]?.let { if (it.isNotBlank()) json.put("support_url", it) }
+            headers["profile-web-page-url"]?.let { if (it.isNotBlank()) json.put("profile_web_page_url", it) }
+            headers["profile-title"]?.let { if (it.isNotBlank()) json.put("profile_title", decodeHeaderValue(it)) }
+            headers["profile-logo"]?.let { if (it.isNotBlank()) json.put("profile_logo", it) }
+            headers["profile-update-interval"]?.let {
+                val hours = it.trim().toIntOrNull()
+                if (hours != null && hours > 0) json.put("profile_update_interval", hours)
+            }
+            headers["announce"]?.let { if (it.isNotBlank()) json.put("announce", decodeHeaderValue(it)) }
+            profileDir.resolve("profile_links.json").writeText(json.toString())
+        } catch (_: Exception) {}
+    }
+
+    fun readProfileHeaders(profileDir: File): ProfileHeaders {
+        return try {
+            val file = profileDir.resolve("profile_links.json")
+            if (file.exists()) {
+                val json = JSONObject(file.readText())
+                ProfileHeaders(
+                    supportUrl = json.optString("support_url", ""),
+                    profileWebPageUrl = json.optString("profile_web_page_url", ""),
+                    profileTitle = json.optString("profile_title", ""),
+                    profileLogo = json.optString("profile_logo", ""),
+                    profileUpdateInterval = json.optInt("profile_update_interval", 0),
+                    announce = json.optString("announce", ""),
+                )
+            } else ProfileHeaders()
+        } catch (_: Exception) { ProfileHeaders() }
+    }
+
+    fun decodeHeaderValue(value: String): String {
+        return if (value.startsWith("base64:")) {
+            try {
+                val encoded = value.removePrefix("base64:")
+                String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT))
+            } catch (_: Exception) { value }
+        } else value
     }
 
     private fun Pending.enforceFieldValid() {

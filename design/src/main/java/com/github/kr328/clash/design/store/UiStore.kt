@@ -72,6 +72,16 @@ class UiStore(context: Context) {
         defaultValue = false,
     )
 
+    var sendHwid: Boolean by store.boolean(
+        key = "send_hwid",
+        defaultValue = true,
+    )
+
+    var delayDisplayDots: Boolean by store.boolean(
+        key = "delay_display_dots",
+        defaultValue = true,
+    )
+
     companion object {
         private const val PREFERENCE_NAME = "ui"
     }

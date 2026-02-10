@@ -168,10 +168,29 @@ class ProxyView(
 
         // draw delay
         canvas.apply {
-            val x = width - state.config.layoutPadding - state.config.contentPadding - delayWidth
-            val y = height / 2f - textOffset
-
-            drawText(state.delayText, 0, delayCount, x, y, paint)
+            if (state.config.delayDisplayDots && state.delayText.isNotEmpty()) {
+                val dotRadius = state.config.textSize * 0.35f
+                val delay = state.delayText.toIntOrNull() ?: 0
+                val dotColor = when {
+                    delay <= 0 -> 0
+                    delay < 200 -> 0xFF4CAF50.toInt()
+                    delay < 500 -> 0xFFFF9800.toInt()
+                    else -> 0xFFF44336.toInt()
+                }
+                if (dotColor != 0) {
+                    val savedColor = paint.color
+                    paint.color = dotColor
+                    paint.style = Paint.Style.FILL
+                    val cx = width - state.config.layoutPadding - state.config.contentPadding - dotRadius
+                    val cy = height / 2f
+                    drawCircle(cx, cy, dotRadius, paint)
+                    paint.color = savedColor
+                }
+            } else {
+                val x = width - state.config.layoutPadding - state.config.contentPadding - delayWidth
+                val y = height / 2f - textOffset
+                drawText(state.delayText, 0, delayCount, x, y, paint)
+            }
         }
 
         // draw title

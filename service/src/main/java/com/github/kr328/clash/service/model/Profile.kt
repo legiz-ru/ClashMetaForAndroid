@@ -27,6 +27,12 @@ data class Profile(
     val updatedAt: Long,
     val imported: Boolean,
     val pending: Boolean,
+    val supportUrl: String = "",
+    val profileWebPageUrl: String = "",
+    val profileTitle: String = "",
+    val profileLogo: String = "",
+    val profileUpdateInterval: Int = 0,
+    val announce: String = "",
 ) : Parcelable {
     enum class Type {
         File, Url, External

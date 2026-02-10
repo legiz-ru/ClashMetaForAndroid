@@ -104,6 +104,11 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                         }
                     }
 
+                    // Auto-activate the imported profile
+                    withProfile {
+                        queryByUUID(profile.uuid)?.let { setActive(it) }
+                    }
+
                     setResult(RESULT_OK)
 
                     finish()

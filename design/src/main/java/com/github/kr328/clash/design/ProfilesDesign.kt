@@ -30,6 +30,8 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         data class Edit(val profile: Profile) : Request()
         data class Duplicate(val profile: Profile) : Request()
         data class Delete(val profile: Profile) : Request()
+        data class OpenUrl(val url: String) : Request()
+        data class ShowAnnounce(val profile: Profile) : Request()
     }
 
     private val binding = DesignProfilesBinding
@@ -41,6 +43,9 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         onEditClicked = { requests.trySend(Request.Edit(it)) },
         onDeleteClicked = { requests.trySend(Request.Delete(it)) },
         onUpdateClicked = { requests.trySend(Request.Update(it)) },
+        onAnnounceClicked = { requests.trySend(Request.ShowAnnounce(it)) },
+        onSupportClicked = { if (it.supportUrl.isNotEmpty()) requests.trySend(Request.OpenUrl(it.supportUrl)) },
+        onWebPageClicked = { if (it.profileWebPageUrl.isNotEmpty()) requests.trySend(Request.OpenUrl(it.profileWebPageUrl)) },
     )
 
     private var allUpdating: Boolean

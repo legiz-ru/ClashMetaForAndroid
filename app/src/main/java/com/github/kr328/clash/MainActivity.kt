@@ -10,13 +10,13 @@ import androidx.activity.result.contract.ActivityResultContracts.RequestPermissi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.util.intent
-import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withClash
+import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.service.model.Profile
@@ -38,12 +38,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                     val url = result.content.rawValue
                         ?: result.content.rawBytes?.let { String(it) }.orEmpty()
                     if (url.isNotEmpty()) {
-                        val uuid = withProfile {
-                            create(Profile.Type.Url, getString(R.string.new_profile)).also {
-                                patch(it, getString(R.string.new_profile), url, 0)
-                            }
-                        }
-                        startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                        importProfileFromUrl(url)
                     }
                 }
                 QRResult.QRUserCanceled -> {}
@@ -111,12 +106,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.trim() ?: ""
                             if (clipText.isNotEmpty()) {
-                                val uuid = withProfile {
-                                    create(Profile.Type.Url, getString(R.string.new_profile)).also {
-                                        patch(it, getString(R.string.new_profile), clipText, 0)
-                                    }
-                                }
-                                startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                                importProfileFromUrl(clipText)
                             } else {
                                 design.showToast(R.string.empty_clipboard, ToastDuration.Long)
                             }
@@ -183,7 +173,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val groups = names.map { name ->
                     name to queryProxyGroup(name, uiStore.proxySort)
                 }.filter { !it.second.hidden }
-                setProxyGroups(groups)
+                setProxyGroups(groups, uiStore.delayDisplayDots)
             }
         } catch (_: Exception) {
             // Proxy groups may not be available yet

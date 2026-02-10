@@ -41,11 +41,12 @@ class ProxyDesign(
     private val binding = DesignProxyBinding
         .inflate(context.layoutInflater, context.root, false)
 
-    private var config = ProxyViewConfig(context, uiStore.proxyLine)
+    private var config = ProxyViewConfig(context, uiStore.proxyLine, uiStore.delayDisplayDots)
 
     private val menu: ProxyMenu by lazy {
         ProxyMenu(context, binding.menuView, overrideMode, uiStore, requests) {
             config.proxyLine = uiStore.proxyLine
+            config.delayDisplayDots = uiStore.delayDisplayDots
         }
     }
 

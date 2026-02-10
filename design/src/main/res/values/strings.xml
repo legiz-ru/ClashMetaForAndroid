@@ -376,4 +376,12 @@
     <string name="no_delay">-</string>
     <string name="timeout">Timeout</string>
     <string name="selected_node">Selected: %s</string>
+
+    <string name="fetching_icons">Fetching icons</string>
+    <string name="privacy">Privacy</string>
+    <string name="send_hwid_title">Send HWID</string>
+    <string name="send_hwid_desc">Send device identifier with profile requests</string>
+    <string name="delay_display">Delay Display</string>
+    <string name="delay_display_dots">Colored dots</string>
+    <string name="delay_display_ms">Milliseconds</string>
 </resources>

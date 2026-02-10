@@ -38,8 +38,10 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                         SettingsDesign.Request.StartHelp ->
                             startActivity(HelpActivity::class.intent)
                         SettingsDesign.Request.StartAbout -> {
-                            // About is handled here directly
                             startActivity(HelpActivity::class.intent)
+                        }
+                        SettingsDesign.Request.GoHome -> {
+                            finish()
                         }
                     }
                 }
