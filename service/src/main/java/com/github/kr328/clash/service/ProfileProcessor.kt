@@ -45,6 +45,7 @@ object ProfileProcessor {
             val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
             builder.header("x-hwid", deviceId)
             builder.header("x-device-os", "Android")
+            builder.header("x-devices-os", "Android")
             builder.header("x-ver-os", Build.VERSION.RELEASE ?: "unknown")
             builder.header("x-device-model", Build.MODEL ?: "unknown")
         } else {

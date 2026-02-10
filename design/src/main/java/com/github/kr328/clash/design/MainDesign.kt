@@ -301,8 +301,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 val isExpanded = expandedGroups.contains(name)
 
                 // Resolve selected leaf proxy (supports nested groups)
+                val selectedProxy = group.proxies.find { it.name == group.now }
                 val (leafName, groupDelay) = resolveSelectedLeaf(name, group.now)
-                val selectedInfoText = "${leafName}·${name}"
+                val selectedGroupPart = if (selectedProxy?.type?.group == true) {
+                    selectedProxy.title.ifEmpty { selectedProxy.name }
+                } else {
+                    name
+                }
+                val selectedInfoText = "${leafName}·${selectedGroupPart}"
 
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
