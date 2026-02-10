@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts.RequestPermissi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.util.intent
+import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
