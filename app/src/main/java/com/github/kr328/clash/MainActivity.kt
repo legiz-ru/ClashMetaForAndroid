@@ -147,6 +147,13 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(HelpActivity::class.intent)
                         MainDesign.Request.OpenAbout ->
                             design.showAbout(queryAppVersionName())
+                        MainDesign.Request.SelectProxy -> {
+                            val (group, selected) = design.consumePendingProxySelection() ?: return@onReceive
+                            withClash {
+                                patchSelector(group, selected)
+                            }
+                            design.fetchProxyGroups()
+                        }
                     }
                 }
                 if (clashRunning) {

@@ -58,6 +58,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         AddManually,
         OpenHelp,
         OpenAbout,
+        SelectProxy,
     }
 
     private val binding = DesignMainBinding
@@ -76,6 +77,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private val iconCache = ConcurrentHashMap<String, Bitmap?>()
     private val iconExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    private var pendingSelectGroup: String? = null
+    private var pendingSelectName: String? = null
 
     suspend fun setProfileName(name: String?) {
         withContext(Dispatchers.Main) {
@@ -304,7 +308,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 val selectedProxy = group.proxies.find { it.name == group.now }
                 val (leafName, groupDelay) = resolveSelectedLeaf(name, group.now)
                 val selectedGroupPart = if (selectedProxy?.type?.group == true) {
-                    selectedProxy.title.ifEmpty { selectedProxy.name }
+                    selectedProxy.name
                 } else {
                     name
                 }
@@ -437,6 +441,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.CENTER_VERTICAL
                         setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (10 * dp).toInt())
+                        isClickable = true
+                        isFocusable = true
+                        background = context.getDrawable(android.R.drawable.list_selector_background)
                     }
 
                     // Checkmark for selected
@@ -482,6 +489,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     proxyRow.addView(checkIcon)
                     proxyRow.addView(proxyInfo)
                     proxyRow.addView(delayView)
+
+                    proxyRow.setOnClickListener {
+                        requestProxySelection(name, proxy.name)
+                    }
 
                     // Row separator
                     if (proxy != group.proxies.last()) {
@@ -591,6 +602,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     fun requestSheet(dialog: Dialog, request: Request) {
         dialog.dismiss()
         requests.trySend(request)
+    }
+
+    private fun requestProxySelection(group: String, name: String) {
+        pendingSelectGroup = group
+        pendingSelectName = name
+        requests.trySend(Request.SelectProxy)
+    }
+
+    fun consumePendingProxySelection(): Pair<String, String>? {
+        val group = pendingSelectGroup ?: return null
+        val name = pendingSelectName ?: return null
+
+        pendingSelectGroup = null
+        pendingSelectName = null
+
+        return group to name
     }
 
     fun request(request: Request) {
