@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.widget.Toast
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.remote.Remote
-import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import kotlinx.coroutines.CoroutineScope
@@ -22,12 +21,16 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
         when(intent.action) {
             Intent.ACTION_VIEW -> {
                 val uri = intent.data ?: return finish()
-                val url = uri.getQueryParameter("url") ?: return finish()
 
-                launch {
-                    importProfileFromUrl(url, forceAutoImport = true)
-                    finish()
-                }
+                startActivity(
+                    Intent(this, MainActivity::class.java)
+                        .setAction(Intent.ACTION_VIEW)
+                        .setData(uri)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                )
+
+                finish()
                 return
             }
 

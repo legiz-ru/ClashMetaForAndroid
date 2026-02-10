@@ -2,6 +2,7 @@ package com.github.kr328.clash
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -32,6 +33,15 @@ import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R
 
 class MainActivity : BaseActivity<MainDesign>() {
+    private fun extractInstallConfigUrl(intent: Intent?): String? {
+        if (intent?.action != Intent.ACTION_VIEW) return null
+
+        val data = intent.data ?: return null
+        if (!data.host.equals("install-config", true)) return null
+
+        return data.getQueryParameter("url")?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     private val scanLauncher = registerForActivityResult(ScanQRCode()) { result ->
         lifecycleScope.launch {
             when (result) {
@@ -59,6 +69,10 @@ class MainActivity : BaseActivity<MainDesign>() {
         setContentDesign(design)
 
         design.fetch()
+
+        extractInstallConfigUrl(intent)?.let {
+            importProfileFromUrl(it, forceAutoImport = true)
+        }
 
         val ticker = ticker(TimeUnit.SECONDS.toMillis(5))
 
@@ -216,6 +230,18 @@ class MainActivity : BaseActivity<MainDesign>() {
     private suspend fun queryAppVersionName(): String {
         return withContext(Dispatchers.IO) {
             packageManager.getPackageInfo(packageName, 0).versionName + "\n" + Bridge.nativeCoreVersion().replace("_", "-")
+        }
+    }
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        val url = extractInstallConfigUrl(intent) ?: return
+
+        lifecycleScope.launch {
+            importProfileFromUrl(url, forceAutoImport = true)
         }
     }
 
