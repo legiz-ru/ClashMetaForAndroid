@@ -84,6 +84,28 @@ object ProfileProcessor {
         }
     }
 
+    private data class FetchTarget(
+        val source: String,
+        val force: Boolean,
+    )
+
+    private fun resolveFetchTarget(context: Context, type: Profile.Type, source: String): FetchTarget {
+        val isHttpUrl = source.startsWith("https://", true) || source.startsWith("http://", true)
+
+        if (type == Profile.Type.Url && isHttpUrl) {
+            val localConfig = context.processingDir.resolve("config.yaml")
+            val prefetched = prefetchProfileConfig(context, source, localConfig)
+
+            if (!prefetched) {
+                throw IOException("Unable to fetch url profile with HWID headers")
+            }
+
+            return FetchTarget(localConfig.toURI().toString(), false)
+        }
+
+        return FetchTarget(source, type != Profile.Type.File)
+    }
+
     suspend fun apply(context: Context, uuid: UUID, callback: IFetchObserver? = null) {
         withContext(NonCancellable) {
             processLock.withLock {
@@ -102,19 +124,10 @@ object ProfileProcessor {
                     pending
                 }
 
-                val prefetched = snapshot.type == Profile.Type.Url &&
-                        (snapshot.source.startsWith("https://", true) || snapshot.source.startsWith("http://", true)) &&
-                        prefetchProfileConfig(context, snapshot.source, context.processingDir.resolve("config.yaml"))
-
-                val fetchSource = if (prefetched) {
-                    context.processingDir.resolve("config.yaml").toURI().toString()
-                } else {
-                    snapshot.source
-                }
-                val force = if (prefetched) false else snapshot.type != Profile.Type.File
+                val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
                 var cb = callback
 
-                Clash.fetchAndValid(context.processingDir, fetchSource, force) {
+                Clash.fetchAndValid(context.processingDir, fetchTarget.source, fetchTarget.force) {
                     try {
                         cb?.updateStatus(it)
                     } catch (e: Exception) {
@@ -242,19 +255,10 @@ object ProfileProcessor {
                     imported
                 }
 
-                val prefetched = snapshot.type == Profile.Type.Url &&
-                        (snapshot.source.startsWith("https://", true) || snapshot.source.startsWith("http://", true)) &&
-                        prefetchProfileConfig(context, snapshot.source, context.processingDir.resolve("config.yaml"))
-
+                val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
                 var cb = callback
 
-                val fetchSource = if (prefetched) {
-                    context.processingDir.resolve("config.yaml").toURI().toString()
-                } else {
-                    snapshot.source
-                }
-
-                Clash.fetchAndValid(context.processingDir, fetchSource, !prefetched) {
+                Clash.fetchAndValid(context.processingDir, fetchTarget.source, fetchTarget.force) {
                     try {
                         cb?.updateStatus(it)
                     } catch (e: Exception) {
