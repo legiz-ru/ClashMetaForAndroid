@@ -2,6 +2,7 @@ package com.github.kr328.clash.service
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.data.Imported
@@ -42,8 +43,10 @@ object ProfileProcessor {
         if (sendHwid) {
             builder.header("User-Agent", "prizrak-box/$versionName")
             val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
-            builder.header("x-device-id", deviceId)
+            builder.header("x-hwid", deviceId)
             builder.header("x-device-os", "Android")
+            builder.header("x-ver-os", Build.VERSION.RELEASE ?: "unknown")
+            builder.header("x-device-model", Build.MODEL ?: "unknown")
         } else {
             builder.header("User-Agent", "ClashMetaForAndroid/$versionName")
         }

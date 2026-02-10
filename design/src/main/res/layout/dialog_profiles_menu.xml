@@ -27,7 +27,7 @@
             android:onClick="@{() -> master.requestUpdate(self, profile)}"
             android:padding="@dimen/bottom_sheet_menu_items_padding"
             android:visibility="@{profile.imported &amp;&amp; profile.type != Type.File ? View.VISIBLE : View.GONE}"
-            app:icon="@drawable/ic_baseline_update"
+            app:icon="@drawable/ic_mdi_update"
             app:text="@string/update" />
 
         <com.github.kr328.clash.design.view.LargeActionLabel
