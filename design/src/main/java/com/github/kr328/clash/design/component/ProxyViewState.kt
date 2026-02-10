@@ -22,6 +22,8 @@ class ProxyViewState(
     var title: String = ""
     var subtitle: String = ""
     var delayText: String = ""
+    var delayChecked: Boolean = false
+    var delayFailed: Boolean = false
     var background: Int = config.unselectedBackground
     var controls: Int = config.unselectedControl
 
@@ -58,7 +60,13 @@ class ProxyViewState(
 
         if (delay != proxy.delay) {
             delay = proxy.delay
-            delayText = if (proxy.delay in 0..Short.MAX_VALUE) proxy.delay.toString() else ""
+            delayChecked = proxy.delay != 0
+            delayFailed = proxy.delay > Short.MAX_VALUE
+            delayText = when {
+                proxy.delay in 1..Short.MAX_VALUE -> proxy.delay.toString()
+                delayFailed -> "timeout"
+                else -> ""
+            }
         }
 
         if (parentNow !== parent.now) {

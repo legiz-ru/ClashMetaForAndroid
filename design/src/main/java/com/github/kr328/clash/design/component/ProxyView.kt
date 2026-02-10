@@ -170,14 +170,16 @@ class ProxyView(
         canvas.apply {
             if (state.config.delayDisplayDots) {
                 if (state.delayChecked) {
-                val dotRadius = state.config.textSize * 0.35f
-                val delay = state.delayText.toIntOrNull() ?: 0
-                val dotColor = when {
-                    delay <= 0 -> 0
-                    delay < 200 -> 0xFF4CAF50.toInt()
-                    delay < 500 -> 0xFFFF9800.toInt()
-                    else -> 0xFFF44336.toInt()
-                }
+                    val dotRadius = state.config.textSize * 0.35f
+                    val delay = state.delayText.toIntOrNull() ?: 0
+                    val dotColor = when {
+                        state.delayFailed -> 0xFFF44336.toInt()
+                        delay in 1..199 -> 0xFF4CAF50.toInt()
+                        delay in 200..499 -> 0xFFFF9800.toInt()
+                        delay >= 500 -> 0xFFF44336.toInt()
+                        else -> 0
+                    }
+
                     if (dotColor != 0) {
                         val savedColor = paint.color
                         paint.color = dotColor
