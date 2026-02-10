@@ -8,7 +8,8 @@
         <bitmap
             android:src="@drawable/summeralways"
             android:alpha="0.12"
-            android:gravity="fill"
-            android:tileMode="repeat" />
+            android:antialias="true"
+            android:filter="true"
+            android:gravity="fill_vertical|center_horizontal" />
     </item>
 </layer-list>
