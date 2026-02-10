@@ -82,8 +82,8 @@
     <color name="md3_summer_onPrimaryContainer">#FF1B5E20</color>
     <color name="md3_summer_secondary">#FF66BB6A</color>
     <color name="md3_summer_onSecondary">#FFFFFFFF</color>
-    <color name="md3_summer_secondaryContainer">#FFE8F5E9</color>
-    <color name="md3_summer_onSecondaryContainer">#FF2E7D32</color>
+    <color name="md3_summer_secondaryContainer">#FFC8E6C9</color>
+    <color name="md3_summer_onSecondaryContainer">#FF1B5E20</color>
     <color name="md3_summer_tertiary">#FF81C784</color>
     <color name="md3_summer_onTertiary">#FFFFFFFF</color>
     <color name="md3_summer_tertiaryContainer">#FFA5D6A7</color>
