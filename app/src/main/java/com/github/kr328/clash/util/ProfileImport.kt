@@ -6,39 +6,7 @@ import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.model.Profile
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.util.UUID
-import java.util.concurrent.TimeUnit
-
-data class ProfileUrlHeaders(
-    val title: String = "",
-    val updateIntervalHours: Int = 0,
-)
-
-suspend fun Context.fetchProfileUrlHeaders(url: String): ProfileUrlHeaders {
-    return withContext(Dispatchers.IO) {
-        try {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(10, TimeUnit.SECONDS)
-                .build()
-            val baseRequest = ProfileProcessor.buildProfileRequest(this@fetchProfileUrlHeaders, url)
-            val request = baseRequest.newBuilder().head().build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext ProfileUrlHeaders()
-                val title = response.headers["profile-title"]?.let {
-                    ProfileProcessor.decodeHeaderValue(it)
-                } ?: ""
-                val interval = response.headers["profile-update-interval"]?.trim()?.toIntOrNull() ?: 0
-                ProfileUrlHeaders(title, interval)
-            }
-        } catch (_: Exception) {
-            ProfileUrlHeaders()
-        }
-    }
-}
 
 /**
  * Import a profile from URL. Checks profile-title and profile-update-interval headers.
@@ -47,7 +15,7 @@ suspend fun Context.fetchProfileUrlHeaders(url: String): ProfileUrlHeaders {
  * Returns the UUID of the created profile.
  */
 suspend fun Context.importProfileFromUrl(url: String): UUID {
-    val headers = fetchProfileUrlHeaders(url)
+    val headers = ProfileProcessor.fetchUrlHeaders(this, url)
     val name = headers.title.ifEmpty { getString(com.github.kr328.clash.design.R.string.new_profile) }
     val intervalMs = if (headers.updateIntervalHours > 0) headers.updateIntervalHours.toLong() * 60 * 60 * 1000 else 0L
 

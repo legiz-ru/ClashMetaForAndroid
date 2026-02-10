@@ -4,8 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.util.importProfileFromUrl
@@ -30,6 +28,7 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
                     importProfileFromUrl(url)
                     finish()
                 }
+                return
             }
 
             Intents.ACTION_TOGGLE_CLASH -> if(Remote.broadcasts.clashRunning) {

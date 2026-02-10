@@ -15,6 +15,7 @@ import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.service.util.processingDir
 import com.github.kr328.clash.service.util.sendProfileChanged
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -307,6 +308,34 @@ object ProfileProcessor {
                 )
             } else ProfileHeaders()
         } catch (_: Exception) { ProfileHeaders() }
+    }
+
+    data class UrlHeaders(
+        val title: String = "",
+        val updateIntervalHours: Int = 0,
+    )
+
+    suspend fun fetchUrlHeaders(context: Context, url: String): UrlHeaders {
+        return withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(10, TimeUnit.SECONDS)
+                    .build()
+                val baseRequest = buildProfileRequest(context, url)
+                val request = baseRequest.newBuilder().head().build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext UrlHeaders()
+                    val title = response.headers["profile-title"]?.let {
+                        decodeHeaderValue(it)
+                    } ?: ""
+                    val interval = response.headers["profile-update-interval"]?.trim()?.toIntOrNull() ?: 0
+                    UrlHeaders(title, interval)
+                }
+            } catch (_: Exception) {
+                UrlHeaders()
+            }
+        }
     }
 
     fun decodeHeaderValue(value: String): String {
