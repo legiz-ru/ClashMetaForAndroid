@@ -289,33 +289,35 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val visibleGroups = groups.filter { !it.second.hidden }
             val groupMap = visibleGroups.toMap()
 
-            fun resolveSelectedLeaf(groupName: String, now: String, visited: MutableSet<String> = mutableSetOf()): Triple<String, String, Int> {
-                if (!visited.add(groupName)) return Triple(now, groupName, 0)
+            fun resolveSelectedInfo(groupName: String, now: String, visited: MutableSet<String> = mutableSetOf()): Pair<String, Int> {
+                if (!visited.add(groupName)) return now to 0
 
-                val currentGroup = groupMap[groupName] ?: return Triple(now, groupName, 0)
+                val currentGroup = groupMap[groupName] ?: return now to 0
                 val selected = currentGroup.proxies.find { it.name == now }
-                    ?: return Triple(now, groupName, 0)
+                    ?: return now to 0
 
                 val selectedDisplayName = selected.title.ifEmpty { selected.name }
 
                 if (!selected.type.group) {
-                    // This is a final proxy, not a group
-                    return Triple(selectedDisplayName, groupName, selected.delay)
+                    // This is a final proxy, not a group - just show its name
+                    return selectedDisplayName to selected.delay
                 }
 
                 // This is a nested group - recurse to find the final proxy
                 val nestedGroupName = selected.name
-                val nestedGroup = groupMap[nestedGroupName] ?: return Triple(selectedDisplayName, selectedDisplayName, selected.delay)
-                val (finalProxyName, _, finalDelay) = resolveSelectedLeaf(nestedGroupName, nestedGroup.now, visited)
-                return Triple(finalProxyName, selectedDisplayName, finalDelay)
+                val nestedGroup = groupMap[nestedGroupName] ?: return selectedDisplayName to selected.delay
+                val (finalProxyName, finalDelay) = resolveSelectedInfo(nestedGroupName, nestedGroup.now, visited)
+
+                // Show: "SelectedGroupName ➡️ FinalProxy"
+                val displayText = "$selectedDisplayName ➡️ $finalProxyName"
+                return displayText to finalDelay
             }
 
             for ((name, group) in visibleGroups) {
                 val isExpanded = expandedGroups.contains(name)
 
-                // Resolve selected leaf proxy (supports nested groups)
-                val (leafName, immediateSelection, groupDelay) = resolveSelectedLeaf(name, group.now)
-                val selectedInfoText = "${leafName}·${immediateSelection}"
+                // Resolve selected info (supports nested groups)
+                val (selectedInfoText, groupDelay) = resolveSelectedInfo(name, group.now)
 
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
@@ -450,8 +452,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     val (proxyDisplayName, proxyDelay) = if (proxy.type.group) {
                         val nestedGroup = groupMap[proxy.name]
                         if (nestedGroup != null) {
-                            val (nestedLeafName, nestedImmediateSelection, nestedDelay) = resolveSelectedLeaf(proxy.name, nestedGroup.now)
-                            "${nestedLeafName}·${nestedImmediateSelection}" to nestedDelay
+                            resolveSelectedInfo(proxy.name, nestedGroup.now)
                         } else {
                             (proxy.title.ifEmpty { proxy.name }) to proxy.delay
                         }
