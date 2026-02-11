@@ -10,7 +10,6 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.databinding.DialogTextFieldBinding
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
-import com.github.kr328.clash.design.util.showToast
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
@@ -106,11 +105,11 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
     private suspend fun PropertiesDesign.verifyAndCommit() {
         when {
             profile.name.isBlank() -> {
-                showToast(R.string.empty_name, ToastDuration.Long)
+                this@PropertiesActivity.design?.showToast(R.string.empty_name, ToastDuration.Long)
             }
 
             profile.type != Profile.Type.File && profile.source.isBlank() -> {
-                showToast(R.string.invalid_url, ToastDuration.Long)
+                this@PropertiesActivity.design?.showToast(R.string.invalid_url, ToastDuration.Long)
             }
 
             else -> {
