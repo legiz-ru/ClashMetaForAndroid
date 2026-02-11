@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	P "path"
@@ -58,22 +59,22 @@ func GetAvailableTemplates() []Template {
 	}
 }
 
-// GetTemplateContent loads template content from assets or custom file
+// GetTemplateContent loads template content from embedded constants or custom file
 func GetTemplateContent(templateID TemplateID, profilePath string) (string, error) {
 	if templateID == TemplateCustom {
 		// Load custom template from profile directory
 		customPath := P.Join(profilePath, "custom-template.yaml")
 		data, err := os.ReadFile(customPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to read custom template: %w", err)
+			// If custom template doesn't exist, use default as fallback
+			log.Warnln("[Template] Custom template not found, using default")
+			return GetBuiltinTemplateContent(TemplateDefault)
 		}
 		return string(data), nil
 	}
 
-	// Load builtin template from assets
-	// Note: In actual implementation, this will load from Android assets
-	// For now, return empty string - will be implemented in Android layer
-	return "", fmt.Errorf("builtin templates are loaded from Android assets")
+	// Load builtin template from embedded constants
+	return GetBuiltinTemplateContent(templateID)
 }
 
 // GetCurrentTemplate returns the template ID used by a profile
@@ -184,4 +185,96 @@ func ValidateTemplateYAML(content string) error {
 	}
 
 	return nil
+}
+
+// ApplyTemplateIfNeeded checks if config is non-YAML (URI/subscription) and applies template
+// Returns true if template was applied, false if it's already a valid YAML config
+func ApplyTemplateIfNeeded(profilePath string, templateContent string) (bool, error) {
+	configPath := P.Join(profilePath, "config.yaml")
+
+	// Read current config.yaml content
+	configData, err := os.ReadFile(configPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read config: %w", err)
+	}
+
+	contentStr := string(configData)
+
+	// Try to detect format
+	format := DetectFormat(contentStr)
+
+	// If it's already Clash/ClashMeta YAML, don't apply template
+	if format == FormatClash || format == FormatClashMeta {
+		log.Infoln("[Template] Config is already YAML, skipping template application")
+		return false, nil
+	}
+
+	// For URI or Base64 subscriptions, we need to parse proxies first
+	var proxies []map[string]interface{}
+
+	switch format {
+	case FormatSingleVLESS, FormatSingleTrojan, FormatSingleSS, FormatSingleVMess:
+		// Single URI - parse it
+		proxy, err := parseProxyURI(contentStr)
+		if err != nil {
+			return false, fmt.Errorf("failed to parse proxy URI: %w", err)
+		}
+		proxies = []map[string]interface{}{proxy}
+
+	case FormatBase64:
+		// Base64 subscription - decode and parse
+		decoded, err := base64.StdEncoding.DecodeString(contentStr)
+		if err != nil {
+			return false, fmt.Errorf("failed to decode base64: %w", err)
+		}
+
+		// Parse each line as proxy URI
+		lines := strings.Split(string(decoded), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+
+			proxy, err := parseProxyURI(line)
+			if err != nil {
+				log.Warnln("[Template] Failed to parse proxy line: %s, error: %s", line, err)
+				continue // Skip invalid proxies
+			}
+			proxies = append(proxies, proxy)
+		}
+
+		if len(proxies) == 0 {
+			return false, fmt.Errorf("no valid proxies found in subscription")
+		}
+
+	default:
+		// Unknown format - don't apply template
+		log.Warnln("[Template] Unknown format %s, skipping template application", format)
+		return false, nil
+	}
+
+	// Apply template with parsed proxies
+	if err := ApplyTemplateToProfile(profilePath, templateContent, proxies); err != nil {
+		return false, fmt.Errorf("failed to apply template: %w", err)
+	}
+
+	log.Infoln("[Template] Applied template to profile with %d proxies", len(proxies))
+	return true, nil
+}
+
+// parseProxyURI parses a single proxy URI (vless://, trojan://, ss://, vmess://)
+func parseProxyURI(uri string) (map[string]interface{}, error) {
+	// Use existing parseVLESS, parseTrojan, etc. from convert.go
+	if strings.HasPrefix(uri, "vless://") {
+		return parseVLESS(uri)
+	} else if strings.HasPrefix(uri, "trojan://") {
+		return parseTrojan(uri)
+	} else if strings.HasPrefix(uri, "ss://") {
+		return parseShadowsocks(uri)
+	} else if strings.HasPrefix(uri, "vmess://") {
+		return parseVMess(uri)
+	}
+
+	return nil, fmt.Errorf("unsupported proxy protocol: %s", uri)
 }

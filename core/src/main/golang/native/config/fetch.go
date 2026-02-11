@@ -103,6 +103,31 @@ func FetchAndValid(
 		if err := fetch(url, configPath); err != nil {
 			return err
 		}
+
+		// After fetching, apply template if needed (for non-YAML profiles)
+		// This converts URI/subscription profiles to full YAML using template
+		templateID, _ := GetCurrentTemplate(path)
+		templateContent, err := GetTemplateContent(templateID, path)
+		if err != nil {
+			// If template loading fails, use default template
+			templateContent, _ = GetBuiltinTemplateContent(TemplateDefault)
+		}
+
+		applied, err := ApplyTemplateIfNeeded(path, templateContent)
+		if err != nil {
+			return fmt.Errorf("failed to apply template: %w", err)
+		}
+
+		if applied {
+			// Report template application status
+			bytes, _ := json.Marshal(&Status{
+				Action:      "ApplyingTemplate",
+				Args:        []string{string(templateID)},
+				Progress:    -1,
+				MaxProgress: -1,
+			})
+			reportStatus(string(bytes))
+		}
 	}
 
 	defer runtime.GC()
