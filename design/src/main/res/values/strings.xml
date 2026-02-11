@@ -227,7 +227,18 @@
     <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
 
-    <string name="tips_properties"><![CDATA[Accept Only <strong>Prizrak-Box Config</strong>(including <strong>Proxy</strong>/<strong>Rules</strong>)]]></string>
+    
+    <string name="template">Template</string>
+    <string name="template_default">Default</string>
+    <string name="template_rubundle">RU Bundle</string>
+    <string name="template_davoyan">Davoyan</string>
+    <string name="template_custom">Custom</string>
+    <string name="template_select_title">Select template</string>
+    <string name="edit_custom_template">Edit custom template</string>
+    <string name="custom_template_hint">Used when template is set to Custom</string>
+    <string name="template_saved">Template updated</string>
+    <string name="custom_template_saved">Custom template saved</string>
+<string name="tips_properties"><![CDATA[Accept Only <strong>Prizrak-Box Config</strong>(including <strong>Proxy</strong>/<strong>Rules</strong>)]]></string>
     <string name="tips_help"><![CDATA[Prizrak-Box is a <strong>freeware</strong> and we do <strong>NOT</strong> provide any service for it]]></string>
 
     <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>

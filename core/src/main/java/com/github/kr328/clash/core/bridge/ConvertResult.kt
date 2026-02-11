@@ -2,6 +2,7 @@ package com.github.kr328.clash.core.bridge
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 
 @Serializable
 data class ConvertResult(
@@ -18,7 +19,7 @@ data class ConvertResult(
 
         fun fromJson(jsonString: String): ConvertResult {
             return try {
-                json.decodeFromString(jsonString)
+                json.decodeFromString<ConvertResult>(jsonString)
             } catch (e: Exception) {
                 ConvertResult(
                     success = false,

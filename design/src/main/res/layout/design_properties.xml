@@ -88,6 +88,26 @@
                     app:text="@{profile.interval == 0 ? @string/disabled : @string/format_minutes(profile.interval / 1000 / 60)}"
                     app:title="@string/auto_update" />
 
+
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/properties_element_margin_vertical"
+                    android:onClick="@{() -> self.requestSelectTemplate()}"
+                    app:icon="@drawable/ic_outline_article"
+                    app:subtext="@{self.selectedTemplateName}"
+                    app:text="@string/template" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/properties_element_margin_vertical"
+                    android:onClick="@{() -> self.requestEditCustomTemplate()}"
+                    app:icon="@drawable/ic_outline_article"
+                    app:subtext="@string/custom_template_hint"
+                    app:text="@string/edit_custom_template" />
+
                 <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

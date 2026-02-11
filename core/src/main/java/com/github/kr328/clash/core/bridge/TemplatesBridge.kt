@@ -1,10 +1,13 @@
 package com.github.kr328.clash.core.bridge
 
-import android.content.Context
-import com.github.kr328.clash.core.Clash
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.File
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Bridge for working with profile templates
@@ -26,7 +29,7 @@ object TemplatesBridge {
     fun getAvailableTemplates(): List<Template> {
         val result = nativeGetAvailableTemplates()
         return try {
-            json.decodeFromString(result)
+            json.decodeFromString<List<Template>>(result)
         } catch (e: Exception) {
             emptyList()
         }
@@ -50,35 +53,6 @@ object TemplatesBridge {
     }
 
     /**
-     * Load template content from assets or custom file
-     */
-    fun getTemplateContent(context: Context, templateId: String, profilePath: String): String {
-        return when (templateId) {
-            "default", "rubundle", "davoyan" -> {
-                // Load from assets
-                context.assets.open("templates/$templateId.yaml").use {
-                    it.bufferedReader().readText()
-                }
-            }
-            "custom" -> {
-                // Load from profile directory
-                val customFile = File(profilePath, "custom-template.yaml")
-                if (customFile.exists()) {
-                    customFile.readText()
-                } else {
-                    // Create default custom template
-                    val defaultTemplate = context.assets.open("templates/default.yaml").use {
-                        it.bufferedReader().readText()
-                    }
-                    customFile.writeText(defaultTemplate)
-                    defaultTemplate
-                }
-            }
-            else -> throw IllegalArgumentException("Unknown template ID: $templateId")
-        }
-    }
-
-    /**
      * Apply template to profile with proxies from subscription
      */
     fun applyTemplateToProfile(
@@ -86,24 +60,11 @@ object TemplatesBridge {
         templateContent: String,
         proxies: List<Map<String, Any>>
     ) {
-        val proxiesJson = json.encodeToString(
-            kotlinx.serialization.builtins.ListSerializer(
-                kotlinx.serialization.builtins.MapSerializer(
-                    kotlinx.serialization.builtins.serializer(),
-                    kotlinx.serialization.json.JsonElement.serializer()
-                )
-            ),
-            proxies.map { map ->
-                map.mapValues { (_, value) ->
-                    when (value) {
-                        is String -> kotlinx.serialization.json.JsonPrimitive(value)
-                        is Number -> kotlinx.serialization.json.JsonPrimitive(value)
-                        is Boolean -> kotlinx.serialization.json.JsonPrimitive(value)
-                        else -> kotlinx.serialization.json.JsonPrimitive(value.toString())
-                    }
-                }
-            }
-        )
+        val normalized = proxies.map { map ->
+            JsonObject(map.mapValues { (_, value) -> toJsonElement(value) })
+        }
+
+        val proxiesJson = json.encodeToString(ListSerializer(JsonObject.serializer()), normalized)
 
         val error = nativeApplyTemplateToProfile(profilePath, templateContent, proxiesJson)
         if (error != null) {
@@ -121,16 +82,14 @@ object TemplatesBridge {
         }
     }
 
-    /**
-     * Save custom template content
-     */
-    fun saveCustomTemplate(profilePath: String, content: String) {
-        // Validate first
-        validateTemplateYAML(content)
-
-        // Save to file
-        val customFile = File(profilePath, "custom-template.yaml")
-        customFile.writeText(content)
+    private fun toJsonElement(value: Any?): JsonElement {
+        return when (value) {
+            null -> JsonPrimitive("")
+            is String -> JsonPrimitive(value)
+            is Number -> JsonPrimitive(value)
+            is Boolean -> JsonPrimitive(value)
+            else -> JsonPrimitive(value.toString())
+        }
     }
 
     // Native methods
@@ -143,8 +102,4 @@ object TemplatesBridge {
         proxiesJSON: String
     ): String?
     private external fun nativeValidateTemplateYAML(content: String): String?
-
-    init {
-        Clash.load()
-    }
 }

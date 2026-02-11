@@ -21,6 +21,8 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     sealed class Request {
         object Commit : Request()
         object BrowseFiles : Request()
+        object SelectTemplate : Request()
+        object EditCustomTemplate : Request()
     }
 
     private val binding = DesignPropertiesBinding
@@ -33,6 +35,12 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         get() = binding.profile!!
         set(value) {
             binding.profile = value
+        }
+
+    var selectedTemplateName: String = context.getString(R.string.template_default)
+        set(value) {
+            field = value
+            binding.invalidateAll()
         }
 
     val progressing: Boolean
@@ -149,6 +157,14 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     fun requestBrowseFiles() {
         requests.trySend(Request.BrowseFiles)
+    }
+
+    fun requestSelectTemplate() {
+        requests.trySend(Request.SelectTemplate)
+    }
+
+    fun requestEditCustomTemplate() {
+        requests.trySend(Request.EditCustomTemplate)
     }
 
     private fun ModelProgressBarConfigure.applyFrom(status: FetchStatus) {

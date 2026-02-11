@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import com.github.kr328.clash.core.bridge.TemplatesBridge
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.Intents
@@ -28,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import java.util.*
+import kotlin.coroutines.resume
 
 class NewProfileActivity : BaseActivity<NewProfileDesign>() {
     private val self: NewProfileActivity
@@ -81,8 +84,13 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                                     }
                                 }
 
-                                if (uuid != null)
+                                if (uuid != null) {
+                                    val templateId = requestTemplateSelection()
+                                    if (templateId != null) {
+                                        writeInitialTemplate(uuid, templateId)
+                                    }
                                     launchProperties(uuid)
+                                }
                             }
                         }
 
@@ -99,6 +107,46 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
+
+
+    private suspend fun requestTemplateSelection(): String? {
+        val templates = TemplatesBridge.getAvailableTemplates()
+        if (templates.isEmpty()) {
+            design?.showExceptionToast(getString(R.string.error))
+            return null
+        }
+
+        val names = templates.map { it.name }.toTypedArray()
+        val ids = templates.map { it.id }
+
+        return kotlinx.coroutines.suspendCancellableCoroutine<String?> { cont ->
+            var selected = 0
+            val dialog = MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.template_select_title)
+                .setSingleChoiceItems(names, 0) { _, which -> selected = which }
+                .setPositiveButton(R.string.ok) { _, _ -> cont.resume(ids[selected]) }
+                .setNegativeButton(R.string.cancel) { _, _ -> cont.resume("default") }
+                .setOnCancelListener { if (!cont.isCompleted) cont.resume("default") }
+                .create()
+
+            cont.invokeOnCancellation { dialog.dismiss() }
+            dialog.show()
+        }
+    }
+
+    private fun writeInitialTemplate(uuid: UUID, templateId: String) {
+        val profileDir = filesDir.resolve("pending").resolve(uuid.toString())
+        profileDir.mkdirs()
+        profileDir.resolve("template.txt").writeText(templateId)
+
+        if (templateId == "custom") {
+            val customFile = profileDir.resolve("custom-template.yaml")
+            if (!customFile.exists()) {
+                val fallback = assets.open("templates/default.yaml").use { it.bufferedReader().readText() }
+                customFile.writeText(fallback)
+            }
+        }
+    }
     private fun launchAppDetailed(provider: ProfileProvider.External) {
         val data = Uri.fromParts(
             "package",
@@ -187,13 +235,16 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
 
     private suspend fun createProfileByQrCode(url: String) {
         withProfile {
-            launchProperties(
-                create(
-                    type = Profile.Type.Url,
-                    name = getString(R.string.new_profile),
-                    url,
-                )
+            val uuid = create(
+                type = Profile.Type.Url,
+                name = getString(R.string.new_profile),
+                url,
             )
+
+            val templateId = requestTemplateSelection() ?: "default"
+            writeInitialTemplate(uuid, templateId)
+
+            launchProperties(uuid)
         }
     }
 
