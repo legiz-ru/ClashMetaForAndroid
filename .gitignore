@@ -27,8 +27,10 @@ gradle-app.setting
 /core/src/premium/golang/.idea/*
 !/core/src/premium/golang/.idea/codeStyles
 
-# Ignore builtin geofiles
-app/src/main/assets
+# Ignore builtin geofiles (but keep templates)
+app/src/main/assets/*
+!app/src/main/assets/templates/
+!app/src/main/assets/templates/*.yaml
 
 # KeyStore
 signing.properties
