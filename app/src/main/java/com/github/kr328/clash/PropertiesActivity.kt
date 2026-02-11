@@ -10,6 +10,7 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.databinding.DialogTextFieldBinding
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
+import com.github.kr328.clash.design.util.showToast
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.pendingDir
@@ -146,7 +147,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
     private suspend fun selectTemplate(uuid: UUID, design: PropertiesDesign) {
         val templates = TemplatesBridge.getAvailableTemplates()
         if (templates.isEmpty()) {
-            showToast(R.string.error, ToastDuration.Long)
+            design.showToast(R.string.error, ToastDuration.Long)
             return
         }
 
@@ -177,7 +178,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
         writeTemplateId(uuid, selected)
         design.selectedTemplateName = getTemplateDisplayName(selected)
-        showToast(R.string.template_saved, ToastDuration.Short)
+        design.showToast(R.string.template_saved, ToastDuration.Short)
     }
 
     private suspend fun editCustomTemplate(uuid: UUID) {
@@ -217,7 +218,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
         TemplatesBridge.validateTemplateYAML(edited)
         customFile.writeText(edited)
-        showToast(R.string.custom_template_saved, ToastDuration.Short)
+        design?.showToast(R.string.custom_template_saved, ToastDuration.Short)
     }
 
     private suspend fun ensureWritableProfileDir(uuid: UUID) = withProfile {
