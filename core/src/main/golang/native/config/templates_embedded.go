@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 // Builtin templates embedded in Go code
 // These are synced with app/src/main/assets/templates/*.yaml
 

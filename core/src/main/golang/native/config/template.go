@@ -212,16 +212,18 @@ func ApplyTemplateIfNeeded(profilePath string, templateContent string) (bool, er
 	// For URI or Base64 subscriptions, we need to parse proxies first
 	var proxies []map[string]interface{}
 
-	switch format {
-	case FormatSingleVLESS, FormatSingleTrojan, FormatSingleSS, FormatSingleVMess:
-		// Single URI - parse it
+	// Check if it's a single URI line (starts with protocol)
+	if strings.HasPrefix(contentStr, "ss://") ||
+		strings.HasPrefix(contentStr, "vmess://") ||
+		strings.HasPrefix(contentStr, "trojan://") ||
+		strings.HasPrefix(contentStr, "vless://") {
+		// Single URI - parse it using existing function from convert.go
 		proxy, err := parseProxyURI(contentStr)
 		if err != nil {
 			return false, fmt.Errorf("failed to parse proxy URI: %w", err)
 		}
 		proxies = []map[string]interface{}{proxy}
-
-	case FormatBase64:
+	} else if format == FormatBase64 {
 		// Base64 subscription - decode and parse
 		decoded, err := base64.StdEncoding.DecodeString(contentStr)
 		if err != nil {
@@ -247,8 +249,7 @@ func ApplyTemplateIfNeeded(profilePath string, templateContent string) (bool, er
 		if len(proxies) == 0 {
 			return false, fmt.Errorf("no valid proxies found in subscription")
 		}
-
-	default:
+	} else {
 		// Unknown format - don't apply template
 		log.Warnln("[Template] Unknown format %s, skipping template application", format)
 		return false, nil
@@ -261,20 +262,4 @@ func ApplyTemplateIfNeeded(profilePath string, templateContent string) (bool, er
 
 	log.Infoln("[Template] Applied template to profile with %d proxies", len(proxies))
 	return true, nil
-}
-
-// parseProxyURI parses a single proxy URI (vless://, trojan://, ss://, vmess://)
-func parseProxyURI(uri string) (map[string]interface{}, error) {
-	// Use existing parseVLESS, parseTrojan, etc. from convert.go
-	if strings.HasPrefix(uri, "vless://") {
-		return parseVLESS(uri)
-	} else if strings.HasPrefix(uri, "trojan://") {
-		return parseTrojan(uri)
-	} else if strings.HasPrefix(uri, "ss://") {
-		return parseShadowsocks(uri)
-	} else if strings.HasPrefix(uri, "vmess://") {
-		return parseVMess(uri)
-	}
-
-	return nil, fmt.Errorf("unsupported proxy protocol: %s", uri)
 }
