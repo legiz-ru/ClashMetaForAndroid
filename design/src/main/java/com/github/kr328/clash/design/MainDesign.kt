@@ -89,6 +89,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     private var openedSheetGroupName: String? = null
     private var openedSheetDialog: Dialog? = null
+    private var openedSheetListContainer: LinearLayout? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -383,6 +384,98 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 container.addView(card)
             }
 
+            val currentDialog = openedSheetDialog
+            val currentSheetGroup = openedSheetGroupName
+            val currentSheetList = openedSheetListContainer
+
+            if (currentDialog?.isShowing == true && currentSheetGroup != null && currentSheetList != null) {
+                val updatedGroup = groupMap[currentSheetGroup]
+                if (updatedGroup != null) {
+                    renderProxyGroupSheetRows(
+                        container = currentSheetList,
+                        groupName = currentSheetGroup,
+                        group = updatedGroup,
+                        useDots = useDots,
+                        dp = dp,
+                        onSurfaceColor = onSurfaceColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor,
+                        surfaceVariantColor = surfaceVariantColor,
+                        dialog = currentDialog,
+                    )
+                } else {
+                    currentDialog.dismiss()
+                }
+            }
+
+        }
+    }
+
+    private fun renderProxyGroupSheetRows(
+        container: LinearLayout,
+        groupName: String,
+        group: ProxyGroup,
+        useDots: Boolean,
+        dp: Float,
+        onSurfaceColor: Int,
+        onSurfaceVariantColor: Int,
+        surfaceVariantColor: Int,
+        dialog: Dialog,
+    ) {
+        container.removeAllViews()
+
+        for (proxy in group.proxies) {
+            val isSelected = proxy.name == group.now
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt())
+                if (isSelected) {
+                    background = GradientDrawable().apply {
+                        setCornerRadius(14 * dp)
+                        setColor(surfaceVariantColor)
+                    }
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = (6 * dp).toInt()
+                }
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    requestProxySelection(groupName, proxy.name)
+                    dialog.dismiss()
+                }
+            }
+
+            val info = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val nameView = TextView(context).apply {
+                text = proxy.title.ifEmpty { proxy.name }
+                textSize = 14f
+                setTextColor(onSurfaceColor)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            }
+
+            val subtitleView = TextView(context).apply {
+                text = proxy.subtitle.ifEmpty { proxy.type.name }
+                textSize = 11f
+                setTextColor(onSurfaceVariantColor)
+                maxLines = 1
+            }
+
+            val delayView = createDelayText(dp, proxy.delay, useDots)
+
+            info.addView(nameView)
+            info.addView(subtitleView)
+            row.addView(info)
+            row.addView(delayView)
+            container.addView(row)
         }
     }
 
@@ -393,6 +486,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         currentSort: ProxySort,
     ) {
         val group = groups[groupName] ?: return
+        openedSheetDialog?.dismiss()
         openedSheetGroupName = groupName
 
         val dp = context.resources.displayMetrics.density
@@ -500,64 +594,24 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             orientation = LinearLayout.VERTICAL
         }
 
-        for (proxy in group.proxies) {
-            val isSelected = proxy.name == group.now
-            val row = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding((12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt())
-                if (isSelected) {
-                    background = GradientDrawable().apply {
-                        setCornerRadius(14 * dp)
-                        setColor(surfaceVariantColor)
-                    }
-                }
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    bottomMargin = (6 * dp).toInt()
-                }
-                isClickable = true
-                isFocusable = true
-                setOnClickListener {
-                    requestProxySelection(groupName, proxy.name)
-                    dialog.dismiss()
-                }
-            }
-
-            val info = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-
-            val nameView = TextView(context).apply {
-                text = proxy.title.ifEmpty { proxy.name }
-                textSize = 14f
-                setTextColor(onSurfaceColor)
-                maxLines = 1
-                ellipsize = TextUtils.TruncateAt.END
-            }
-
-            val subtitleView = TextView(context).apply {
-                text = proxy.subtitle.ifEmpty { proxy.type.name }
-                textSize = 11f
-                setTextColor(onSurfaceVariantColor)
-                maxLines = 1
-            }
-
-            val delayView = createDelayText(dp, proxy.delay, useDots)
-
-            info.addView(nameView)
-            info.addView(subtitleView)
-            row.addView(info)
-            row.addView(delayView)
-            list.addView(row)
-        }
+        renderProxyGroupSheetRows(
+            container = list,
+            groupName = groupName,
+            group = group,
+            useDots = useDots,
+            dp = dp,
+            onSurfaceColor = onSurfaceColor,
+            onSurfaceVariantColor = onSurfaceVariantColor,
+            surfaceVariantColor = surfaceVariantColor,
+            dialog = dialog,
+        )
 
         val scrollView = androidx.core.widget.NestedScrollView(context).apply {
             isFillViewport = true
             overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            isVerticalScrollBarEnabled = true
+            scrollBarStyle = View.SCROLLBARS_INSIDE_INSET
+            isScrollbarFadingEnabled = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0,
@@ -565,6 +619,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             )
             addView(list)
         }
+        openedSheetListContainer = list
 
         content.addView(scrollView)
         dialog.setContentView(content)
@@ -589,6 +644,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             if (openedSheetDialog === dialog) {
                 openedSheetDialog = null
                 openedSheetGroupName = null
+                openedSheetListContainer = null
             }
         }
         dialog.show()
