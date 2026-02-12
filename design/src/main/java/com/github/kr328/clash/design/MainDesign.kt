@@ -430,7 +430,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 bottomMargin = (14 * dp).toInt()
             }
             background = GradientDrawable().apply {
-                cornerRadius = 999 * dp
+                setCornerRadius(999 * dp)
                 setColor(onSurfaceVariantColor and 0x66FFFFFF)
             }
         }
@@ -508,7 +508,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 setPadding((12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt())
                 if (isSelected) {
                     background = GradientDrawable().apply {
-                        cornerRadius = 14 * dp
+                        setCornerRadius(14 * dp)
                         setColor(surfaceVariantColor)
                     }
                 }
