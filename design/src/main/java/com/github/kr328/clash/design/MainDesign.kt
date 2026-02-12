@@ -15,6 +15,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
@@ -35,6 +36,7 @@ import com.github.kr328.clash.design.util.elapsedIntervalString
 import com.github.kr328.clash.service.model.Profile
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -381,13 +383,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 container.addView(card)
             }
 
-            openedSheetGroupName?.let { activeName ->
-                val dialog = openedSheetDialog
-                if (dialog?.isShowing == true && groupMap.containsKey(activeName)) {
-                    dialog.dismiss()
-                    openProxyGroupSheet(activeName, groupMap, useDots, currentSort)
-                }
-            }
         }
     }
 
@@ -401,20 +396,31 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         openedSheetGroupName = groupName
 
         val dp = context.resources.displayMetrics.density
-        val darkTheme = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
         val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
-        val sheetBackground = if (darkTheme) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
-        val selectedBackground = if (darkTheme) 0xFF2F323A.toInt() else 0xFFF1F1F1.toInt()
+        val surfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurface)
+        val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
 
         val dialog = AppBottomSheetDialog(context)
         openedSheetDialog = dialog
-
         dialog.window?.setDimAmount(0.32f)
+
+        val cornerRadius = 24 * dp
+        val sheetBackgroundDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = floatArrayOf(
+                cornerRadius, cornerRadius,
+                cornerRadius, cornerRadius,
+                0f, 0f,
+                0f, 0f,
+            )
+            setColor(surfaceColor)
+        }
 
         val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(sheetBackground)
+            background = sheetBackgroundDrawable
+            clipToOutline = true
             setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (16 * dp).toInt())
         }
 
@@ -425,7 +431,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
             background = GradientDrawable().apply {
                 cornerRadius = 999 * dp
-                setColor(if (darkTheme) 0x66FFFFFF else 0x33000000)
+                setColor(onSurfaceVariantColor and 0x66FFFFFF)
             }
         }
         content.addView(handle)
@@ -503,7 +509,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 if (isSelected) {
                     background = GradientDrawable().apply {
                         cornerRadius = 14 * dp
-                        setColor(selectedBackground)
+                        setColor(surfaceVariantColor)
                     }
                 }
                 layoutParams = LinearLayout.LayoutParams(
@@ -549,8 +555,36 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             list.addView(row)
         }
 
-        content.addView(list)
+        val scrollView = androidx.core.widget.NestedScrollView(context).apply {
+            isFillViewport = true
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f,
+            )
+            addView(list)
+        }
+
+        content.addView(scrollView)
         dialog.setContentView(content)
+
+        dialog.setOnShowListener {
+            val bottomSheet = dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet) ?: return@setOnShowListener
+            bottomSheet.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+
+            val maxHeight = (context.resources.displayMetrics.heightPixels * 0.82f).toInt()
+            bottomSheet.layoutParams = bottomSheet.layoutParams.apply {
+                height = maxHeight
+            }
+
+            val behavior = BottomSheetBehavior.from(bottomSheet)
+            behavior.isFitToContents = true
+            behavior.skipCollapsed = false
+            behavior.peekHeight = (context.resources.displayMetrics.heightPixels * 0.52f).toInt()
+            behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        }
+
         dialog.setOnDismissListener {
             if (openedSheetDialog === dialog) {
                 openedSheetDialog = null
