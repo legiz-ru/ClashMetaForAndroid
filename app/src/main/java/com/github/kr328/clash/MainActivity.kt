@@ -165,7 +165,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         }
                         MainDesign.Request.UpdateProxySort -> {
                             val sort = design.consumePendingProxySort() ?: return@onReceive
-                            design.uiStore.proxySort = sort
+                            uiStore.proxySort = sort
                             design.fetchProxyGroups()
                         }
                     }
