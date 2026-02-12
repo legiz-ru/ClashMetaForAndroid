@@ -289,7 +289,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             container.removeAllViews()
 
             val dp = context.resources.displayMetrics.density
-                val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
+            val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+            val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
             val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
             val darkTheme = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -442,7 +443,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         val sortButton = ImageView(context).apply {
             layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
-            setImageResource(R.drawable.ic_mdi_sort_variant)
+            setImageResource(R.drawable.ic_baseline_swap_vert)
             imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
             background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
             isClickable = true
