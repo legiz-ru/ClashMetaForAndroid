@@ -10,6 +10,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
+import android.content.res.Configuration
 import android.view.Gravity
 import android.view.View
 import android.view.ViewTreeObserver
@@ -296,6 +297,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
         val surfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurface)
         val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
+        val isDarkTheme = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
         fun resolveSelectedInfo(groupName: String, now: String, visited: MutableSet<String> = mutableSetOf()): Pair<String, Int> {
             if (!visited.add(groupName)) return now to 0
@@ -345,6 +347,21 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             listContainer.removeAllViews()
 
             val proxies = sortedProxies(group, currentSort)
+            if (proxies.isEmpty()) {
+                listContainer.addView(TextView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    )
+                    text = context.getString(R.string.empty)
+                    textSize = 14f
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    setTextColor(onSurfaceVariantColor)
+                    setPadding(0, (24 * dp).toInt(), 0, (24 * dp).toInt())
+                })
+                return
+            }
+
             proxies.forEachIndexed { index, proxy ->
                 val isSelected = proxy.name == group.now
                 val (proxyDisplayName, proxyDelay) = if (proxy.type.group) {
@@ -364,7 +381,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     }
                     radius = 14 * dp
                     cardElevation = 0f
-                    setCardBackgroundColor(if (isSelected) surfaceVariantColor else surfaceColor)
+                    setCardBackgroundColor(
+                        when {
+                            isSelected -> surfaceVariantColor
+                            isDarkTheme -> surfaceVariantColor
+                            else -> surfaceColor
+                        }
+                    )
                     strokeWidth = if (isSelected) (1 * dp).toInt() else 0
                     strokeColor = onSurfaceVariantColor and 0x40FFFFFF
                     isClickable = true
@@ -413,7 +436,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 row.addView(rowContent)
                 listContainer.addView(row)
 
-                if (!isSelected && index != proxies.lastIndex) {
+                if (index != proxies.lastIndex) {
                     listContainer.addView(View(context).apply {
                         layoutParams = LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -508,8 +531,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val dp = context.resources.displayMetrics.density
             val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
             val surfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurface)
+            val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
             val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+            val isDarkTheme = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
             val visibleGroups = groups.filter { !it.second.hidden }
             val groupMap = visibleGroups.toMap()
@@ -542,8 +567,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         bottomMargin = (10 * dp).toInt()
                     }
                     radius = 16 * dp
-                    cardElevation = if (androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode() == androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES) 0f else 1.5f * dp
-                    setCardBackgroundColor(surfaceColor)
+                    cardElevation = if (isDarkTheme) 0f else 1.5f * dp
+                    setCardBackgroundColor(if (isDarkTheme) surfaceVariantColor else surfaceColor)
                     isClickable = true
                     isFocusable = true
                     background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
