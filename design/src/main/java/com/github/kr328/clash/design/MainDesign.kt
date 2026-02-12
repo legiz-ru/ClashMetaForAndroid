@@ -404,7 +404,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 // Open Bottom Sheet on header click
                 headerRow.setOnClickListener {
-                    showProxyGroupSheet(name, group, groupMap, resolveSelectedInfo)
+                    showProxyGroupSheet(name, group, groupMap) { gName, now, visited ->
+                        resolveSelectedInfo(gName, now, visited)
+                    }
                 }
 
                 card.addView(cardContent)
@@ -452,7 +454,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     ) {
         val dialog = AppBottomSheetDialog(context)
         val sheetBinding = com.github.kr328.clash.design.databinding.DesignSheetProxyGroupBinding
-            .inflate(context.layoutInflater, dialog.window?.decorView as ViewGroup?, false)
+            .inflate(context.layoutInflater, null, false)
 
         sheetBinding.groupName = groupName
         sheetBinding.groupIcon = group.icon
@@ -518,7 +520,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     }
                     radius = 12 * dp
                     cardElevation = 0f
-                    setCardBackgroundColor(if (isSelected) primaryColor and 0x20FFFFFF or (primaryColor and 0x00FFFFFF) else surfaceContainerHighColor)
+                    // Selected: semi-transparent primary color, otherwise surface container high
+                    val bgColor = if (isSelected) {
+                        (primaryColor and 0x00FFFFFF) or 0x20000000  // 12.5% opacity
+                    } else {
+                        surfaceContainerHighColor
+                    }
+                    setCardBackgroundColor(bgColor)
                     isClickable = true
                     isFocusable = true
                     foreground = context.getDrawable(android.R.attr.selectableItemBackground)
