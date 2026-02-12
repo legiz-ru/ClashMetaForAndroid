@@ -3,6 +3,7 @@ package com.github.kr328.clash.design
 import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
@@ -16,9 +17,11 @@ import android.view.ViewTreeObserver
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.core.model.ProxyGroup
+import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
@@ -60,6 +63,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         OpenAbout,
         SelectProxy,
         UrlTest,
+        UpdateProxySort,
     }
 
     private val binding = DesignMainBinding
@@ -71,12 +75,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     val bottomNav: BottomNavigationView
         get() = binding.bottomNav
 
-    // Track expanded state of accordion groups
-    private val expandedGroups = mutableSetOf<String>()
-
-    // Track URL testing state for each group
-    private val urlTestingGroups = mutableSetOf<String>()
-
     // Cache for loaded icons
     private val iconCache = ConcurrentHashMap<String, Bitmap?>()
     private val iconExecutor = Executors.newSingleThreadExecutor()
@@ -85,6 +83,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var pendingSelectGroup: String? = null
     private var pendingSelectName: String? = null
     private var pendingUrlTestGroup: String? = null
+    private var pendingProxySort: ProxySort? = null
+
+    private var openedSheetGroupName: String? = null
+    private var openedSheetDialog: Dialog? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -277,80 +279,46 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
-    suspend fun setProxyGroups(groups: List<Pair<String, ProxyGroup>>, useDots: Boolean = true) {
+    suspend fun setProxyGroups(
+        groups: List<Pair<String, ProxyGroup>>,
+        useDots: Boolean = true,
+        currentSort: ProxySort = ProxySort.Default,
+    ) {
         withContext(Dispatchers.Main) {
             val container = binding.proxyGroupsContainer
             container.removeAllViews()
 
             val dp = context.resources.displayMetrics.density
-            val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
-            val secondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSecondaryContainer)
-            val onSecondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSecondaryContainer)
-            val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
+                val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
             val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+            val darkTheme = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-            // Filter hidden groups on Kotlin side as safety net
             val visibleGroups = groups.filter { !it.second.hidden }
             val groupMap = visibleGroups.toMap()
 
-            fun resolveSelectedInfo(groupName: String, now: String, visited: MutableSet<String> = mutableSetOf()): Pair<String, Int> {
-                if (!visited.add(groupName)) return now to 0
-
-                val currentGroup = groupMap[groupName] ?: return now to 0
-                val selected = currentGroup.proxies.find { it.name == now }
-                    ?: return now to 0
-
-                val selectedDisplayName = selected.title.ifEmpty { selected.name }
-
-                if (!selected.type.group) {
-                    // This is a final proxy, not a group - just show its name
-                    return selectedDisplayName to selected.delay
-                }
-
-                // This is a nested group - recurse to find the final proxy
-                val nestedGroupName = selected.name
-                val nestedGroup = groupMap[nestedGroupName] ?: return selectedDisplayName to selected.delay
-                val (finalProxyName, finalDelay) = resolveSelectedInfo(nestedGroupName, nestedGroup.now, visited)
-
-                // Show: "SelectedGroupName ➡️ FinalProxy"
-                val displayText = "$selectedDisplayName ➡️ $finalProxyName"
-                return displayText to finalDelay
-            }
-
             for ((name, group) in visibleGroups) {
-                val isExpanded = expandedGroups.contains(name)
-
-                // Resolve selected info (supports nested groups)
-                val (selectedInfoText, groupDelay) = resolveSelectedInfo(name, group.now)
-
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        bottomMargin = (8 * dp).toInt()
+                        bottomMargin = (10 * dp).toInt()
                     }
                     radius = 16 * dp
-                    cardElevation = 0f
-                    setCardBackgroundColor(if (isExpanded) secondaryContainerColor else surfaceVariantColor)
+                    cardElevation = if (darkTheme) 0f else 3 * dp
+                    setCardBackgroundColor(surfaceVariantColor)
                 }
 
-                val cardContent = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                }
-
-                // ======= COLLAPSED HEADER (always visible) =======
                 val headerRow = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding((16 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt())
+                    setPadding((16 * dp).toInt(), (18 * dp).toInt(), (12 * dp).toInt(), (18 * dp).toInt())
                     isClickable = true
                     isFocusable = true
                     background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                 }
 
-                // Group icon (from URL or default)
                 val groupIcon = ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt()).apply {
                         marginEnd = (12 * dp).toInt()
@@ -366,7 +334,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     groupIcon.visibility = View.GONE
                 }
 
-                // Group name and selected proxy info
                 val nameColumn = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -374,16 +341,19 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 val groupNameView = TextView(context).apply {
                     text = name
-                    setTextColor(if (isExpanded) onSecondaryContainerColor else onSurfaceColor)
+                    setTextColor(onSurfaceColor)
                     textSize = 15f
                     setTypeface(typeface, Typeface.BOLD)
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
                 }
 
+                val selected = group.proxies.find { it.name == group.now }
+                val selectedSubtitle = selected?.title?.ifEmpty { selected.name } ?: group.now
+
                 val selectedInfo = TextView(context).apply {
-                    text = selectedInfoText
-                    setTextColor(if (isExpanded) onSecondaryContainerColor else onSurfaceVariantColor)
+                    text = selectedSubtitle
+                    setTextColor(onSurfaceVariantColor)
                     textSize = 12f
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
@@ -392,183 +362,204 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 nameColumn.addView(groupNameView)
                 nameColumn.addView(selectedInfo)
 
-                // Group delay indicator (delay of the currently selected proxy)
-                val groupDelayView = createDelayText(dp, groupDelay, useDots)
-                groupDelayView.layoutParams = (groupDelayView.layoutParams as? LinearLayout.LayoutParams
-                    ?: LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )).apply {
-                    marginEnd = (8 * dp).toInt()
-                }
-
-                // URL Test button (tests delay for this group)
-                val urlTestButton = ImageView(context).apply {
-                    layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt()).apply {
-                        marginEnd = (8 * dp).toInt()
-                    }
-                    setImageResource(R.drawable.ic_baseline_speed)
-                    imageTintList = ColorStateList.valueOf(if (isExpanded) onSecondaryContainerColor else onSurfaceVariantColor)
-                    isClickable = true
-                    isFocusable = true
-                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
-                    setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
-                    setOnClickListener {
-                        pendingUrlTestGroup = name
-                        requests.trySend(Request.UrlTest)
-                    }
-                }
-
-                // Chevron indicator (rotates when expanded)
                 val chevron = ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
                     setImageResource(R.drawable.ic_mdi_chevron_right)
-                    imageTintList = ColorStateList.valueOf(if (isExpanded) onSecondaryContainerColor else onSurfaceVariantColor)
-                    rotation = if (isExpanded) 90f else 0f
+                    imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
                 }
 
                 headerRow.addView(groupIcon)
                 headerRow.addView(nameColumn)
-                headerRow.addView(groupDelayView)
-                headerRow.addView(urlTestButton)
                 headerRow.addView(chevron)
-                cardContent.addView(headerRow)
 
-                // ======= EXPANDED PROXY LIST (accordion content) =======
-                val proxyListContainer = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    visibility = if (isExpanded) View.VISIBLE else View.GONE
-                }
-
-                // Divider
-                val divider = View(context).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, (1 * dp).toInt()
-                    ).apply {
-                        marginStart = (16 * dp).toInt()
-                        marginEnd = (16 * dp).toInt()
-                    }
-                    setBackgroundColor(onSurfaceVariantColor and 0x1FFFFFFF)
-                }
-                proxyListContainer.addView(divider)
-
-                for (proxy in group.proxies) {
-                    val isSelected = proxy.name == group.now
-                    val (proxyDisplayName, proxyDelay) = if (proxy.type.group) {
-                        val nestedGroup = groupMap[proxy.name]
-                        if (nestedGroup != null) {
-                            resolveSelectedInfo(proxy.name, nestedGroup.now)
-                        } else {
-                            (proxy.title.ifEmpty { proxy.name }) to proxy.delay
-                        }
-                    } else {
-                        (proxy.title.ifEmpty { proxy.name }) to proxy.delay
-                    }
-
-                    val proxyRow = LinearLayout(context).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (10 * dp).toInt())
-                        isClickable = true
-                        isFocusable = true
-                        background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
-                    }
-
-                    // Checkmark for selected
-                    val checkIcon = ImageView(context).apply {
-                        layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
-                            marginEnd = (8 * dp).toInt()
-                        }
-                        if (isSelected) {
-                            setImageResource(R.drawable.ic_baseline_check)
-                            imageTintList = ColorStateList.valueOf(primaryColor)
-                        } else {
-                            visibility = View.INVISIBLE
-                        }
-                    }
-
-                    // Proxy name + subtitle column
-                    val proxyInfo = LinearLayout(context).apply {
-                        orientation = LinearLayout.VERTICAL
-                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                    }
-
-                    val proxyNameView = TextView(context).apply {
-                        text = proxyDisplayName
-                        textSize = 14f
-                        setTextColor(if (isSelected) primaryColor else onSurfaceColor)
-                        maxLines = 1
-                        ellipsize = TextUtils.TruncateAt.END
-                    }
-
-                    val proxySubtitle = TextView(context).apply {
-                        text = proxy.subtitle.ifEmpty { proxy.type.name }
-                        textSize = 11f
-                        setTextColor(onSurfaceVariantColor)
-                        maxLines = 1
-                    }
-
-                    proxyInfo.addView(proxyNameView)
-                    proxyInfo.addView(proxySubtitle)
-
-                    // Delay indicator
-                    val delayView = createDelayText(dp, proxyDelay, useDots)
-
-                    proxyRow.addView(checkIcon)
-                    proxyRow.addView(proxyInfo)
-                    proxyRow.addView(delayView)
-
-                    proxyRow.setOnClickListener {
-                        requestProxySelection(name, proxy.name)
-                    }
-
-                    // Row separator
-                    if (proxy != group.proxies.last()) {
-                        val rowDivider = View(context).apply {
-                            layoutParams = LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT, 1
-                            ).apply {
-                                marginStart = (44 * dp).toInt()
-                                marginEnd = (16 * dp).toInt()
-                            }
-                            setBackgroundColor(onSurfaceVariantColor and 0x0FFFFFFF)
-                        }
-                        proxyListContainer.addView(proxyRow)
-                        proxyListContainer.addView(rowDivider)
-                    } else {
-                        proxyListContainer.addView(proxyRow)
-                    }
-                }
-
-                cardContent.addView(proxyListContainer)
-
-                // Toggle accordion on header click
                 headerRow.setOnClickListener {
-                    if (expandedGroups.contains(name)) {
-                        expandedGroups.remove(name)
-                        proxyListContainer.visibility = View.GONE
-                        chevron.animate().rotation(0f).setDuration(200).start()
-                        card.setCardBackgroundColor(surfaceVariantColor)
-                        groupNameView.setTextColor(onSurfaceColor)
-                        selectedInfo.setTextColor(onSurfaceVariantColor)
-                        chevron.imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
-                        urlTestButton.imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
-                    } else {
-                        expandedGroups.add(name)
-                        proxyListContainer.visibility = View.VISIBLE
-                        chevron.animate().rotation(90f).setDuration(200).start()
-                        card.setCardBackgroundColor(secondaryContainerColor)
-                        groupNameView.setTextColor(onSecondaryContainerColor)
-                        selectedInfo.setTextColor(onSecondaryContainerColor)
-                        chevron.imageTintList = ColorStateList.valueOf(onSecondaryContainerColor)
-                        urlTestButton.imageTintList = ColorStateList.valueOf(onSecondaryContainerColor)
-                    }
+                    openProxyGroupSheet(name, groupMap, useDots, currentSort)
                 }
 
-                card.addView(cardContent)
+                card.addView(headerRow)
                 container.addView(card)
             }
+
+            openedSheetGroupName?.let { activeName ->
+                val dialog = openedSheetDialog
+                if (dialog?.isShowing == true && groupMap.containsKey(activeName)) {
+                    dialog.dismiss()
+                    openProxyGroupSheet(activeName, groupMap, useDots, currentSort)
+                }
+            }
         }
+    }
+
+    private fun openProxyGroupSheet(
+        groupName: String,
+        groups: Map<String, ProxyGroup>,
+        useDots: Boolean,
+        currentSort: ProxySort,
+    ) {
+        val group = groups[groupName] ?: return
+        openedSheetGroupName = groupName
+
+        val dp = context.resources.displayMetrics.density
+        val darkTheme = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
+        val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        val sheetBackground = if (darkTheme) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+        val selectedBackground = if (darkTheme) 0xFF2F323A.toInt() else 0xFFF1F1F1.toInt()
+
+        val dialog = AppBottomSheetDialog(context)
+        openedSheetDialog = dialog
+
+        dialog.window?.setDimAmount(0.32f)
+
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(sheetBackground)
+            setPadding((16 * dp).toInt(), (10 * dp).toInt(), (16 * dp).toInt(), (16 * dp).toInt())
+        }
+
+        val handle = View(context).apply {
+            layoutParams = LinearLayout.LayoutParams((56 * dp).toInt(), (5 * dp).toInt()).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = (14 * dp).toInt()
+            }
+            background = GradientDrawable().apply {
+                cornerRadius = 999 * dp
+                setColor(if (darkTheme) 0x66FFFFFF else 0x33000000)
+            }
+        }
+        content.addView(handle)
+
+        val header = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = (12 * dp).toInt()
+            }
+        }
+
+        val sortButton = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
+            setImageResource(R.drawable.ic_mdi_sort_variant)
+            imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+            background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { anchor ->
+                PopupMenu(context, anchor).apply {
+                    menu.add(0, ProxySort.Default.ordinal, 0, context.getString(R.string.default_))
+                    menu.add(0, ProxySort.Title.ordinal, 1, context.getString(R.string.name))
+                    menu.add(0, ProxySort.Delay.ordinal, 2, context.getString(R.string.delay))
+                    menu.findItem(currentSort.ordinal)?.isChecked = true
+                    setOnMenuItemClickListener { item ->
+                        pendingProxySort = ProxySort.values()[item.itemId]
+                        requests.trySend(Request.UpdateProxySort)
+                        true
+                    }
+                }.show()
+            }
+        }
+
+        val title = TextView(context).apply {
+            text = groupName
+            textSize = 16f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(onSurfaceColor)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val speedButton = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt())
+            setImageResource(R.drawable.ic_baseline_speed)
+            imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+            background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                pendingUrlTestGroup = groupName
+                requests.trySend(Request.UrlTest)
+            }
+        }
+
+        header.addView(sortButton)
+        header.addView(title)
+        header.addView(speedButton)
+        content.addView(header)
+
+        val list = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        for (proxy in group.proxies) {
+            val isSelected = proxy.name == group.now
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt(), (12 * dp).toInt())
+                if (isSelected) {
+                    background = GradientDrawable().apply {
+                        cornerRadius = 14 * dp
+                        setColor(selectedBackground)
+                    }
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = (6 * dp).toInt()
+                }
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    requestProxySelection(groupName, proxy.name)
+                    dialog.dismiss()
+                }
+            }
+
+            val info = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val nameView = TextView(context).apply {
+                text = proxy.title.ifEmpty { proxy.name }
+                textSize = 14f
+                setTextColor(onSurfaceColor)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            }
+
+            val subtitleView = TextView(context).apply {
+                text = proxy.subtitle.ifEmpty { proxy.type.name }
+                textSize = 11f
+                setTextColor(onSurfaceVariantColor)
+                maxLines = 1
+            }
+
+            val delayView = createDelayText(dp, proxy.delay, useDots)
+
+            info.addView(nameView)
+            info.addView(subtitleView)
+            row.addView(info)
+            row.addView(delayView)
+            list.addView(row)
+        }
+
+        content.addView(list)
+        dialog.setContentView(content)
+        dialog.setOnDismissListener {
+            if (openedSheetDialog === dialog) {
+                openedSheetDialog = null
+                openedSheetGroupName = null
+            }
+        }
+        dialog.show()
+
+        pendingUrlTestGroup = groupName
+        requests.trySend(Request.UrlTest)
     }
 
     suspend fun showAbout(versionName: String) {
@@ -680,6 +671,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val group = pendingUrlTestGroup ?: return null
         pendingUrlTestGroup = null
         return group
+    }
+
+    fun consumePendingProxySort(): ProxySort? {
+        val sort = pendingProxySort ?: return null
+        pendingProxySort = null
+        return sort
     }
 
     fun request(request: Request) {

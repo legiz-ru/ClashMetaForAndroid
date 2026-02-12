@@ -163,6 +163,11 @@ class MainActivity : BaseActivity<MainDesign>() {
                                 design.fetchProxyGroups()
                             }
                         }
+                        MainDesign.Request.UpdateProxySort -> {
+                            val sort = design.consumePendingProxySort() ?: return@onReceive
+                            design.uiStore.proxySort = sort
+                            design.fetchProxyGroups()
+                        }
                     }
                 }
                 if (clashRunning) {
@@ -206,7 +211,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val groups = names.map { name ->
                     name to queryProxyGroup(name, uiStore.proxySort)
                 }.filter { !it.second.hidden }
-                setProxyGroups(groups, uiStore.delayDisplayDots)
+                setProxyGroups(groups, uiStore.delayDisplayDots, uiStore.proxySort)
             }
         } catch (_: Exception) {
             // Proxy groups may not be available yet
