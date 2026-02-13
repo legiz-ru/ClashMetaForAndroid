@@ -127,15 +127,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                             } catch (_: Exception) {}
                         }
                         is ProfilesDesign.Request.ShowAnnounce -> {
-                            val profile = it.profile
-                            if (profile.announce.isNotEmpty()) {
-                                val text = profile.announce.replace("\\n", "\n")
-                                androidx.appcompat.app.AlertDialog.Builder(this@ProfilesActivity)
-                                    .setTitle(profile.name)
-                                    .setMessage(text)
-                                    .setPositiveButton(android.R.string.ok, null)
-                                    .show()
-                            }
+                            design.showAnnounceSheet(it.profile)
                         }
                     }
                 }

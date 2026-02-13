@@ -7,6 +7,8 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
@@ -15,6 +17,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.ViewGroup
+import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -287,6 +290,35 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    private fun applySlowDirectionTicker(textView: TextView) {
+        textView.post {
+            val layout = textView.layout ?: return@post
+            val overflow = layout.getLineWidth(0) - textView.width
+            if (overflow <= 0f) {
+                textView.translationX = 0f
+                return@post
+            }
+
+            val animator = ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, 0f, -overflow).apply {
+                duration = ((overflow / 15f) * 1000f).toLong().coerceAtLeast(5000L)
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                interpolator = LinearInterpolator()
+            }
+
+            textView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) = Unit
+
+                override fun onViewDetachedFromWindow(v: View) {
+                    animator.cancel()
+                    v.removeOnAttachStateChangeListener(this)
+                }
+            })
+
+            animator.start()
+        }
+    }
+
     private fun resolveSelectedInfo(
         groupMap: Map<String, ProxyGroup>,
         groupName: String,
@@ -415,6 +447,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         useDots: Boolean,
     ): View {
         val dp = context.resources.displayMetrics.density
+        val maxSheetHeight = (context.resources.displayMetrics.heightPixels * 0.7f).toInt()
+        val topBarHeight = (56 * dp).toInt()
+        val listHeight = (maxSheetHeight - topBarHeight).coerceAtLeast((180 * dp).toInt())
         val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         val secondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSecondaryContainer)
         val onSecondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSecondaryContainer)
@@ -479,7 +514,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val listScroll = ScrollView(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    (360 * dp).toInt(),
+                    listHeight,
                 )
                 isFillViewport = true
                 isVerticalScrollBarEnabled = true
@@ -611,6 +646,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     suspend fun setProxyGroups(groups: List<Pair<String, ProxyGroup>>, useDots: Boolean = true) {
         withContext(Dispatchers.Main) {
+            if (groups.isEmpty()) return@withContext
+
             val container = binding.proxyGroupsContainer
             container.removeAllViews()
 
@@ -689,10 +726,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     maxLines = 1
                     setHorizontallyScrolling(true)
                     isSingleLine = true
-                    ellipsize = TextUtils.TruncateAt.MARQUEE
-                    marqueeRepeatLimit = -1
-                    isSelected = true
+                    ellipsize = null
                 }
+                applySlowDirectionTicker(selectedInfo)
 
                 nameColumn.addView(groupNameView)
                 nameColumn.addView(selectedInfo)

@@ -86,7 +86,6 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:animateLayoutChanges="true"
                     android:clipToPadding="false"
                     android:orientation="vertical"
                     android:paddingHorizontal="@dimen/main_padding_horizontal"
@@ -155,7 +154,7 @@
                             android:background="@drawable/bg_power_button"
                             android:clickable="true"
                             android:focusable="true"
-                            android:foreground="?attr/selectableItemBackgroundBorderless"
+                            android:foreground="@drawable/bg_power_button_ripple"
                             android:onClick="@{() -> self.showAddProfileSheet()}">
 
                             <ImageView
@@ -420,7 +419,7 @@
                             android:background="@drawable/bg_power_button"
                             android:clickable="true"
                             android:focusable="true"
-                            android:foreground="?attr/selectableItemBackgroundBorderless"
+                            android:foreground="@drawable/bg_power_button_ripple"
                             android:onClick="@{() -> self.request(Request.ToggleStatus)}">
 
                             <ImageView
