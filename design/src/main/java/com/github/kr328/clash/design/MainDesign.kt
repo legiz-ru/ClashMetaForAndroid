@@ -90,6 +90,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var openedSheetGroupName: String? = null
     private var openedSheetDialog: Dialog? = null
     private var openedSheetListContainer: LinearLayout? = null
+    private var openedSheetSort: ProxySort = ProxySort.Default
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -387,6 +388,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val currentDialog = openedSheetDialog
             val currentSheetGroup = openedSheetGroupName
             val currentSheetList = openedSheetListContainer
+            openedSheetSort = currentSort
 
             if (currentDialog?.isShowing == true && currentSheetGroup != null && currentSheetList != null) {
                 val updatedGroup = groupMap[currentSheetGroup]
@@ -400,6 +402,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         onSurfaceColor = onSurfaceColor,
                         onSurfaceVariantColor = onSurfaceVariantColor,
                         surfaceVariantColor = surfaceVariantColor,
+                        currentSort = currentSort,
                         dialog = currentDialog,
                     )
                 } else {
@@ -419,11 +422,18 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         onSurfaceColor: Int,
         onSurfaceVariantColor: Int,
         surfaceVariantColor: Int,
+        currentSort: ProxySort,
         dialog: Dialog,
     ) {
         container.removeAllViews()
 
-        for (proxy in group.proxies) {
+        val proxies = when (currentSort) {
+            ProxySort.Default -> group.proxies
+            ProxySort.Title -> group.proxies.sortedBy { it.title.ifEmpty { it.name }.lowercase(Locale.getDefault()) }
+            ProxySort.Delay -> group.proxies.sortedWith(compareBy({ it.delay < 0 }, { it.delay }))
+        }
+
+        for (proxy in proxies) {
             val isSelected = proxy.name == group.now
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -488,6 +498,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val group = groups[groupName] ?: return
         openedSheetDialog?.dismiss()
         openedSheetGroupName = groupName
+        openedSheetSort = currentSort
 
         val dp = context.resources.displayMetrics.density
         val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
@@ -553,7 +564,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     menu.add(0, ProxySort.Default.ordinal, 0, context.getString(R.string.default_))
                     menu.add(0, ProxySort.Title.ordinal, 1, context.getString(R.string.name))
                     menu.add(0, ProxySort.Delay.ordinal, 2, context.getString(R.string.delay))
-                    menu.findItem(currentSort.ordinal)?.isChecked = true
+                    menu.findItem(openedSheetSort.ordinal)?.isChecked = true
                     setOnMenuItemClickListener { item ->
                         pendingProxySort = ProxySort.values()[item.itemId]
                         requests.trySend(Request.UpdateProxySort)
@@ -603,6 +614,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             onSurfaceColor = onSurfaceColor,
             onSurfaceVariantColor = onSurfaceVariantColor,
             surfaceVariantColor = surfaceVariantColor,
+            currentSort = openedSheetSort,
             dialog = dialog,
         )
 
@@ -645,6 +657,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 openedSheetDialog = null
                 openedSheetGroupName = null
                 openedSheetListContainer = null
+                openedSheetSort = ProxySort.Default
             }
         }
         dialog.show()
