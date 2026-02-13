@@ -15,6 +15,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -93,6 +94,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
     private var proxyGroupDialog: AppBottomSheetDialog? = null
+    private var sortPickerDialog: AppBottomSheetDialog? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -323,30 +325,87 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
 
     private fun openSortPicker(onPicked: () -> Unit) {
-        val options = arrayOf(
-            context.getString(R.string.default_),
-            context.getString(R.string.name),
-            context.getString(R.string.delay),
-        )
+        val dp = context.resources.displayMetrics.density
+        val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
+        val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
 
-        val checkedItem = when (openedProxyGroupSort) {
-            GroupSheetSort.Default -> 0
-            GroupSheetSort.Name -> 1
-            GroupSheetSort.Delay -> 2
+        val dialog = sortPickerDialog ?: AppBottomSheetDialog(context, forceExpanded = false).also {
+            sortPickerDialog = it
         }
 
-        AlertDialog.Builder(context)
-            .setTitle(R.string.sort)
-            .setSingleChoiceItems(options, checkedItem) { dialog, which ->
-                openedProxyGroupSort = when (which) {
-                    1 -> GroupSheetSort.Name
-                    2 -> GroupSheetSort.Delay
-                    else -> GroupSheetSort.Default
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((16 * dp).toInt(), (8 * dp).toInt(), (16 * dp).toInt(), (16 * dp).toInt())
+        }
+
+        val title = TextView(context).apply {
+            text = context.getString(R.string.sort)
+            textSize = 20f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(onSurfaceColor)
+            setPadding((8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt())
+        }
+        root.addView(title)
+
+        fun addSortOption(label: String, sort: GroupSheetSort) {
+            val isChecked = openedProxyGroupSort == sort
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((8 * dp).toInt(), (12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt())
+                background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    openedProxyGroupSort = sort
+                    dialog.dismiss()
+                    onPicked()
                 }
-                dialog.dismiss()
-                onPicked()
             }
-            .show()
+
+            val checkIcon = ImageView(context).apply {
+                layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
+                    marginEnd = (12 * dp).toInt()
+                }
+                if (isChecked) {
+                    setImageResource(R.drawable.ic_baseline_check)
+                    imageTintList = ColorStateList.valueOf(primaryColor)
+                } else {
+                    visibility = View.INVISIBLE
+                }
+            }
+
+            val text = TextView(context).apply {
+                textSize = 16f
+                this.text = label
+                setTextColor(onSurfaceColor)
+                setTypeface(typeface, if (isChecked) Typeface.BOLD else Typeface.NORMAL)
+            }
+
+            row.addView(checkIcon)
+            row.addView(text)
+            root.addView(row)
+
+            val divider = View(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    1,
+                ).apply {
+                    marginStart = (40 * dp).toInt()
+                }
+                setBackgroundColor(onSurfaceVariantColor and 0x22FFFFFF)
+            }
+            root.addView(divider)
+        }
+
+        addSortOption(context.getString(R.string.default_), GroupSheetSort.Default)
+        addSortOption(context.getString(R.string.name), GroupSheetSort.Name)
+        addSortOption(context.getString(R.string.delay), GroupSheetSort.Delay)
+        if (root.childCount > 0) root.removeViewAt(root.childCount - 1)
+
+        dialog.setContentView(root)
+        if (!dialog.isShowing) dialog.show()
     }
 
     private fun buildProxyGroupSheet(
@@ -365,15 +424,17 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
 
-            val topBar = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding((16 * dp).toInt(), (8 * dp).toInt(), (16 * dp).toInt(), (8 * dp).toInt())
+            val topBar = FrameLayout(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                )
+                setPadding((12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt(), (8 * dp).toInt())
             }
 
             val sortButton = ImageView(context).apply {
-                layoutParams = LinearLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt())
-                setImageResource(R.drawable.ic_baseline_view_list)
+                layoutParams = FrameLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt(), Gravity.START or Gravity.CENTER_VERTICAL)
+                setImageResource(R.drawable.ic_baseline_sort)
                 imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
                 background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                 setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
@@ -385,12 +446,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
 
             val titleView = TextView(context).apply {
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginStart = (10 * dp).toInt()
-                    marginEnd = (10 * dp).toInt()
-                }
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER,
+                )
                 text = groupName
-                textSize = 24f
+                textSize = 15f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(onSurfaceColor)
                 maxLines = 1
@@ -398,7 +460,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
 
             val urlTestButton = ImageView(context).apply {
-                layoutParams = LinearLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt())
+                layoutParams = FrameLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt(), Gravity.END or Gravity.CENTER_VERTICAL)
                 setImageResource(R.drawable.ic_baseline_speed)
                 imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
                 background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
@@ -417,9 +479,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val listScroll = ScrollView(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    (360 * dp).toInt(),
                 )
                 isFillViewport = true
+                isVerticalScrollBarEnabled = true
+                isScrollbarFadingEnabled = false
             }
 
             val listContainer = LinearLayout(context).apply {
@@ -530,10 +594,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         openedProxyGroupName = groupName
 
-        val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context).also {
+        val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context, forceExpanded = false).also {
             proxyGroupDialog = it
             it.setOnDismissListener {
                 openedProxyGroupName = null
+                sortPickerDialog?.dismiss()
             }
         }
 
@@ -622,7 +687,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     setTextColor(onSurfaceVariantColor)
                     textSize = 12f
                     maxLines = 1
-                    ellipsize = TextUtils.TruncateAt.END
+                    setHorizontallyScrolling(true)
+                    isSingleLine = true
+                    ellipsize = TextUtils.TruncateAt.MARQUEE
+                    marqueeRepeatLimit = -1
+                    isSelected = true
                 }
 
                 nameColumn.addView(groupNameView)
