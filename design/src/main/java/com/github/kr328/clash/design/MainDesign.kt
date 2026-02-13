@@ -398,18 +398,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             if (currentDialog?.isShowing == true && currentSheetGroup != null && currentSheetList != null) {
                 val updatedGroup = groupMap[currentSheetGroup]
                 if (updatedGroup != null) {
-                    renderProxyGroupSheetRows(
-                        container = currentSheetList,
-                        groupName = currentSheetGroup,
-                        group = updatedGroup,
-                        useDots = useDots,
-                        dp = dp,
-                        onSurfaceColor = onSurfaceColor,
-                        onSurfaceVariantColor = onSurfaceVariantColor,
-                        surfaceVariantColor = surfaceVariantColor,
-                        currentSort = currentSort,
-                        dialog = currentDialog,
-                    )
+                    runCatching {
+                        renderProxyGroupSheetRows(
+                            container = currentSheetList,
+                            groupName = currentSheetGroup,
+                            group = updatedGroup,
+                            useDots = useDots,
+                            dp = dp,
+                            onSurfaceColor = onSurfaceColor,
+                            onSurfaceVariantColor = onSurfaceVariantColor,
+                            surfaceVariantColor = surfaceVariantColor,
+                            currentSort = currentSort,
+                            dialog = currentDialog,
+                        )
+                    }.onFailure {
+                        Log.e("MainDesign", "Failed to refresh opened proxy group sheet: $currentSheetGroup", it)
+                    }
                 } else {
                     currentDialog.dismiss()
                 }
@@ -610,18 +614,23 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             orientation = LinearLayout.VERTICAL
         }
 
-        renderProxyGroupSheetRows(
-            container = list,
-            groupName = groupName,
-            group = group,
-            useDots = useDots,
-            dp = dp,
-            onSurfaceColor = onSurfaceColor,
-            onSurfaceVariantColor = onSurfaceVariantColor,
-            surfaceVariantColor = surfaceVariantColor,
-            currentSort = openedSheetSort,
-            dialog = dialog,
-        )
+        runCatching {
+            renderProxyGroupSheetRows(
+                container = list,
+                groupName = groupName,
+                group = group,
+                useDots = useDots,
+                dp = dp,
+                onSurfaceColor = onSurfaceColor,
+                onSurfaceVariantColor = onSurfaceVariantColor,
+                surfaceVariantColor = surfaceVariantColor,
+                currentSort = openedSheetSort,
+                dialog = dialog,
+            )
+        }.onFailure {
+            Log.e("MainDesign", "Failed to render proxy group sheet rows: $groupName", it)
+            return
+        }
 
         val scrollView = androidx.core.widget.NestedScrollView(context).apply {
             isFillViewport = true
@@ -642,19 +651,24 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         dialog.setContentView(content)
 
         dialog.setOnShowListener {
-            val bottomSheet = dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet) ?: return@setOnShowListener
-            bottomSheet.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            runCatching {
+                val bottomSheet = dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+                    ?: return@runCatching
+                bottomSheet.setBackgroundColor(android.graphics.Color.TRANSPARENT)
 
-            val maxHeight = (context.resources.displayMetrics.heightPixels * 0.82f).toInt()
-            bottomSheet.layoutParams = bottomSheet.layoutParams.apply {
-                height = maxHeight
+                val maxHeight = (context.resources.displayMetrics.heightPixels * 0.82f).toInt()
+                bottomSheet.layoutParams = bottomSheet.layoutParams.apply {
+                    height = maxHeight
+                }
+
+                val behavior = BottomSheetBehavior.from(bottomSheet)
+                behavior.isFitToContents = true
+                behavior.skipCollapsed = false
+                behavior.peekHeight = (context.resources.displayMetrics.heightPixels * 0.52f).toInt()
+                behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            }.onFailure {
+                Log.e("MainDesign", "Failed to configure proxy group bottom sheet: $groupName", it)
             }
-
-            val behavior = BottomSheetBehavior.from(bottomSheet)
-            behavior.isFitToContents = true
-            behavior.skipCollapsed = false
-            behavior.peekHeight = (context.resources.displayMetrics.heightPixels * 0.52f).toInt()
-            behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         }
 
         dialog.setOnDismissListener {
