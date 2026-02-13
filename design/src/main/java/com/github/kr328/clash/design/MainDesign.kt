@@ -10,6 +10,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
@@ -378,7 +379,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 headerRow.addView(chevron)
 
                 headerRow.setOnClickListener {
-                    openProxyGroupSheet(name, groupMap, useDots, currentSort)
+                    runCatching {
+                        openProxyGroupSheet(name, groupMap, useDots, currentSort)
+                    }.onFailure {
+                        Log.e("MainDesign", "Failed to open proxy group sheet: $name", it)
+                    }
                 }
 
                 card.addView(headerRow)
@@ -660,7 +665,18 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 openedSheetSort = ProxySort.Default
             }
         }
-        dialog.show()
+        runCatching {
+            dialog.show()
+        }.onFailure {
+            Log.e("MainDesign", "Failed to show proxy group sheet: $groupName", it)
+            if (openedSheetDialog === dialog) {
+                openedSheetDialog = null
+                openedSheetGroupName = null
+                openedSheetListContainer = null
+                openedSheetSort = ProxySort.Default
+            }
+            return
+        }
 
         pendingUrlTestGroup = groupName
         requests.trySend(Request.UrlTest)

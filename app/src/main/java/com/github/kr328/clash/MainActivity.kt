@@ -161,7 +161,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                                     withClash {
                                         healthCheck(groupName)
                                     }
-                                } catch (_: Exception) {
+                                } catch (_: Throwable) {
                                     // Some providers/groups may reject health checks temporarily.
                                     // Keep the app alive and refresh current state instead of crashing.
                                 }
