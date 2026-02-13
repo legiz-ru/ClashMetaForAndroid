@@ -157,9 +157,15 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.UrlTest -> {
                             val groupName = design.consumePendingUrlTestGroup() ?: return@onReceive
                             launch {
-                                withClash {
-                                    healthCheck(groupName)
+                                try {
+                                    withClash {
+                                        healthCheck(groupName)
+                                    }
+                                } catch (_: Exception) {
+                                    // Some providers/groups may reject health checks temporarily.
+                                    // Keep the app alive and refresh current state instead of crashing.
                                 }
+
                                 design.fetchProxyGroups()
                             }
                         }
