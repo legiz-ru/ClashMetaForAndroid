@@ -74,5 +74,5 @@ private fun <T> PreferenceScreen.popupSelectMenu(
                 impl.listener?.onChanged()
             }
         }
-        show()
+        .show()
 }
