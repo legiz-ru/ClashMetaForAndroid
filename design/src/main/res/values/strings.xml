@@ -387,4 +387,6 @@
     <string name="delay_display">Delay Display</string>
     <string name="delay_display_dots">Colored dots</string>
     <string name="delay_display_ms">Milliseconds</string>
+    <string name="show_full_proxy_chain">Show full proxy chain</string>
+    <string name="show_full_proxy_chain_desc">Show the complete route chain in proxy groups instead of only the first node</string>
 </resources>

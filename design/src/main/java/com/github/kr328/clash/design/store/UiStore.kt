@@ -82,6 +82,11 @@ class UiStore(context: Context) {
         defaultValue = true,
     )
 
+    var showFullProxyChain: Boolean by store.boolean(
+        key = "show_full_proxy_chain",
+        defaultValue = false,
+    )
+
     var summerModeUnlocked: Boolean by store.boolean(
         key = "summer_mode_unlocked",
         defaultValue = false,

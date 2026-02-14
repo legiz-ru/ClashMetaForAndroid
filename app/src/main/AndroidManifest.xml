@@ -20,7 +20,7 @@
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
-        android:banner="@mipmap/ic_banner"
+        android:banner="@drawable/ic_banner"
         android:fullBackupContent="@xml/full_backup_content"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/application_name"

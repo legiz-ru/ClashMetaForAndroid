@@ -7,8 +7,6 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
@@ -17,7 +15,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.ViewGroup
-import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -290,42 +287,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
-    private fun applySlowDirectionTicker(textView: TextView) {
-        textView.post {
-            val textWidth = textView.paint.measureText(textView.text.toString())
-            val overflow = textWidth - (textView.width - textView.paddingLeft - textView.paddingRight)
-            if (overflow <= 0f) {
-                textView.translationX = 0f
-                return@post
-            }
-
-            val endGap = context.resources.displayMetrics.density * 24f
-            val travel = overflow + endGap
-
-            val animator = ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, 0f, -travel).apply {
-                duration = ((travel / 22f) * 1000f).toLong().coerceAtLeast(3800L)
-                repeatMode = ValueAnimator.RESTART
-                repeatCount = ValueAnimator.INFINITE
-                interpolator = LinearInterpolator()
-            }
-
-            textView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) = Unit
-
-                override fun onViewDetachedFromWindow(v: View) {
-                    animator.cancel()
-                    v.removeOnAttachStateChangeListener(this)
-                }
-            })
-
-            animator.start()
-        }
-    }
-
     private fun resolveSelectedInfo(
         groupMap: Map<String, ProxyGroup>,
         groupName: String,
         now: String,
+        showFullChain: Boolean = true,
         visited: MutableSet<String> = mutableSetOf(),
     ): Pair<String, Int> {
         if (!visited.add(groupName)) return now to 0
@@ -342,8 +308,19 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         val nestedGroupName = selected.name
         val nestedGroup = groupMap[nestedGroupName] ?: return selectedDisplayName to selected.delay
-        val (finalProxyName, finalDelay) = resolveSelectedInfo(groupMap, nestedGroupName, nestedGroup.now, visited)
-        return "$selectedDisplayName -> $finalProxyName" to finalDelay
+        val (finalProxyName, finalDelay) = resolveSelectedInfo(
+            groupMap,
+            nestedGroupName,
+            nestedGroup.now,
+            showFullChain,
+            visited,
+        )
+
+        return if (showFullChain) {
+            "$selectedDisplayName -> $finalProxyName" to finalDelay
+        } else {
+            selectedDisplayName to finalDelay
+        }
     }
 
     private fun sortedProxies(group: ProxyGroup): List<com.github.kr328.clash.core.model.Proxy> {
@@ -594,7 +571,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         requests.trySend(Request.UrlTest)
     }
 
-    suspend fun setProxyGroups(groups: List<Pair<String, ProxyGroup>>, useDots: Boolean = true) {
+    suspend fun setProxyGroups(
+        groups: List<Pair<String, ProxyGroup>>,
+        useDots: Boolean = true,
+        showFullChain: Boolean = false,
+    ) {
         withContext(Dispatchers.Main) {
             if (groups.isEmpty()) return@withContext
 
@@ -617,7 +598,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             refreshOpenedProxyGroupSheet()
 
             for ((name, group) in visibleGroups) {
-                val (selectedInfoText, _) = resolveSelectedInfo(groupMap, name, group.now)
+                val (selectedInfoText, _) = resolveSelectedInfo(groupMap, name, group.now, showFullChain)
 
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
@@ -673,12 +654,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     text = selectedInfoText
                     setTextColor(onSurfaceVariantColor)
                     textSize = 12f
-                    maxLines = 1
-                    setHorizontallyScrolling(true)
-                    isSingleLine = true
-                    ellipsize = null
+                    maxLines = if (showFullChain) 2 else 1
+                    isSingleLine = !showFullChain
+                    ellipsize = TextUtils.TruncateAt.END
                 }
-                applySlowDirectionTicker(selectedInfo)
 
                 nameColumn.addView(groupNameView)
                 nameColumn.addView(selectedInfo)

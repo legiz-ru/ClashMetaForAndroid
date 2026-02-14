@@ -206,7 +206,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                 val groups = names.map { name ->
                     name to queryProxyGroup(name, uiStore.proxySort)
                 }.filter { !it.second.hidden }
-                setProxyGroups(groups, uiStore.delayDisplayDots)
+                setProxyGroups(groups, uiStore.delayDisplayDots, uiStore.showFullProxyChain)
             }
         } catch (_: Exception) {
             // Proxy groups may not be available yet
