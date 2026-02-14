@@ -38,6 +38,7 @@ import com.github.kr328.clash.design.util.elapsedIntervalString
 import com.github.kr328.clash.service.model.Profile
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -97,7 +98,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
     private var proxyGroupDialog: AppBottomSheetDialog? = null
-    private var sortPickerDialog: AppBottomSheetDialog? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -292,16 +292,19 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     private fun applySlowDirectionTicker(textView: TextView) {
         textView.post {
-            val layout = textView.layout ?: return@post
-            val overflow = layout.getLineWidth(0) - textView.width
+            val textWidth = textView.paint.measureText(textView.text.toString())
+            val overflow = textWidth - (textView.width - textView.paddingLeft - textView.paddingRight)
             if (overflow <= 0f) {
                 textView.translationX = 0f
                 return@post
             }
 
-            val animator = ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, 0f, -overflow).apply {
-                duration = ((overflow / 15f) * 1000f).toLong().coerceAtLeast(5000L)
-                repeatMode = ValueAnimator.REVERSE
+            val endGap = context.resources.displayMetrics.density * 24f
+            val travel = overflow + endGap
+
+            val animator = ObjectAnimator.ofFloat(textView, View.TRANSLATION_X, 0f, -travel).apply {
+                duration = ((travel / 22f) * 1000f).toLong().coerceAtLeast(3800L)
+                repeatMode = ValueAnimator.RESTART
                 repeatCount = ValueAnimator.INFINITE
                 interpolator = LinearInterpolator()
             }
@@ -357,87 +360,35 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
 
     private fun openSortPicker(onPicked: () -> Unit) {
-        val dp = context.resources.displayMetrics.density
-        val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
-        val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
-        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        val options = arrayOf(
+            context.getString(R.string.default_),
+            context.getString(R.string.name),
+            context.getString(R.string.delay),
+        )
 
-        val dialog = sortPickerDialog ?: AppBottomSheetDialog(context, forceExpanded = false).also {
-            sortPickerDialog = it
+        val initial = when (openedProxyGroupSort) {
+            GroupSheetSort.Default -> 0
+            GroupSheetSort.Name -> 1
+            GroupSheetSort.Delay -> 2
         }
 
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding((16 * dp).toInt(), (8 * dp).toInt(), (16 * dp).toInt(), (16 * dp).toInt())
-        }
+        var selected = initial
 
-        val title = TextView(context).apply {
-            text = context.getString(R.string.sort)
-            textSize = 20f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(onSurfaceColor)
-            setPadding((8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt())
-        }
-        root.addView(title)
-
-        fun addSortOption(label: String, sort: GroupSheetSort) {
-            val isChecked = openedProxyGroupSort == sort
-            val row = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding((8 * dp).toInt(), (12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt())
-                background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
-                isClickable = true
-                isFocusable = true
-                setOnClickListener {
-                    openedProxyGroupSort = sort
-                    dialog.dismiss()
-                    onPicked()
-                }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.sort)
+            .setSingleChoiceItems(options, initial) { _, which ->
+                selected = which
             }
-
-            val checkIcon = ImageView(context).apply {
-                layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
-                    marginEnd = (12 * dp).toInt()
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                openedProxyGroupSort = when (selected) {
+                    1 -> GroupSheetSort.Name
+                    2 -> GroupSheetSort.Delay
+                    else -> GroupSheetSort.Default
                 }
-                if (isChecked) {
-                    setImageResource(R.drawable.ic_baseline_check)
-                    imageTintList = ColorStateList.valueOf(primaryColor)
-                } else {
-                    visibility = View.INVISIBLE
-                }
+                onPicked()
             }
-
-            val text = TextView(context).apply {
-                textSize = 16f
-                this.text = label
-                setTextColor(onSurfaceColor)
-                setTypeface(typeface, if (isChecked) Typeface.BOLD else Typeface.NORMAL)
-            }
-
-            row.addView(checkIcon)
-            row.addView(text)
-            root.addView(row)
-
-            val divider = View(context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    1,
-                ).apply {
-                    marginStart = (40 * dp).toInt()
-                }
-                setBackgroundColor(onSurfaceVariantColor and 0x22FFFFFF)
-            }
-            root.addView(divider)
-        }
-
-        addSortOption(context.getString(R.string.default_), GroupSheetSort.Default)
-        addSortOption(context.getString(R.string.name), GroupSheetSort.Name)
-        addSortOption(context.getString(R.string.delay), GroupSheetSort.Delay)
-        if (root.childCount > 0) root.removeViewAt(root.childCount - 1)
-
-        dialog.setContentView(root)
-        if (!dialog.isShowing) dialog.show()
+            .show()
     }
 
     private fun buildProxyGroupSheet(
@@ -633,7 +584,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             proxyGroupDialog = it
             it.setOnDismissListener {
                 openedProxyGroupName = null
-                sortPickerDialog?.dismiss()
             }
         }
 

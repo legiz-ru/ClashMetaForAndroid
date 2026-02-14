@@ -2,14 +2,10 @@ package com.github.kr328.clash.design
 
 import android.app.Dialog
 import android.content.Context
-import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import com.github.kr328.clash.design.adapter.ProfileAdapter
 import com.github.kr328.clash.design.databinding.DesignProfilesBinding
 import com.github.kr328.clash.design.databinding.DesignSheetAddProfileProfilesBinding
@@ -18,6 +14,7 @@ import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import com.github.kr328.clash.service.model.Profile
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -58,7 +55,6 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
             adapter.states.allUpdating = value
         }
     private val rotateAnimation : Animation = AnimationUtils.loadAnimation(context, R.anim.rotate_infinite)
-    private var announceDialog: AppBottomSheetDialog? = null
 
     override val root: View
         get() = binding.root
@@ -145,52 +141,11 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
     fun showAnnounceSheet(profile: Profile) {
         if (profile.announce.isEmpty()) return
 
-        val dp = context.resources.displayMetrics.density
-        val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
-        val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
-
-        val dialog = announceDialog ?: AppBottomSheetDialog(context, forceExpanded = false).also {
-            announceDialog = it
-        }
-
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding((16 * dp).toInt(), (8 * dp).toInt(), (16 * dp).toInt(), (16 * dp).toInt())
-        }
-
-        val title = TextView(context).apply {
-            text = profile.name
-            textSize = 18f
-            setTextColor(onSurfaceColor)
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-            setPadding((8 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt())
-        }
-        root.addView(title)
-
-        val scroll = ScrollView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (300 * dp).toInt(),
-            )
-            isVerticalScrollBarEnabled = true
-            isScrollbarFadingEnabled = false
-        }
-
-        val message = TextView(context).apply {
-            text = profile.announce.replace("\\n", "\n")
-            textSize = 15f
-            setTextColor(onSurfaceVariantColor)
-            setLineSpacing(0f, 1.15f)
-            setPadding((8 * dp).toInt(), (6 * dp).toInt(), (8 * dp).toInt(), (8 * dp).toInt())
-        }
-
-        scroll.addView(message)
-        root.addView(scroll)
-
-        dialog.setContentView(root)
-        if (!dialog.isShowing) dialog.show()
+        MaterialAlertDialogBuilder(context)
+            .setTitle(profile.name)
+            .setMessage(profile.announce.replace("\\n", "\n"))
+            .setPositiveButton(R.string.ok, null)
+            .show()
     }
 
     fun requestSheet(dialog: Dialog, request: Request) {

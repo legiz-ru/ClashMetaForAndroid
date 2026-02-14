@@ -2,11 +2,7 @@ package com.github.kr328.clash.design.preference
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.appcompat.widget.ListPopupWindow
-import com.github.kr328.clash.design.R
-import com.github.kr328.clash.design.adapter.PopupListAdapter
-import com.github.kr328.clash.design.util.getPixels
-import com.github.kr328.clash.design.util.measureWidth
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,7 +42,7 @@ fun <T> PreferenceScreen.selectableList(
         impl.selected = values.indexOf(initial)
 
         impl.clicked {
-            popupSelectMenu(impl, value, valuesText.map { context.getText(it) }, values)
+            popupSelectMenu(impl, value, context.getText(title), valuesText.map { context.getText(it) }, values)
         }
     }
 
@@ -56,41 +52,27 @@ fun <T> PreferenceScreen.selectableList(
 private fun <T> PreferenceScreen.popupSelectMenu(
     impl: SelectableListPreference<T>,
     value: KMutableProperty0<T>,
+    title: CharSequence,
     valuesText: List<CharSequence>,
     values: Array<T>,
 ) {
-    ListPopupWindow(context).apply {
-        val adapter = PopupListAdapter(
-            context,
-            valuesText,
-            impl.selected,
-        )
+    var selected = impl.selected
 
-        setAdapter(adapter)
-
-        anchorView = impl.view
-
-        width = adapter.measureWidth(context)
-            .coerceAtLeast(context.getPixels(R.dimen.dialog_menu_min_width))
-
-        isModal = true
-
-        horizontalOffset = context.getPixels(R.dimen.item_header_component_size) +
-                context.getPixels(R.dimen.item_header_margin) * 2
-
-        setOnItemClickListener { _, _, position, _ ->
-            dismiss()
-
+    MaterialAlertDialogBuilder(context)
+        .setTitle(title)
+        .setSingleChoiceItems(valuesText.toTypedArray(), impl.selected) { _, which ->
+            selected = which
+        }
+        .setNegativeButton(com.github.kr328.clash.design.R.string.cancel, null)
+        .setPositiveButton(com.github.kr328.clash.design.R.string.ok) { _, _ ->
             launch(Dispatchers.Main) {
                 withContext(Dispatchers.IO) {
-                    value.set(values[position])
+                    value.set(values[selected])
                 }
 
-                impl.selected = position
+                impl.selected = selected
                 impl.listener?.onChanged()
             }
         }
-
         show()
-    }
 }
