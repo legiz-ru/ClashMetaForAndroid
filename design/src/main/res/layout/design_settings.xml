@@ -58,15 +58,6 @@
                     app:icon="@drawable/ic_baseline_meta"
                     app:text="@string/meta_features" />
 
-                <!-- Divider -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/divider_size"
-                    android:layout_marginHorizontal="16dp"
-                    android:layout_marginVertical="8dp"
-                    android:background="?attr/colorOutline"
-                    android:alpha="0.3" />
-
                 <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

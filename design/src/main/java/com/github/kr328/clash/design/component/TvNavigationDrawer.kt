@@ -233,10 +233,8 @@ class TvNavigationDrawer(
     }
 
     private fun createToggleItem(dp: Float): View {
-        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
-        val onPrimaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimary)
-        val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
-        val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
+        val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        val transparentColor = 0x00000000
 
         val item = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -251,7 +249,7 @@ class TvNavigationDrawer(
             setPadding((16 * dp).toInt(), 0, (16 * dp).toInt(), 0)
             isFocusable = true
             isClickable = true
-            background = createFocusableBackground(dp, surfaceVariantColor)
+            background = createFocusableBackground(dp, transparentColor)
             setOnClickListener { onToggleStatus?.invoke() }
         }
 
@@ -260,7 +258,7 @@ class TvNavigationDrawer(
                 marginEnd = (16 * dp).toInt()
             }
             setImageResource(R.drawable.ic_mdi_power)
-            imageTintList = ColorStateList.valueOf(onSurfaceColor)
+            imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
         }
         toggleIcon = icon
 
@@ -271,7 +269,7 @@ class TvNavigationDrawer(
             )
             this.text = context.getString(R.string.start)
             textSize = 15f
-            setTextColor(onSurfaceColor)
+            setTextColor(onSurfaceVariantColor)
         }
         toggleText = text
 
@@ -283,29 +281,14 @@ class TvNavigationDrawer(
         item.id = View.generateViewId()
         drawerFocusableItems.add(item)
 
-        updateToggleButton()
         return item
     }
 
     private fun updateToggleButton() {
-        val dp = context.resources.displayMetrics.density
-        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
-        val onPrimaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnPrimary)
-        val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
-        val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
-
-        toggleButton?.let { button ->
-            if (isClashRunning) {
-                button.background = createFocusableBackground(dp, primaryColor)
-                toggleIcon?.imageTintList = ColorStateList.valueOf(onPrimaryColor)
-                toggleText?.setTextColor(onPrimaryColor)
-                toggleText?.text = context.getString(R.string.stop)
-            } else {
-                button.background = createFocusableBackground(dp, surfaceVariantColor)
-                toggleIcon?.imageTintList = ColorStateList.valueOf(onSurfaceColor)
-                toggleText?.setTextColor(onSurfaceColor)
-                toggleText?.text = context.getString(R.string.start)
-            }
+        toggleText?.text = if (isClashRunning) {
+            context.getString(R.string.stop)
+        } else {
+            context.getString(R.string.start)
         }
     }
 
