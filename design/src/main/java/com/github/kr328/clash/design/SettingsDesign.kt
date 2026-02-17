@@ -103,7 +103,11 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
         val scrollContent = binding.scrollRoot.getChildAt(0) as? LinearLayout ?: return
         val dp = context.resources.displayMetrics.density
         val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
-        val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
+        val transparentColor = 0x00000000
+
+        // Enable visible scrollbar for TV
+        binding.scrollRoot.isVerticalScrollBarEnabled = true
+        binding.scrollRoot.isScrollbarFadingEnabled = false
 
         for (i in 0 until scrollContent.childCount) {
             val child = scrollContent.getChildAt(i)
@@ -111,17 +115,17 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
                 // ActionLabel is a FrameLayout; its first child is the inner clickable LinearLayout
                 val innerLayout = (child as ViewGroup).getChildAt(0) ?: continue
 
-                // StateListDrawable: focus border + surfaceVariant background
+                // StateListDrawable: transparent normally, primary border on focus only
                 val focusedBg = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = 28 * dp
-                    setColor(surfaceVariantColor)
+                    setColor(transparentColor)
                     setStroke((2 * dp).toInt(), primaryColor)
                 }
                 val normalBg = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = 28 * dp
-                    setColor(surfaceVariantColor)
+                    setColor(transparentColor)
                 }
                 innerLayout.background = StateListDrawable().apply {
                     addState(intArrayOf(android.R.attr.state_focused), focusedBg)
