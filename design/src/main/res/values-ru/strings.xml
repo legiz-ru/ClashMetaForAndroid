@@ -361,4 +361,5 @@
 
     <!-- TV Navigation -->
     <string name="start">Запустить</string>
+    <string name="stop">Остановить</string>
 </resources>
