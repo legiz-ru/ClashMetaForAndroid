@@ -748,31 +748,32 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.appLogo.isFocusable = false
         binding.appLogo.isFocusableInTouchMode = false
         binding.appLogo.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP &&
-                event.source and android.view.InputDevice.SOURCE_TOUCHSCREEN != 0
-            ) {
-                logoTapTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+            // Only handle touchscreen input, ignore D-pad
+            if (event.source and android.view.InputDevice.SOURCE_TOUCHSCREEN != 0) {
+                if (event.action == MotionEvent.ACTION_UP) {
+                    logoTapTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
 
-                logoTapCount++
+                    logoTapCount++
 
-                if (logoTapCount >= 15) {
-                    val uiStore = com.github.kr328.clash.design.store.UiStore(context)
-                    uiStore.summerModeUnlocked = true
-                    logoTapCount = 0
-
-                    android.widget.Toast.makeText(
-                        context,
-                        "🥒 Всегда Лето разблокирован! Проверьте настройки темы",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                } else {
-                    logoTapTimeoutRunnable = Runnable {
+                    if (logoTapCount >= 15) {
+                        val uiStore = com.github.kr328.clash.design.store.UiStore(context)
+                        uiStore.summerModeUnlocked = true
                         logoTapCount = 0
-                    }.also {
-                        mainHandler.postDelayed(it, logoTapTimeout)
+
+                        android.widget.Toast.makeText(
+                            context,
+                            "🥒 Всегда Лето разблокирован! Проверьте настройки темы",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        logoTapTimeoutRunnable = Runnable {
+                            logoTapCount = 0
+                        }.also {
+                            mainHandler.postDelayed(it, logoTapTimeout)
+                        }
                     }
                 }
-                true
+                true // consume all touchscreen events to receive full DOWN→UP sequence
             } else {
                 false
             }
