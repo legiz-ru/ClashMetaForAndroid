@@ -6,7 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.design.adapter.ProfileAdapter
+import com.github.kr328.clash.design.component.TvNavigationDrawer
 import com.github.kr328.clash.design.databinding.DesignProfilesBinding
 import com.github.kr328.clash.design.databinding.DesignSheetAddProfileProfilesBinding
 import com.github.kr328.clash.design.databinding.DialogProfilesMenuBinding
@@ -26,6 +28,9 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         object ScanQrCode : Request()
         object AddFromFile : Request()
         object AddManually : Request()
+        object GoHome : Request()
+        object OpenSettings : Request()
+        object ToggleStatus : Request()
         data class Active(val profile: Profile) : Request()
         data class Update(val profile: Profile) : Request()
         data class Edit(val profile: Profile) : Request()
@@ -56,8 +61,33 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         }
     private val rotateAnimation : Animation = AnimationUtils.loadAnimation(context, R.anim.rotate_infinite)
 
+    private val isTv = TvUtils.isTv(context)
+
+    private val tvDrawer: TvNavigationDrawer? = if (isTv) {
+        TvNavigationDrawer(context, TvNavigationDrawer.NavItem.Profiles).apply {
+            onNavigate = { item ->
+                when (item) {
+                    TvNavigationDrawer.NavItem.Home -> requests.trySend(Request.GoHome)
+                    TvNavigationDrawer.NavItem.Profiles -> {} // Already on profiles
+                    TvNavigationDrawer.NavItem.Settings -> requests.trySend(Request.OpenSettings)
+                }
+            }
+            onToggleStatus = { requests.trySend(Request.ToggleStatus) }
+        }
+    } else null
+
+    private val rootView: View = if (isTv) {
+        tvDrawer!!.wrapContent(binding.root)
+    } else {
+        binding.root
+    }
+
     override val root: View
-        get() = binding.root
+        get() = rootView
+
+    fun setClashRunning(running: Boolean) {
+        tvDrawer?.isClashRunning = running
+    }
 
     suspend fun patchProfiles(profiles: List<Profile>) {
         adapter.apply {

@@ -358,6 +358,7 @@
     <string name="delay_display">Отображение задержки</string>
     <string name="delay_display_dots">Цветные точки</string>
     <string name="delay_display_ms">Миллисекунды</string>
-    <string name="show_full_proxy_chain">Показывать полную цепочку прокси</string>
-    <string name="show_full_proxy_chain_desc">Показывать полный маршрут в группах прокси вместо только первой позиции</string>
+
+    <!-- TV Navigation -->
+    <string name="start">Запустить</string>
 </resources>

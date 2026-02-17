@@ -211,6 +211,7 @@
 
             <!-- Bottom row: checkmark left, link icons + edit/delete right -->
             <LinearLayout
+                android:id="@+id/action_buttons_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -232,6 +233,7 @@
 
                 <!-- Announce icon -->
                 <ImageView
+                    android:id="@+id/announce_button"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
@@ -245,6 +247,7 @@
 
                 <!-- Support URL icon -->
                 <ImageView
+                    android:id="@+id/support_button"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_marginStart="4dp"
@@ -259,6 +262,7 @@
 
                 <!-- Web page URL icon -->
                 <ImageView
+                    android:id="@+id/webpage_button"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_marginStart="4dp"
@@ -273,6 +277,7 @@
 
                 <!-- Edit icon -->
                 <ImageView
+                    android:id="@+id/edit_button"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:layout_marginStart="4dp"

@@ -3,6 +3,7 @@ package com.github.kr328.clash.design.adapter
 import android.content.Context
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.design.databinding.AdapterProfileBinding
 import com.github.kr328.clash.design.model.ProfilePageState
 import com.github.kr328.clash.design.model.ProxyPageState
@@ -26,6 +27,7 @@ class ProfileAdapter(
     class Holder(val binding: AdapterProfileBinding) : RecyclerView.ViewHolder(binding.root)
 
     private val currentTime = ObservableCurrentTime()
+    private val isTv = TvUtils.isTv(context)
 
     var profiles: List<Profile> = emptyList()
     val states = ProfilePageState()
@@ -38,7 +40,16 @@ class ProfileAdapter(
         return Holder(
             AdapterProfileBinding
                 .inflate(context.layoutInflater, parent, false)
-                .also { it.currentTime = currentTime }
+                .also { binding ->
+                    binding.currentTime = currentTime
+                    // On TV: allow D-pad to reach action buttons inside the card
+                    if (isTv) {
+                        val card = binding.rootView
+                        if (card is ViewGroup) {
+                            card.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+                        }
+                    }
+                }
         )
     }
 

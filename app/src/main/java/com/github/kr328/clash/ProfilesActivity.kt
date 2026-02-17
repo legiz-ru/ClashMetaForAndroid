@@ -9,7 +9,10 @@ import com.github.kr328.clash.design.ProfilesDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.importProfileFromUrl
+import com.github.kr328.clash.util.startClashService
+import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withProfile
+import androidx.activity.result.contract.ActivityResultContracts
 import io.github.g00fy2.quickie.QRResult
 import io.github.g00fy2.quickie.ScanQRCode
 import androidx.lifecycle.lifecycleScope
@@ -49,6 +52,8 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
 
         setContentDesign(design)
 
+        design.setClashRunning(clashRunning)
+
         val ticker = ticker(TimeUnit.MINUTES.toMillis(1))
 
         while (isActive) {
@@ -57,6 +62,9 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                     when (it) {
                         Event.ActivityStart, Event.ProfileChanged -> {
                             design.fetch()
+                        }
+                        Event.ClashStart, Event.ClashStop -> {
+                            design.setClashRunning(clashRunning)
                         }
                         else -> Unit
                     }
@@ -129,6 +137,25 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                         is ProfilesDesign.Request.ShowAnnounce -> {
                             design.showAnnounceSheet(it.profile)
                         }
+                        ProfilesDesign.Request.GoHome -> {
+                            startActivity(
+                                MainActivity::class.intent
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                            )
+                            finish()
+                            overridePendingTransition(0, 0)
+                        }
+                        ProfilesDesign.Request.OpenSettings ->
+                            startActivity(SettingsActivity::class.intent)
+                        ProfilesDesign.Request.ToggleStatus -> {
+                            if (clashRunning) {
+                                stopClashService()
+                            } else {
+                                toggleClashOn(design)
+                            }
+                        }
                     }
                 }
                 if (activityStarted) {
@@ -137,6 +164,27 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun toggleClashOn(design: ProfilesDesign) {
+        val active = withProfile { queryActive() }
+        if (active == null || !active.imported) {
+            design.showToast(R.string.no_profile_selected, ToastDuration.Long)
+            return
+        }
+        val vpnRequest = startClashService()
+        try {
+            if (vpnRequest != null) {
+                val result = startActivityForResult(
+                    ActivityResultContracts.StartActivityForResult(),
+                    vpnRequest
+                )
+                if (result.resultCode == RESULT_OK)
+                    startClashService()
+            }
+        } catch (e: Exception) {
+            design.showToast(R.string.unable_to_start_vpn, ToastDuration.Long)
         }
     }
 

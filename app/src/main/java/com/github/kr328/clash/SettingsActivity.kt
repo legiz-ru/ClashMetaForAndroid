@@ -1,7 +1,12 @@
 package com.github.kr328.clash
 
+import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.SettingsDesign
+import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.util.startClashService
+import com.github.kr328.clash.util.stopClashService
+import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
 
@@ -11,10 +16,17 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
 
         setContentDesign(design)
 
+        design.setClashRunning(clashRunning)
+
         while (isActive) {
             select<Unit> {
                 events.onReceive {
-
+                    when (it) {
+                        Event.ClashStart, Event.ClashStop -> {
+                            design.setClashRunning(clashRunning)
+                        }
+                        else -> Unit
+                    }
                 }
                 design.requests.onReceive {
                     when (it) {
@@ -50,9 +62,39 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             finish()
                             overridePendingTransition(0, 0)
                         }
+                        SettingsDesign.Request.OpenProfiles ->
+                            startActivity(ProfilesActivity::class.intent)
+                        SettingsDesign.Request.ToggleStatus -> {
+                            if (clashRunning) {
+                                stopClashService()
+                            } else {
+                                toggleClashOn(design)
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun toggleClashOn(design: SettingsDesign) {
+        val active = withProfile { queryActive() }
+        if (active == null || !active.imported) {
+            design.showToast(com.github.kr328.clash.design.R.string.no_profile_selected, ToastDuration.Long)
+            return
+        }
+        val vpnRequest = startClashService()
+        try {
+            if (vpnRequest != null) {
+                val result = startActivityForResult(
+                    ActivityResultContracts.StartActivityForResult(),
+                    vpnRequest
+                )
+                if (result.resultCode == RESULT_OK)
+                    startClashService()
+            }
+        } catch (e: Exception) {
+            design.showToast(com.github.kr328.clash.design.R.string.unable_to_start_vpn, ToastDuration.Long)
         }
     }
 }

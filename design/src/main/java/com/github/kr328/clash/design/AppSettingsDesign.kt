@@ -83,13 +83,6 @@ class AppSettingsDesign(
             )
 
             switch(
-                value = uiStore::showFullProxyChain,
-                icon = R.drawable.ic_baseline_sort,
-                title = R.string.show_full_proxy_chain,
-                summary = R.string.show_full_proxy_chain_desc,
-            )
-
-            switch(
                 value = uiStore::hideAppIcon,
                 icon = R.drawable.ic_baseline_hide,
                 title = R.string.hide_app_icon_title,

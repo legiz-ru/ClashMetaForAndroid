@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.ViewGroup
@@ -21,8 +22,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.core.model.ProxyGroup
 import com.github.kr328.clash.core.model.TunnelState
+import com.github.kr328.clash.design.component.TvNavigationDrawer
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.databinding.DesignSheetAddProfileBinding
@@ -69,8 +72,32 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private val binding = DesignMainBinding
         .inflate(context.layoutInflater, context.root, false)
 
+    val isTv = TvUtils.isTv(context)
+
+    private val tvDrawer: TvNavigationDrawer? = if (isTv) {
+        TvNavigationDrawer(context, TvNavigationDrawer.NavItem.Home).apply {
+            onNavigate = { item ->
+                when (item) {
+                    TvNavigationDrawer.NavItem.Home -> {} // Already on home
+                    TvNavigationDrawer.NavItem.Profiles -> requests.trySend(Request.OpenProfiles)
+                    TvNavigationDrawer.NavItem.Settings -> requests.trySend(Request.OpenSettings)
+                }
+            }
+            onToggleStatus = { requests.trySend(Request.ToggleStatus) }
+        }
+    } else null
+
+    private val rootView: View = if (isTv) {
+        // On TV: hide bottom nav and FAB, wrap with drawer
+        binding.bottomNav.visibility = View.GONE
+        binding.disconnectFab.visibility = View.GONE
+        tvDrawer!!.wrapContent(binding.root)
+    } else {
+        binding.root
+    }
+
     override val root: View
-        get() = binding.root
+        get() = rootView
 
     val bottomNav: BottomNavigationView
         get() = binding.bottomNav
@@ -110,6 +137,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setClashRunning(running: Boolean) {
         withContext(Dispatchers.Main) {
             binding.clashRunning = running
+            tvDrawer?.isClashRunning = running
         }
     }
 
@@ -287,15 +315,25 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    private fun resolveDelay(
+        groupMap: Map<String, ProxyGroup>,
+        groupName: String,
+        now: String,
+        visited: MutableSet<String> = mutableSetOf(),
+    ): Int {
+        if (!visited.add(groupName)) return 0
+        val currentGroup = groupMap[groupName] ?: return 0
+        val selected = currentGroup.proxies.find { it.name == now } ?: return 0
+        if (!selected.type.group) return selected.delay
+        val nestedGroup = groupMap[selected.name] ?: return selected.delay
+        return resolveDelay(groupMap, selected.name, nestedGroup.now, visited)
+    }
+
     private fun resolveSelectedInfo(
         groupMap: Map<String, ProxyGroup>,
         groupName: String,
         now: String,
-        showFullChain: Boolean = true,
-        visited: MutableSet<String> = mutableSetOf(),
     ): Pair<String, Int> {
-        if (!visited.add(groupName)) return now to 0
-
         val currentGroup = groupMap[groupName] ?: return now to 0
         val selected = currentGroup.proxies.find { it.name == now }
             ?: return now to 0
@@ -306,21 +344,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             return selectedDisplayName to selected.delay
         }
 
-        val nestedGroupName = selected.name
-        val nestedGroup = groupMap[nestedGroupName] ?: return selectedDisplayName to selected.delay
-        val (finalProxyName, finalDelay) = resolveSelectedInfo(
-            groupMap,
-            nestedGroupName,
-            nestedGroup.now,
-            showFullChain,
-            visited,
-        )
-
-        return if (showFullChain) {
-            "$selectedDisplayName -> $finalProxyName" to finalDelay
-        } else {
-            selectedDisplayName to finalDelay
-        }
+        // For nested groups, resolve delay from the chain but always display the group name only
+        val nestedGroup = groupMap[selected.name] ?: return selectedDisplayName to selected.delay
+        val finalDelay = resolveDelay(groupMap, selected.name, nestedGroup.now)
+        return selectedDisplayName to finalDelay
     }
 
     private fun sortedProxies(group: ProxyGroup): List<com.github.kr328.clash.core.model.Proxy> {
@@ -401,6 +428,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
                 background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                 setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
+                isFocusable = true
+                isClickable = true
                 setOnClickListener {
                     openSortPicker {
                         refreshOpenedProxyGroupSheet()
@@ -428,6 +457,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
                 background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                 setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
+                isFocusable = true
+                isClickable = true
                 setOnClickListener {
                     pendingUrlTestGroup = groupName
                     requests.trySend(Request.UrlTest)
@@ -456,15 +487,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
             for (proxy in sortedProxies(group)) {
                 val isSelected = proxy.name == group.now
-                val (proxyDisplayName, proxyDelay) = if (proxy.type.group) {
+                val proxyDisplayName = proxy.title.ifEmpty { proxy.name }
+                val proxyDelay = if (proxy.type.group) {
                     val nestedGroup = groupMap[proxy.name]
                     if (nestedGroup != null) {
-                        resolveSelectedInfo(groupMap, proxy.name, nestedGroup.now)
+                        resolveDelay(groupMap, proxy.name, nestedGroup.now)
                     } else {
-                        proxy.title.ifEmpty { proxy.name } to proxy.delay
+                        proxy.delay
                     }
                 } else {
-                    proxy.title.ifEmpty { proxy.name } to proxy.delay
+                    proxy.delay
                 }
 
                 val rowCard = MaterialCardView(context).apply {
@@ -557,7 +589,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         openedProxyGroupName = groupName
 
-        val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context, forceExpanded = false).also {
+        val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context, forceExpanded = true).also {
             proxyGroupDialog = it
             it.setOnDismissListener {
                 openedProxyGroupName = null
@@ -574,7 +606,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setProxyGroups(
         groups: List<Pair<String, ProxyGroup>>,
         useDots: Boolean = true,
-        showFullChain: Boolean = false,
     ) {
         withContext(Dispatchers.Main) {
             if (groups.isEmpty()) return@withContext
@@ -598,7 +629,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             refreshOpenedProxyGroupSheet()
 
             for ((name, group) in visibleGroups) {
-                val (selectedInfoText, _) = resolveSelectedInfo(groupMap, name, group.now, showFullChain)
+                val (selectedInfoText, _) = resolveSelectedInfo(groupMap, name, group.now)
 
                 val card = MaterialCardView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
@@ -654,8 +685,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     text = selectedInfoText
                     setTextColor(onSurfaceVariantColor)
                     textSize = 12f
-                    maxLines = if (showFullChain) 2 else 1
-                    isSingleLine = !showFullChain
+                    maxLines = 1
+                    isSingleLine = true
                     ellipsize = TextUtils.TruncateAt.END
                 }
 
@@ -712,29 +743,37 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.colorClashStarted = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         binding.colorClashStopped = context.resolveThemedColor(R.attr.colorClashStopped)
 
-        // Easter egg: 15 taps on logo unlocks Summer mode
-        binding.appLogo.setOnClickListener {
-            logoTapTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        // Easter egg: 15 taps on logo unlocks Summer mode (touch-only, no D-pad)
+        binding.appLogo.isFocusable = false
+        binding.appLogo.isFocusableInTouchMode = false
+        binding.appLogo.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP &&
+                event.source and android.view.InputDevice.SOURCE_TOUCHSCREEN != 0
+            ) {
+                logoTapTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
 
-            logoTapCount++
+                logoTapCount++
 
-            if (logoTapCount >= 15) {
-                val uiStore = com.github.kr328.clash.design.store.UiStore(context)
-                uiStore.summerModeUnlocked = true
-                logoTapCount = 0
-
-                android.widget.Toast.makeText(
-                    context,
-                    "🥒 Всегда Лето разблокирован! Проверьте настройки темы",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-            } else {
-                // Reset counter if timeout
-                logoTapTimeoutRunnable = Runnable {
+                if (logoTapCount >= 15) {
+                    val uiStore = com.github.kr328.clash.design.store.UiStore(context)
+                    uiStore.summerModeUnlocked = true
                     logoTapCount = 0
-                }.also {
-                    mainHandler.postDelayed(it, logoTapTimeout)
+
+                    android.widget.Toast.makeText(
+                        context,
+                        "🥒 Всегда Лето разблокирован! Проверьте настройки темы",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    logoTapTimeoutRunnable = Runnable {
+                        logoTapCount = 0
+                    }.also {
+                        mainHandler.postDelayed(it, logoTapTimeout)
+                    }
                 }
+                true
+            } else {
+                false
             }
         }
 
@@ -742,27 +781,34 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.hasTrafficInfo = false
         binding.hasExpireInfo = false
 
-        binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_home -> true
-                R.id.nav_settings -> {
-                    requests.trySend(Request.OpenSettings)
-                    false
-                }
-                else -> false
-            }
+        // On TV: allow D-pad to reach buttons inside the profile card
+        if (isTv) {
+            (binding.profileCard as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
         }
 
-        // Position disconnect FAB above bottom nav dynamically after layout
-        binding.bottomNav.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                binding.bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                val dp = context.resources.displayMetrics.density
-                val params = binding.disconnectFab.layoutParams as CoordinatorLayout.LayoutParams
-                params.bottomMargin = binding.bottomNav.height + (12 * dp).toInt()
-                binding.disconnectFab.layoutParams = params
+        if (!isTv) {
+            binding.bottomNav.setOnItemSelectedListener { item ->
+                when (item.itemId) {
+                    R.id.nav_home -> true
+                    R.id.nav_settings -> {
+                        requests.trySend(Request.OpenSettings)
+                        false
+                    }
+                    else -> false
+                }
             }
-        })
+
+            // Position disconnect FAB above bottom nav dynamically after layout
+            binding.bottomNav.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    binding.bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    val dp = context.resources.displayMetrics.density
+                    val params = binding.disconnectFab.layoutParams as CoordinatorLayout.LayoutParams
+                    params.bottomMargin = binding.bottomNav.height + (12 * dp).toInt()
+                    binding.disconnectFab.layoutParams = params
+                }
+            })
+        }
     }
 
     fun requestSheet(dialog: Dialog, request: Request) {
