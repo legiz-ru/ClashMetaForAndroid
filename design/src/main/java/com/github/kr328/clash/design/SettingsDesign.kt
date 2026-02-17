@@ -1,8 +1,6 @@
 package com.github.kr328.clash.design
 
 import android.content.Context
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.StateListDrawable
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -10,7 +8,6 @@ import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.design.component.TvNavigationDrawer
 import com.github.kr328.clash.design.databinding.DesignSettingsBinding
 import com.github.kr328.clash.design.util.layoutInflater
-import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
 import com.github.kr328.clash.design.view.ActionLabel
 
@@ -57,8 +54,9 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
         binding.self = this
 
         if (isTv) {
-            // Restyle existing ActionLabel items for TV (focus states, rounded)
-            applyTvRoundedBackgrounds()
+            // Enable visible scrollbar for TV
+            binding.scrollRoot.isVerticalScrollBarEnabled = true
+            binding.scrollRoot.isScrollbarFadingEnabled = false
         } else {
             // Apply rounded ripple backgrounds for mobile
             applyMobileRoundedBackgrounds()
@@ -91,48 +89,6 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
                 innerLayout?.background = context.getDrawable(R.drawable.bg_settings_item_rounded)
 
                 // Add horizontal margins for the rounded pill look
-                val params = child.layoutParams as? LinearLayout.LayoutParams ?: continue
-                params.marginStart = (12 * dp).toInt()
-                params.marginEnd = (12 * dp).toInt()
-                child.layoutParams = params
-            }
-        }
-    }
-
-    private fun applyTvRoundedBackgrounds() {
-        val scrollContent = binding.scrollRoot.getChildAt(0) as? LinearLayout ?: return
-        val dp = context.resources.displayMetrics.density
-        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
-        val transparentColor = 0x00000000
-
-        // Enable visible scrollbar for TV
-        binding.scrollRoot.isVerticalScrollBarEnabled = true
-        binding.scrollRoot.isScrollbarFadingEnabled = false
-
-        for (i in 0 until scrollContent.childCount) {
-            val child = scrollContent.getChildAt(i)
-            if (child is ActionLabel) {
-                // ActionLabel is a FrameLayout; its first child is the inner clickable LinearLayout
-                val innerLayout = (child as ViewGroup).getChildAt(0) ?: continue
-
-                // StateListDrawable: transparent normally, primary border on focus only
-                val focusedBg = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 28 * dp
-                    setColor(transparentColor)
-                    setStroke((2 * dp).toInt(), primaryColor)
-                }
-                val normalBg = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 28 * dp
-                    setColor(transparentColor)
-                }
-                innerLayout.background = StateListDrawable().apply {
-                    addState(intArrayOf(android.R.attr.state_focused), focusedBg)
-                    addState(intArrayOf(), normalBg)
-                }
-
-                // Add horizontal margins
                 val params = child.layoutParams as? LinearLayout.LayoutParams ?: continue
                 params.marginStart = (12 * dp).toInt()
                 params.marginEnd = (12 * dp).toInt()
