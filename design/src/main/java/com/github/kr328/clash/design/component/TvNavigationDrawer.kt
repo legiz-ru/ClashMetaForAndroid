@@ -6,6 +6,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -33,7 +34,13 @@ class TvNavigationDrawer(
     private var toggleIcon: ImageView? = null
     private var toggleText: TextView? = null
 
+    // D-pad navigation support
+    private val drawerFocusableItems = mutableListOf<View>()
+    private var selectedNavItemView: View? = null
+    private var contentView: View? = null
+
     fun wrapContent(contentView: View): View {
+        this.contentView = contentView
         val dp = context.resources.displayMetrics.density
         val drawerWidth = (260 * dp).toInt()
 
@@ -67,7 +74,55 @@ class TvNavigationDrawer(
         )
         wrapper.addView(contentView)
 
+        // Setup D-pad navigation between drawer and content
+        setupDpadNavigation(wrapper)
+
         return wrapper
+    }
+
+    private fun setupDpadNavigation(wrapper: View) {
+        // DPAD_RIGHT on any drawer item → focus first focusable in content
+        for (item in drawerFocusableItems) {
+            item.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) {
+                    val content = contentView ?: return@setOnKeyListener false
+                    val target = content.findFocus() ?: findFirstFocusable(content)
+                    if (target != null) {
+                        target.requestFocus()
+                        return@setOnKeyListener true
+                    }
+                }
+                false
+            }
+        }
+
+        // When focus moves into content, set nextFocusLeftId to return to selected nav item
+        val selectedId = selectedNavItemView?.id ?: return
+        wrapper.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
+            if (newFocus != null && contentView != null && isDescendantOf(newFocus, contentView!!)) {
+                newFocus.nextFocusLeftId = selectedId
+            }
+        }
+    }
+
+    private fun isDescendantOf(view: View, ancestor: View): Boolean {
+        var current: android.view.ViewParent? = view.parent
+        while (current != null) {
+            if (current === ancestor) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    private fun findFirstFocusable(view: View): View? {
+        if (view.isFocusable && view.visibility == View.VISIBLE) return view
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = findFirstFocusable(view.getChildAt(i))
+                if (found != null) return found
+            }
+        }
+        return null
     }
 
     private fun createDrawer(dp: Float, width: Int): View {
@@ -223,6 +278,10 @@ class TvNavigationDrawer(
         item.addView(text)
         toggleButton = item
 
+        // Track for D-pad navigation
+        item.id = View.generateViewId()
+        drawerFocusableItems.add(item)
+
         updateToggleButton()
         return item
     }
@@ -309,6 +368,14 @@ class TvNavigationDrawer(
 
         item.addView(icon)
         item.addView(text)
+
+        // Track for D-pad navigation
+        item.id = View.generateViewId()
+        drawerFocusableItems.add(item)
+        if (isSelected) {
+            selectedNavItemView = item
+        }
+
         return item
     }
 

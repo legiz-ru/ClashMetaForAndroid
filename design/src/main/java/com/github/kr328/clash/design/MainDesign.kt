@@ -40,6 +40,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.databinding.OnRebindCallback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -784,6 +785,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         // On TV: allow D-pad to reach buttons inside the profile card
         if (isTv) {
             (binding.profileCard as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+
+            // Prevent data binding from re-showing the FAB on TV after rebind
+            binding.addOnRebindCallback(object : OnRebindCallback<DesignMainBinding>() {
+                override fun onBound(binding: DesignMainBinding?) {
+                    binding?.disconnectFab?.visibility = View.GONE
+                }
+            })
         }
 
         if (!isTv) {
