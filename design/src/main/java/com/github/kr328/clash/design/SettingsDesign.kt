@@ -8,7 +8,6 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -121,9 +120,10 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
 
     private fun buildTvSettingsGrid(): View {
         val dp = context.resources.displayMetrics.density
+        val margin = (6 * dp).toInt()
 
-        val grid = GridLayout(context).apply {
-            columnCount = 2
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -131,21 +131,45 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
             setPadding((16 * dp).toInt(), (24 * dp).toInt(), (16 * dp).toInt(), (24 * dp).toInt())
         }
 
-        for (item in settingsItems) {
-            val cell = createTvSettingsItem(dp, item.iconRes, context.getString(item.textRes)) {
-                requests.trySend(item.request)
+        // Build 2-column rows from the items list
+        for (i in settingsItems.indices step 2) {
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                )
             }
-            val params = GridLayout.LayoutParams().apply {
-                width = 0
-                height = GridLayout.LayoutParams.WRAP_CONTENT
-                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, 1f)
-                setMargins((6 * dp).toInt(), (6 * dp).toInt(), (6 * dp).toInt(), (6 * dp).toInt())
+
+            val left = createTvSettingsItem(dp, settingsItems[i].iconRes, context.getString(settingsItems[i].textRes)) {
+                requests.trySend(settingsItems[i].request)
             }
-            cell.layoutParams = params
-            grid.addView(cell)
+            left.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(margin, margin, margin, margin)
+            }
+            row.addView(left)
+
+            if (i + 1 < settingsItems.size) {
+                val right = createTvSettingsItem(dp, settingsItems[i + 1].iconRes, context.getString(settingsItems[i + 1].textRes)) {
+                    requests.trySend(settingsItems[i + 1].request)
+                }
+                right.layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(margin, margin, margin, margin)
+                }
+                row.addView(right)
+            } else {
+                // Placeholder for odd number of items
+                val spacer = View(context)
+                spacer.layoutParams = LinearLayout.LayoutParams(0, 0, 1f).apply {
+                    setMargins(margin, margin, margin, margin)
+                }
+                row.addView(spacer)
+            }
+
+            container.addView(row)
         }
 
-        return grid
+        return container
     }
 
     private fun createTvSettingsItem(
