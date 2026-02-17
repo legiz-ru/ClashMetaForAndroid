@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.KeyEvent
@@ -397,11 +398,25 @@ class TvNavigationDrawer(
         }
     }
 
-    private fun createFocusableBackground(dp: Float, fillColor: Int): GradientDrawable {
-        return GradientDrawable().apply {
+    private fun createFocusableBackground(dp: Float, fillColor: Int): StateListDrawable {
+        val focusColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+
+        val focusedDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 28 * dp
             setColor(fillColor)
+            setStroke((2 * dp).toInt(), focusColor)
+        }
+
+        val normalDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 28 * dp
+            setColor(fillColor)
+        }
+
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), focusedDrawable)
+            addState(intArrayOf(), normalDrawable)
         }
     }
 }

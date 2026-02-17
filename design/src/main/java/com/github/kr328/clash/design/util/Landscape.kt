@@ -1,10 +1,14 @@
 package com.github.kr328.clash.design.util
 
 import android.content.Context
+import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.ui.Insets
 
 fun Insets.landscape(context: Context): Insets {
+    // Skip landscape width constraining on TV — content width is managed by the TV drawer layout
+    if (TvUtils.isTv(context)) return this
+
     val displayMetrics = context.resources.displayMetrics
     val minWidth = context.getPixels(R.dimen.surface_landscape_min_width)
 
