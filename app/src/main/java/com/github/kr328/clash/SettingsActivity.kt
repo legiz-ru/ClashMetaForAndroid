@@ -47,8 +47,6 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                                 startActivity(LogsActivity::class.intent)
                             }
                         }
-                        SettingsDesign.Request.StartHelp ->
-                            startActivity(HelpActivity::class.intent)
                         SettingsDesign.Request.StartAbout -> {
                             startActivity(HelpActivity::class.intent)
                         }

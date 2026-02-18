@@ -3,7 +3,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="?attr/selectableItemBackground"
+        android:layout_marginHorizontal="12dp"
+        android:background="@drawable/bg_preference_pill"
         android:clickable="true"
         android:focusable="true"
         android:gravity="center_vertical"

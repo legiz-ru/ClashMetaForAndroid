@@ -75,13 +75,6 @@
                 <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> self.request(Request.StartHelp)}"
-                    app:icon="@drawable/ic_baseline_help_center"
-                    app:text="@string/help" />
-
-                <com.github.kr328.clash.design.view.ActionLabel
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:onClick="@{() -> self.request(Request.StartAbout)}"
                     app:icon="@drawable/ic_baseline_info"
                     app:text="@string/about" />
