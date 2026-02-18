@@ -53,11 +53,7 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
     init {
         binding.self = this
 
-        if (isTv) {
-            // Enable visible scrollbar for TV
-            binding.scrollRoot.isVerticalScrollBarEnabled = true
-            binding.scrollRoot.isScrollbarFadingEnabled = false
-        } else {
+        if (!isTv) {
             // Apply rounded ripple backgrounds for mobile
             applyMobileRoundedBackgrounds()
 
