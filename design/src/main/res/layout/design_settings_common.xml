@@ -9,8 +9,8 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingStart="@{surface.insets.start + @dimen/sub_settings_horizontal_padding}"
-        android:paddingEnd="@{surface.insets.end + @dimen/sub_settings_horizontal_padding}">
+        android:paddingStart="@{surface.insets.start + (int)@dimen/sub_settings_horizontal_padding}"
+        android:paddingEnd="@{surface.insets.end + (int)@dimen/sub_settings_horizontal_padding}">
 
         <com.github.kr328.clash.design.view.ObservableScrollView
             android:id="@+id/scroll_root"
