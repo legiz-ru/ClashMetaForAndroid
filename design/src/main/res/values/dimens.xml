@@ -84,4 +84,7 @@
     <!-- Logcat Design -->
     <dimen name="logcat_padding_vertical">12dp</dimen>
     <dimen name="logcat_padding_horizontal">12dp</dimen>
+
+    <!-- Sub-settings horizontal padding (overridden for TV) -->
+    <dimen name="sub_settings_horizontal_padding">0dp</dimen>
 </resources>
