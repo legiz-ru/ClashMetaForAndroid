@@ -31,18 +31,7 @@ class HelpDesign(
         binding.scrollRoot.bindAppBarElevation(binding.activityBarLayout)
 
         val screen = preferenceScreen(context) {
-            tips(R.string.tips_help)
-
             category(R.string.document)
-
-            clickable(
-                title = R.string.clash_wiki,
-                summary = R.string.clash_wiki_url
-            ) {
-                clicked {
-                    openLink(Uri.parse(context.getString(R.string.clash_wiki_url)))
-                }
-            }
 
             clickable(
                 title = R.string.clash_meta_wiki,

@@ -213,7 +213,7 @@
     <string name="import_from_clipboard">Import from Clipboard</string>
     <string name="export_to_clipboard">Export to Clipboard</string>
 
-    <string name="clash_meta_for_android">Prizrak-Box</string>
+    <string name="clash_meta_for_android">CMFA</string>
 
     <string name="document">Document</string>
     <string name="feedback">Feedback</string>
@@ -222,10 +222,10 @@
     <string name="clash_wiki">Prizrak-Box Wiki</string>
     <string name="github_issues">Github Issues</string>
     <string name="google_play">Google Play</string>
-    <string name="clash_meta_core">Prizrak-Box Core</string>
+    <string name="clash_meta_core">Mihomo Core</string>
     <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
     <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
-    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/Clash.Meta</string>
+    <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/mihomo</string>
 
     <string name="tips_properties"><![CDATA[Accept Only <strong>Prizrak-Box Config</strong>(including <strong>Proxy</strong>/<strong>Rules</strong>)]]></string>
     <string name="tips_help"><![CDATA[Prizrak-Box is a <strong>freeware</strong> and we do <strong>NOT</strong> provide any service for it]]></string>
@@ -299,8 +299,8 @@
 
     <string name="mode_switch_tips">Valid only for current session</string>
 
-    <string name="clash_meta_wiki">Prizrak-Box Wiki</string>
-    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one</string>
+    <string name="clash_meta_wiki">Mihomo Documentation</string>
+    <string name="clash_meta_wiki_url" translatable="false">https://wiki.metacubex.one/ru/</string>
 
     <string name="meta_features">Meta Features</string>
     <string name="unified_delay">Unified Delay</string>
