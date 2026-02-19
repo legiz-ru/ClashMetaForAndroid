@@ -3,7 +3,9 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_preference_pill"
         android:gravity="center_vertical"
+        android:layout_marginHorizontal="12dp"
         android:minHeight="@dimen/item_min_height"
         android:orientation="horizontal"
         android:paddingVertical="@dimen/item_padding_vertical">
@@ -18,8 +20,7 @@
             android:id="@+id/action_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/item_tailing_margin"
-            android:background="?attr/selectableItemBackground">
+            android:layout_marginEnd="@dimen/item_tailing_margin">
 
             <LinearLayout
                 android:layout_width="match_parent"

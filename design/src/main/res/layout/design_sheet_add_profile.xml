@@ -46,7 +46,9 @@
                 app:cardElevation="0dp"
                 android:clickable="true"
                 android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
+                android:foreground="@drawable/bg_card_focus_ripple"
+                app:strokeColor="@color/card_stroke_focus"
+                app:strokeWidth="2dp"
                 android:onClick="@{() -> master.requestSheet(dialog, Request.AddFromClipboard)}">
 
                 <LinearLayout
@@ -85,7 +87,9 @@
                 app:cardElevation="0dp"
                 android:clickable="true"
                 android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
+                android:foreground="@drawable/bg_card_focus_ripple"
+                app:strokeColor="@color/card_stroke_focus"
+                app:strokeWidth="2dp"
                 android:onClick="@{() -> master.requestSheet(dialog, Request.ScanQrCode)}">
 
                 <LinearLayout
@@ -124,7 +128,9 @@
             app:cardElevation="0dp"
             android:clickable="true"
             android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
+            android:foreground="@drawable/bg_card_focus_ripple"
+            app:strokeColor="@color/card_stroke_focus"
+            app:strokeWidth="2dp"
             android:onClick="@{() -> master.requestSheet(dialog, Request.AddFromFile)}">
 
             <LinearLayout
@@ -162,7 +168,9 @@
             app:cardElevation="0dp"
             android:clickable="true"
             android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
+            android:foreground="@drawable/bg_card_focus_ripple"
+            app:strokeColor="@color/card_stroke_focus"
+            app:strokeWidth="2dp"
             android:onClick="@{() -> master.requestSheet(dialog, Request.AddManually)}">
 
             <LinearLayout

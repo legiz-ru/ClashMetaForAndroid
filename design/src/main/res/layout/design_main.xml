@@ -181,10 +181,15 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="@drawable/bg_card_focus_ripple"
                         android:visibility="@{hasProfiles ? View.VISIBLE : View.GONE}"
                         app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp">
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/card_stroke_focus"
+                        app:strokeWidth="2dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -202,7 +207,7 @@
                                 <ImageView
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:background="@drawable/bg_toolbar_button_focus"
                                     android:clickable="true"
                                     android:focusable="true"
                                     android:onClick="@{() -> self.request(Request.UpdateProfile)}"
@@ -221,7 +226,7 @@
                                 <ImageView
                                     android:layout_width="32dp"
                                     android:layout_height="32dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:background="@drawable/bg_toolbar_button_focus"
                                     android:clickable="true"
                                     android:focusable="true"
                                     android:onClick="@{() -> self.request(Request.ManageProfiles)}"
@@ -367,7 +372,7 @@
                                     android:id="@+id/profile_support_icon"
                                     android:layout_width="32dp"
                                     android:layout_height="32dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:background="@drawable/bg_toolbar_button_focus"
                                     android:clickable="true"
                                     android:focusable="true"
                                     android:padding="4dp"
@@ -380,7 +385,7 @@
                                     android:layout_width="32dp"
                                     android:layout_height="32dp"
                                     android:layout_marginStart="4dp"
-                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:background="@drawable/bg_toolbar_button_focus"
                                     android:clickable="true"
                                     android:focusable="true"
                                     android:padding="4dp"

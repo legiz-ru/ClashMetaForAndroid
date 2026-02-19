@@ -19,8 +19,8 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingStart="@{self.surface.insets.start}"
-        android:paddingEnd="@{self.surface.insets.end}">
+        android:paddingStart="@{self.surface.insets.start + (int)@dimen/sub_settings_horizontal_padding}"
+        android:paddingEnd="@{self.surface.insets.end + (int)@dimen/sub_settings_horizontal_padding}">
 
         <com.github.kr328.clash.design.view.ObservableScrollView
             android:id="@+id/scroll_root"
@@ -136,7 +136,7 @@
                         android:layout_width="@dimen/item_tailing_component_size"
                         android:layout_height="@dimen/item_tailing_component_size"
                         android:layout_gravity="end|center_vertical"
-                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:background="@drawable/bg_toolbar_button_focus"
                         android:clickable="true"
                         android:contentDescription="@string/save"
                         android:focusable="true"
