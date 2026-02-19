@@ -209,7 +209,7 @@
     <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/mihomo</string>
 
-    <string name="tips_properties"><![CDATA[Принимается только <strong>конфиг Prizrak-Box</strong> (включая <strong>Прокси</strong>/<strong>Правила</strong>)]]></string>
+    <string name="tips_properties"><![CDATA[Принимается только <strong>конфиг mihomo</strong> (включая <strong>Прокси</strong>/<strong>Правила</strong>)]]></string>
     <string name="tips_help"><![CDATA[Prizrak-Box — <strong>бесплатен</strong> и мы <strong>НЕ</strong> предоставляем по нему поддержку]]></string>
 
     <string name="google_play_url" translatable="false">https://play.google.com/store/apps/details?id=com.github.kr328.clash</string>
