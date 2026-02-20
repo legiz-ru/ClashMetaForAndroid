@@ -42,8 +42,8 @@ private fun isDirectProxyLinks(input: String): Boolean {
  * 2. Otherwise treat as an HTTP(S) subscription URL ([Profile.Type.Url]).
  *    - Auto-imports (commit + activate) when both profile headers are present.
  *    - If [forceAutoImport] is true (deeplink flow), auto-imports even without headers.
- *    - During commit, [ProfileProcessor] will auto-detect convertible content (SingBox JSON,
- *      base64 proxy-link blobs) and transparently switch the stored type to Converted.
+ *    - During commit, [ProfileProcessor] will auto-detect convertible content (proxy links,
+ *      base64-encoded proxy-link lists) and transparently switch the stored type to Converted.
  */
 suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean = false): ProfileImportResult {
     // Direct proxy links — bypass HTTP fetch entirely.

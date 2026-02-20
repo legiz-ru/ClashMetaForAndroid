@@ -16,9 +16,10 @@ type convertResult struct {
 	Error string `json:"error,omitempty"`
 }
 
-// convertAndApplyTemplate detects the format of proxy content (V2Ray/XRay links, SingBox JSON,
-// or their base64-encoded form), converts the proxies found therein, and merges them into the
-// provided Clash YAML template.
+// convertAndApplyTemplate detects the format of proxy content (V2Ray/XRay links
+// such as vless://, trojan://, vmess://, ss://, hysteria2://, or their
+// base64-encoded form), converts the proxies found therein, and merges them
+// into the provided Clash YAML template.
 //
 // Returns a JSON string: {"yaml": "..."} on success, or {"error": "..."} on failure.
 //
@@ -29,24 +30,17 @@ func convertAndApplyTemplate(contentRaw C.c_string, templateContentRaw C.c_strin
 
 	data := []byte(content)
 
-	// Try V2Ray/XRay format: vless://, trojan://, vmess://, ss://, ssr://,
-	// hysteria://, hysteria2://, hy2://, tuic://, etc.
-	// ConvertsV2Ray also handles base64-encoded content automatically.
+	// ConvertsV2Ray handles vless://, trojan://, vmess://, ss://, ssr://,
+	// hysteria://, hysteria2://, hy2://, tuic://, anytls://, wireguard://,
+	// as well as base64-encoded subscriptions containing any of the above.
 	proxies, err := convert.ConvertsV2Ray(data)
 	if err != nil || len(proxies) == 0 {
-		// Try SingBox JSON format.
-		var err2 error
-		proxies, err2 = convert.ConvertsSingBox(data)
-		if err2 != nil || len(proxies) == 0 {
-			errText := "content is not convertible: no recognised proxy links or SingBox JSON found"
-			if err != nil && err.Error() != "" {
-				errText = "content is not convertible: " + err.Error()
-			} else if err2 != nil && err2.Error() != "" {
-				errText = "content is not convertible: " + err2.Error()
-			}
-			result, _ := json.Marshal(convertResult{Error: errText})
-			return C.CString(string(result))
+		errText := "content is not convertible: no recognised proxy links found"
+		if err != nil && err.Error() != "" {
+			errText = "content is not convertible: " + err.Error()
 		}
+		result, _ := json.Marshal(convertResult{Error: errText})
+		return C.CString(string(result))
 	}
 
 	// Parse the template as a generic YAML document.

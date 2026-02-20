@@ -85,7 +85,7 @@ object ProfileProcessor {
     }
 
     // -------------------------------------------------------------------------
-    // Proxy-link / SingBox conversion helpers
+    // Proxy-link conversion helpers
     // -------------------------------------------------------------------------
 
     /** Broad classification of fetched profile content. */
@@ -93,7 +93,7 @@ object ProfileProcessor {
 
     /**
      * Returns [ContentFormat.ConvertibleContent] when the content looks like proxy links
-     * (vless://, trojan://, etc.), a SingBox JSON object, or a bare base64 blob.
+     * (vless://, trojan://, etc.) or a bare base64-encoded proxy-link list.
      * Falls back to [ContentFormat.ClashYaml] for everything else.
      */
     private fun detectContentFormat(content: String): ContentFormat {
@@ -109,7 +109,6 @@ object ProfileProcessor {
         if (proxySchemes.any { firstLine.startsWith(it, ignoreCase = true) }) {
             return ContentFormat.ConvertibleContent
         }
-        if (trimmed.startsWith("{")) return ContentFormat.ConvertibleContent  // SingBox JSON
         // Single long base64-looking line (encoded proxy list)
         if (!trimmed.contains('\n') && trimmed.length > 80 &&
             trimmed.all { it.isLetterOrDigit() || it == '+' || it == '/' || it == '=' }
@@ -143,7 +142,7 @@ object ProfileProcessor {
     }
 
     /**
-     * Converts [content] (proxy links or SingBox JSON) using the template selected for
+     * Converts [content] (proxy links or base64-encoded proxy list) using the template selected for
      * [pendingDir], writes the resulting Clash YAML to [processingDir]/config.yaml, and
      * saves the chosen template id to [processingDir]/[TemplateManager.META_FILE].
      *
@@ -232,8 +231,8 @@ object ProfileProcessor {
                 var effectiveType = snapshot.type
                 val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
 
-                // For Url+HTTP profiles: detect if the downloaded content is proxy links / SingBox.
-                // If so, convert and mark the profile as Converted.
+                // For Url+HTTP profiles: detect if the downloaded content is proxy links.
+                // If so, convert using the selected template and mark the profile as Converted.
                 if (snapshot.type == Profile.Type.Url &&
                     (snapshot.source.startsWith("http://", ignoreCase = true) ||
                      snapshot.source.startsWith("https://", ignoreCase = true))
