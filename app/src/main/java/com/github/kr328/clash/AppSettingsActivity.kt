@@ -2,13 +2,17 @@ package com.github.kr328.clash
 
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.common.util.componentName
 import com.github.kr328.clash.design.AppSettingsDesign
 import com.github.kr328.clash.design.model.Behavior
+import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.ApplicationObserver
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withContext
 
 class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
     override suspend fun main() {
@@ -33,8 +37,32 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
                     }
                 }
                 design.requests.onReceive {
-                    ApplicationObserver.createdActivities.forEach {
-                        it.recreate()
+                    when (it) {
+                        AppSettingsDesign.Request.ReCreateAllActivities -> {
+                            ApplicationObserver.createdActivities.forEach { activity ->
+                                activity.recreate()
+                            }
+                        }
+                        AppSettingsDesign.Request.SelectCustomTemplate -> {
+                            val uri = startActivityForResult(
+                                ActivityResultContracts.GetContent(), "*/*"
+                            )
+                            if (uri != null) {
+                                val content = withContext(Dispatchers.IO) {
+                                    contentResolver.openInputStream(uri)
+                                        ?.use { it.readBytes().toString(Charsets.UTF_8) }
+                                }
+                                if (!content.isNullOrBlank()) {
+                                    val customFile = filesDir.resolve("custom_template.yaml")
+                                    withContext(Dispatchers.IO) {
+                                        customFile.writeText(content, Charsets.UTF_8)
+                                    }
+                                    TemplateManager.setCustomTemplatePath(
+                                        this@AppSettingsActivity, customFile.absolutePath
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

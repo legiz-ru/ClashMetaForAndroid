@@ -84,6 +84,92 @@ object ProfileProcessor {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Proxy-link / SingBox conversion helpers
+    // -------------------------------------------------------------------------
+
+    /** Broad classification of fetched profile content. */
+    private enum class ContentFormat { ClashYaml, ConvertibleContent }
+
+    /**
+     * Returns [ContentFormat.ConvertibleContent] when the content looks like proxy links
+     * (vless://, trojan://, etc.), a SingBox JSON object, or a bare base64 blob.
+     * Falls back to [ContentFormat.ClashYaml] for everything else.
+     */
+    private fun detectContentFormat(content: String): ContentFormat {
+        val trimmed = content.trimStart()
+        val proxySchemes = listOf(
+            "vless://", "trojan://", "vmess://", "ss://", "ssr://",
+            "hysteria://", "hysteria2://", "hy2://", "tuic://", "anytls://", "wireguard://"
+        )
+        if (proxySchemes.any { trimmed.startsWith(it, ignoreCase = true) }) {
+            return ContentFormat.ConvertibleContent
+        }
+        val firstLine = trimmed.lineSequence().firstOrNull()?.trim() ?: ""
+        if (proxySchemes.any { firstLine.startsWith(it, ignoreCase = true) }) {
+            return ContentFormat.ConvertibleContent
+        }
+        if (trimmed.startsWith("{")) return ContentFormat.ConvertibleContent  // SingBox JSON
+        // Single long base64-looking line (encoded proxy list)
+        if (!trimmed.contains('\n') && trimmed.length > 80 &&
+            trimmed.all { it.isLetterOrDigit() || it == '+' || it == '/' || it == '=' }
+        ) {
+            return ContentFormat.ConvertibleContent
+        }
+        return ContentFormat.ClashYaml
+    }
+
+    /**
+     * Fetches raw content from an HTTP(S) URL, or returns [source] as-is for
+     * direct proxy-link text (non-HTTP sources such as vless://, ss://, etc.).
+     */
+    private fun fetchSourceContent(context: Context, source: String): String {
+        if (!source.startsWith("http://", ignoreCase = true) &&
+            !source.startsWith("https://", ignoreCase = true)
+        ) {
+            return source  // Direct proxy-link text
+        }
+        val request = buildProfileRequest(context, source)
+        val client = OkHttpClient.Builder()
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Failed to fetch profile: HTTP ${response.code}")
+            }
+            return response.body?.string() ?: throw IOException("Empty response body")
+        }
+    }
+
+    /**
+     * Converts [content] (proxy links or SingBox JSON) using the template selected for
+     * [pendingDir], writes the resulting Clash YAML to [processingDir]/config.yaml, and
+     * saves the chosen template id to [processingDir]/[TemplateManager.META_FILE].
+     *
+     * Throws [IOException] if conversion fails.
+     */
+    private fun convertAndWriteConfig(
+        context: Context,
+        content: String,
+        pendingDir: File,
+        processingDir: File,
+    ) {
+        val templateId = TemplateManager.getSelectedTemplateId(pendingDir)
+        val templateContent = TemplateManager.loadTemplate(context, templateId)
+        val resultJson = Clash.convertAndApplyTemplate(content, templateContent)
+        val result = JSONObject(resultJson)
+        val error = result.optString("error", "")
+        if (error.isNotEmpty()) throw IOException("Conversion failed: $error")
+        val configYaml = result.optString("yaml", "")
+        if (configYaml.isEmpty()) throw IOException("Conversion produced an empty config")
+        processingDir.mkdirs()
+        processingDir.resolve("config.yaml").writeText(configYaml, Charsets.UTF_8)
+        TemplateManager.saveSelectedTemplateId(processingDir, templateId)
+    }
+
+    // -------------------------------------------------------------------------
+
     private data class FetchTarget(
         val source: String,
         val force: Boolean,
@@ -101,6 +187,14 @@ object ProfileProcessor {
             }
 
             return FetchTarget(localConfig.toURI().toString(), false)
+        }
+
+        // For Converted profiles the config.yaml is pre-written; just validate in place.
+        if (type == Profile.Type.Converted) {
+            return FetchTarget(
+                context.processingDir.resolve("config.yaml").toURI().toString(),
+                false
+            )
         }
 
         return FetchTarget(source, type != Profile.Type.File)
@@ -124,7 +218,37 @@ object ProfileProcessor {
                     pending
                 }
 
+                // Converted profiles: convert proxy content and write config.yaml before validation.
+                if (snapshot.type == Profile.Type.Converted) {
+                    val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
+                    convertAndWriteConfig(
+                        context,
+                        fetchSourceContent(context, snapshot.source),
+                        pendingDir,
+                        context.processingDir,
+                    )
+                }
+
+                var effectiveType = snapshot.type
                 val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
+
+                // For Url+HTTP profiles: detect if the downloaded content is proxy links / SingBox.
+                // If so, convert and mark the profile as Converted.
+                if (snapshot.type == Profile.Type.Url &&
+                    (snapshot.source.startsWith("http://", ignoreCase = true) ||
+                     snapshot.source.startsWith("https://", ignoreCase = true))
+                ) {
+                    val configFile = context.processingDir.resolve("config.yaml")
+                    if (configFile.exists()) {
+                        val content = configFile.readText(Charsets.UTF_8)
+                        if (detectContentFormat(content) == ContentFormat.ConvertibleContent) {
+                            val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
+                            convertAndWriteConfig(context, content, pendingDir, context.processingDir)
+                            effectiveType = Profile.Type.Converted
+                        }
+                    }
+                }
+
                 var cb = callback
 
                 Clash.fetchAndValid(context.processingDir, fetchTarget.source, fetchTarget.force) {
@@ -149,7 +273,22 @@ object ProfileProcessor {
                         var download: Long = 0
                         var total: Long = 0
                         var expire: Long = 0
-                        if (snapshot?.type == Profile.Type.Url) {
+                        if (effectiveType == Profile.Type.Converted) {
+                            // Converted profile — no subscription traffic tracking.
+                            val new = Imported(
+                                snapshot.uuid,
+                                snapshot.name,
+                                Profile.Type.Converted,
+                                snapshot.source,
+                                snapshot.interval,
+                                0L, 0L, 0L, 0L,
+                                old?.createdAt ?: System.currentTimeMillis()
+                            )
+                            if (old != null) ImportedDao().update(new) else ImportedDao().insert(new)
+                            PendingDao().remove(snapshot.uuid)
+                            context.pendingDir.resolve(snapshot.uuid.toString()).deleteRecursively()
+                            context.sendProfileChanged(snapshot.uuid)
+                        } else if (snapshot?.type == Profile.Type.Url) {
                             if (snapshot.source.startsWith("https://", true)) {
                                 val client = OkHttpClient()
                                 val request = buildProfileRequest(context, snapshot.source)
@@ -253,6 +392,17 @@ object ProfileProcessor {
                         .copyRecursively(context.processingDir, overwrite = true)
 
                     imported
+                }
+
+                // Converted profiles: re-fetch source and re-apply the template.
+                if (snapshot.type == Profile.Type.Converted) {
+                    val importedDir = context.importedDir.resolve(snapshot.uuid.toString())
+                    convertAndWriteConfig(
+                        context,
+                        fetchSourceContent(context, snapshot.source),
+                        importedDir,      // template metadata lives in the imported dir
+                        context.processingDir,
+                    )
                 }
 
                 val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
@@ -426,7 +576,10 @@ object ProfileProcessor {
             source.isEmpty() && type != Profile.Type.File ->
                 throw IllegalArgumentException("Invalid url")
 
-            source.isNotEmpty() && scheme != "https" && scheme != "http" && scheme != "content" ->
+            // Converted profiles may have http/https URLs *or* raw proxy-link text as their
+            // source, so skip the scheme check for them.
+            source.isNotEmpty() && type != Profile.Type.Converted &&
+                    scheme != "https" && scheme != "http" && scheme != "content" ->
                 throw IllegalArgumentException("Unsupported url $source")
 
             interval != 0L && TimeUnit.MILLISECONDS.toMinutes(interval) < 15 ->

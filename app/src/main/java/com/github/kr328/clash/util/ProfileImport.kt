@@ -8,7 +8,9 @@ import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.dialog.withModelProgressBar
 import com.github.kr328.clash.service.ProfileProcessor
+import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.service.util.pendingDir
 import java.util.UUID
 
 data class ProfileImportResult(
@@ -16,13 +18,40 @@ data class ProfileImportResult(
     val autoImported: Boolean,
 )
 
+/** Proxy-link URI schemes whose presence indicates raw proxy-link content. */
+private val PROXY_SCHEMES = listOf(
+    "vless://", "trojan://", "vmess://", "ss://", "ssr://",
+    "hysteria://", "hysteria2://", "hy2://", "tuic://", "anytls://", "wireguard://"
+)
+
 /**
- * Import a profile from URL.
- * - Auto-imports (commit + activate) when both headers are present.
- * - If [forceAutoImport] is true (used for deeplink flow), it will also auto-import
- *   even when headers are absent.
+ * Returns true when [input] starts with a recognised proxy-link URI scheme,
+ * indicating that the content is a raw proxy-link list rather than an HTTP(S) URL.
+ */
+private fun isDirectProxyLinks(input: String): Boolean {
+    val trimmed = input.trimStart()
+    return PROXY_SCHEMES.any { trimmed.startsWith(it, ignoreCase = true) }
+}
+
+/**
+ * Import a profile from [url].
+ *
+ * Routing logic:
+ * 1. If [url] is a raw proxy-link (vless://, trojan://, etc.) → import as [Profile.Type.Converted]
+ *    with the default template, then open [PropertiesActivity] so the user can change the template.
+ * 2. Otherwise treat as an HTTP(S) subscription URL ([Profile.Type.Url]).
+ *    - Auto-imports (commit + activate) when both profile headers are present.
+ *    - If [forceAutoImport] is true (deeplink flow), auto-imports even without headers.
+ *    - During commit, [ProfileProcessor] will auto-detect convertible content (SingBox JSON,
+ *      base64 proxy-link blobs) and transparently switch the stored type to Converted.
  */
 suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean = false): ProfileImportResult {
+    // Direct proxy links — bypass HTTP fetch entirely.
+    if (isDirectProxyLinks(url)) {
+        return importDirectProxyLinks(url)
+    }
+
+    // Standard HTTP(S) URL flow.
     val headers = ProfileProcessor.fetchUrlHeaders(this, url)
     val name = headers.title.ifEmpty { getString(com.github.kr328.clash.design.R.string.new_profile) }
     val intervalMs = if (headers.updateIntervalHours > 0) headers.updateIntervalHours.toLong() * 60 * 60 * 1000 else 0L
@@ -67,4 +96,49 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
     }
 
     return ProfileImportResult(uuid, autoImported)
+}
+
+/**
+ * Creates a [Profile.Type.Converted] profile from raw proxy-link text, commits it with the
+ * default template, activates it, and opens [PropertiesActivity] so the user can change the
+ * template afterwards.
+ */
+private suspend fun Context.importDirectProxyLinks(proxyLinks: String): ProfileImportResult {
+    val name = getString(com.github.kr328.clash.design.R.string.new_profile)
+
+    val uuid = withProfile {
+        create(Profile.Type.Converted, name).also {
+            patch(it, name, proxyLinks, 0L)
+        }
+    }
+
+    // Write default template metadata into the newly-created pending directory so that
+    // ProfileProcessor.apply() can find it.
+    val pendingProfileDir = pendingDir.resolve(uuid.toString())
+    TemplateManager.saveSelectedTemplateId(pendingProfileDir, TemplateManager.Template.Default.id)
+
+    withModelProgressBar {
+        configure {
+            isIndeterminate = true
+            text = getString(com.github.kr328.clash.design.R.string.import_loading_activating)
+        }
+
+        try {
+            withProfile { commit(uuid, null) }
+            withProfile { queryByUUID(uuid)?.let { setActive(it) } }
+        } catch (_: Exception) {
+            Toast.makeText(
+                this@importDirectProxyLinks,
+                getString(com.github.kr328.clash.design.R.string.import_profile_failed),
+                Toast.LENGTH_LONG
+            ).show()
+            startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+            return@withModelProgressBar
+        }
+    }
+
+    // Open PropertiesActivity so the user can switch templates.
+    startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+
+    return ProfileImportResult(uuid, true)
 }

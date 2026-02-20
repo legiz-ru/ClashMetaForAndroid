@@ -391,4 +391,18 @@
     <!-- TV Navigation -->
     <string name="start">Start</string>
     <string name="stop">Stop</string>
+
+    <!-- Converted profile / template selection -->
+    <string name="select_template">Select Template</string>
+    <string name="select_template_desc">Choose a routing template for this profile</string>
+    <string name="template_default">Default (Prizrak-Box)</string>
+    <string name="template_ru_bundle">RU-Bundle by Legiz</string>
+    <string name="template_ultimate">Ultimate by Davoyan</string>
+    <string name="template_custom">Custom</string>
+    <string name="custom_template">Custom Template</string>
+    <string name="custom_template_desc">Load a custom YAML template file for converted profiles</string>
+    <string name="custom_template_not_set">Not set (falls back to Default)</string>
+    <string name="import_converted_profile">Import as Converted Profile</string>
+    <string name="converted_profile_hint">Proxy links / SingBox JSON — a template will be applied</string>
+    <string name="templates">Templates</string>
 </resources>

@@ -1,18 +1,26 @@
 package com.github.kr328.clash
 
+import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.design.PropertiesDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.showExceptionToast
+import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.util.withProfile
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import com.github.kr328.clash.design.R
+import kotlin.coroutines.resume
 
 class PropertiesActivity : BaseActivity<PropertiesDesign>() {
     private var canceled: Boolean = false
@@ -63,6 +71,9 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                         PropertiesDesign.Request.Commit -> {
                             design.verifyAndCommit()
                         }
+                        PropertiesDesign.Request.SelectTemplate -> {
+                            design.selectAndApplyTemplate()
+                        }
                     }
                 }
             }
@@ -78,6 +89,66 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                 }
             }
         } ?: return super.onBackPressed()
+    }
+
+    /**
+     * Shows a template-selection dialog for Converted profiles, writes the chosen template id
+     * to the pending profile directory, then re-commits with the new template.
+     */
+    private suspend fun PropertiesDesign.selectAndApplyTemplate() {
+        if (profile.type != Profile.Type.Converted) return
+
+        // Ensure a pending record and directory exist (creates one from the imported profile if absent).
+        withProfile { patch(profile.uuid, profile.name, profile.source, profile.interval) }
+
+        val pendingProfileDir = pendingDir.resolve(profile.uuid.toString())
+        val currentTemplateId = TemplateManager.getSelectedTemplateId(pendingProfileDir)
+
+        val templates = TemplateManager.Template.entries.toList()
+        val displayNames = templates.map { context.getString(
+            when (it) {
+                TemplateManager.Template.Default  -> R.string.template_default
+                TemplateManager.Template.RuBundle -> R.string.template_ru_bundle
+                TemplateManager.Template.Ultimate -> R.string.template_ultimate
+                TemplateManager.Template.Custom   -> R.string.template_custom
+            }
+        ) }.toTypedArray()
+        val currentIndex = templates.indexOfFirst { it.id == currentTemplateId }.coerceAtLeast(0)
+
+        val selectedIndex = suspendCancellableCoroutine<Int?> { continuation ->
+            val dialog = MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.select_template)
+                .setSingleChoiceItems(displayNames, currentIndex) { dlg, which ->
+                    dlg.dismiss()
+                    continuation.resume(which)
+                }
+                .setNegativeButton(R.string.cancel) { _, _ -> continuation.resume(null) }
+                .setOnCancelListener { if (!continuation.isCompleted) continuation.resume(null) }
+                .show()
+            continuation.invokeOnCancellation { dialog.dismiss() }
+        } ?: return
+
+        val selectedTemplate = templates[selectedIndex]
+
+        // For Custom template, let the user pick a YAML file to use as the template.
+        if (selectedTemplate == TemplateManager.Template.Custom) {
+            val uri = this@PropertiesActivity.startActivityForResult(
+                ActivityResultContracts.GetContent(), "*/*"
+            )
+            if (uri == null) return // User cancelled the file picker
+            val content = withContext(Dispatchers.IO) {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+            }
+            if (content.isNullOrBlank()) return
+            val customFile = context.filesDir.resolve("custom_template.yaml")
+            withContext(Dispatchers.IO) { customFile.writeText(content, Charsets.UTF_8) }
+            TemplateManager.setCustomTemplatePath(context, customFile.absolutePath)
+        }
+
+        TemplateManager.saveSelectedTemplateId(pendingProfileDir, selectedTemplate.id)
+
+        // Re-commit so the new template is applied.
+        verifyAndCommit()
     }
 
     private suspend fun PropertiesDesign.verifyAndCommit() {

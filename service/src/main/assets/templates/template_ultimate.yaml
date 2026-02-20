@@ -1,0 +1,431 @@
+mixed-port: 7890
+allow-lan: true
+tcp-concurrent: true
+enable-process: true
+find-process-mode: always
+mode: rule
+log-level: info
+ipv6: false
+keep-alive-interval: 30
+unified-delay: false
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: false
+  sniff:
+    HTTP:
+      ports:
+        - 80
+        - 8080-8880
+      override-destination: true
+    TLS:
+      ports:
+        - 443
+        - 8443
+
+  skip-dst-address:
+    - 0.0.0.0/8
+    - 10.0.0.0/8
+    - 100.64.0.0/10
+    - 127.0.0.0/8
+    - 169.254.0.0/16
+    - 172.16.0.0/12
+    - 192.0.0.0/24
+    - 192.0.2.0/24
+    - 192.88.99.0/24
+    - 192.168.0.0/16
+    - 198.18.0.0/15
+    - 198.51.100.0/24
+    - 203.0.113.0/24
+    - 224.0.0.0/3
+    - ::/127
+    - fc00::/7
+    - fe80::/10
+    - ff00::/8
+
+tun:
+  enable: true
+  stack: gvisor
+  auto-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  strict-route: true
+  route-exclude-address:
+    - 0.0.0.0/8
+    - 10.0.0.0/8
+    - 100.64.0.0/10
+    - 127.0.0.0/8
+    - 169.254.0.0/16
+    - 172.16.0.0/12
+    - 192.0.0.0/24
+    - 192.0.2.0/24
+    - 192.88.99.0/24
+    - 192.168.0.0/16
+    - 198.18.0.0/15
+    - 198.51.100.0/24
+    - 203.0.113.0/24
+    - 224.0.0.0/3
+    - ::/127
+    - fc00::/7
+    - fe80::/10
+    - ff00::/8
+
+dns:
+  enable: true
+  prefer-h3: false
+  use-hosts: true
+  use-system-hosts: true
+  ipv6: false
+  enhanced-mode: redir-host
+  default-nameserver:
+    - tls://1.1.1.1#🎲 Любой доступный сервер
+    - https://94.140.14.14/dns-query#DIRECT
+    - https://8.8.8.8/dns-query#DIRECT
+  proxy-server-nameserver:
+    - tls://1.1.1.1#🎲 Любой доступный сервер
+    - https://94.140.14.14/dns-query#DIRECT
+    - https://8.8.8.8/dns-query#DIRECT
+  direct-nameserver:
+    - 77.88.8.8#DIRECT
+    - 77.88.8.1#DIRECT
+    - 8.8.8.8#DIRECT
+  nameserver:
+    - tls://94.140.14.14#🚫 Недоступные сайты
+    - tls://94.140.14.14#🎲 Любой доступный сервер
+    - tls://94.140.15.15#🎲 Любой доступный сервер
+  nameserver-policy:
+    rule-set:ru-inline,ru-outside,yandex,mailru,drweb,geosite-ru:
+      - tls://77.88.8.8#DIRECT
+      - tls://77.88.8.1#DIRECT
+      - tls://8.8.8.8#DIRECT
+    raw.githubusercontent.com,cdn.jsdelivr.net,github.com:
+      - tls://77.88.8.8#DIRECT
+      - tls://77.88.8.1#DIRECT
+      - tls://8.8.8.8#DIRECT
+
+proxies:
+
+proxy-groups:
+  - name: 🚫 Недоступные сайты
+    icon: https://raw.githubusercontent.com/remnawave/templates/refs/heads/main/icons/Blocked.png
+    type: select
+    include-all: true
+    proxies:
+      - 🎲 Любой доступный сервер
+      - 🇷🇺 Без VPN
+
+  - name: ▶️ YouTube
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/YouTube.png
+    type: select
+    include-all: true
+    proxies:
+      - 🚫 Недоступные сайты
+
+  - name: 💬 Discord
+    icon: https://raw.githubusercontent.com/remnawave/templates/refs/heads/main/icons/Discord.png
+    type: select
+    include-all: true
+    proxies:
+      - 🚫 Недоступные сайты
+
+  - name: ➤ Telegram
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Telegram.png
+    type: select
+    include-all: true
+    proxies:
+      - 🚫 Недоступные сайты
+      - 🇷🇺 Без VPN
+
+  - name: 🟠 Cloudflare
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Cloudflare.png
+    type: select
+    include-all: true
+    proxies:
+      - 🇷🇺 Без VPN
+      - 🚫 Недоступные сайты
+
+  - name: ⚪🔵🔴 RU сайты
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Russia.png
+    type: select
+    proxies:
+      - 🇷🇺 Без VPN
+
+  - name: 🌍 Остальные сайты
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Global.png
+    type: select
+    include-all: true
+    proxies:
+      - 🇷🇺 Без VPN
+      - 🚫 Недоступные сайты
+
+  - name: PROXY
+    type: select
+    hidden: true
+    proxies:
+      - 🚫 Недоступные сайты
+
+  - name: 🎲 Любой доступный сервер
+    type: url-test
+    hidden: true
+    url: https://cp.cloudflare.com/generate_204
+    interval: 300
+    include-all: true
+
+  - name: 🇷🇺 Без VPN
+    icon: https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Blackhole.png
+    type: select
+    hidden: true
+    proxies:
+      - DIRECT
+
+rule-providers:
+  ru-inline-banned:
+    type: inline
+    payload:
+      - DOMAIN-SUFFIX,habr.com
+      - DOMAIN-SUFFIX,seasonvar.ru
+      - DOMAIN-SUFFIX,lib.social
+      - DOMAIN-SUFFIX,kemono.su
+      - DOMAIN-SUFFIX,jut.su
+      - DOMAIN-SUFFIX,kara.su
+      - DOMAIN-SUFFIX,theins.ru
+      - DOMAIN-SUFFIX,tvrain.tv
+      - DOMAIN-KEYWORD,animego
+      - DOMAIN-KEYWORD,yummyanime
+      - DOMAIN-KEYWORD,animeportal
+      - DOMAIN-KEYWORD,animedub
+      - DOMAIN-KEYWORD,anidub
+      - DOMAIN-KEYWORD,animelib
+      - DOMAIN-KEYWORD,ikianime
+      - DOMAIN-KEYWORD,anilibria
+    behavior: classical
+  ru-inline:
+    type: inline
+    payload:
+      - DOMAIN-SUFFIX,2ip.ru
+      - DOMAIN-SUFFIX,yastatic.net
+      - DOMAIN-SUFFIX,yandex.net
+      - DOMAIN-SUFFIX,yandex.kz
+      - DOMAIN-SUFFIX,yandex.com
+      - DOMAIN-SUFFIX,yadi.sk
+      - DOMAIN-SUFFIX,mycdn.me
+      - DOMAIN-SUFFIX,jivosite.com
+      - DOMAIN-SUFFIX,vk.com
+      - DOMAIN-SUFFIX,.ru
+      - DOMAIN-SUFFIX,.su
+      - DOMAIN-SUFFIX,.by
+      - DOMAIN-KEYWORD,avito
+      - DOMAIN-KEYWORD,2gis
+      - DOMAIN-KEYWORD,kaspersky
+      - DOMAIN-KEYWORD,stepik
+      - DOMAIN-KEYWORD,ozon
+      - DOMAIN-KEYWORD,wildberries
+    behavior: classical
+  geosite-ru:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geosite/category-ru.mrs
+    path: ./rule-sets/geosite-ru.mrs
+    interval: 86400
+  yandex:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/yandex.yaml
+    path: ./rule-sets/yandex.yaml
+    interval: 86400
+  ai:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ai-!cn.mrs
+    path: ./rule-sets/ai.mrs
+    interval: 86400
+  mailru:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/mailru.mrs
+    path: ./rule-sets/mailru.mrs
+  drweb:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geosite/drweb.mrs
+    path: ./rule-sets/drweb.mrs
+    interval: 86400
+  geoip-ru:
+    type: http
+    behavior: ipcidr
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geoip/ru.mrs
+    path: ./rule-sets/geoip-ru.mrs
+    interval: 86400
+  geoip-by:
+    type: http
+    behavior: ipcidr
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geoip/by.mrs
+    path: ./rule-sets/geoip-by.mrs
+    interval: 86400
+  geosite-private:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geosite/private.mrs
+    path: ./rule-sets/geosite-private.mrs
+    interval: 86400
+  geoip-private:
+    type: http
+    behavior: ipcidr
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geoip/private.mrs
+    path: ./rule-sets/geoip-private.mrs
+    interval: 86400
+  discord_domains:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geosite/discord.mrs
+    path: ./rule-sets/discord_domains.mrs
+    interval: 86400
+  discord_voiceips:
+    type: http
+    behavior: ipcidr
+    format: mrs
+    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/other/discord-voice-ip-list.mrs
+    path: ./rule-sets/discord_voiceips.mrs
+    interval: 86400
+  discord_vc:
+    type: inline
+    behavior: classical
+    payload:
+      - AND,((IP-CIDR,138.128.136.0/21),(NETWORK,udp),(DST-PORT,50000-50100))
+      - AND,((IP-CIDR,162.158.0.0/15),(NETWORK,udp),(DST-PORT,50000-50100))
+      - AND,((IP-CIDR,172.64.0.0/13),(NETWORK,udp),(DST-PORT,50000-50100))
+  refilter_domains:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/re-filter/domain-rule.mrs
+    path: ./rule-sets/refilter.mrs
+    interval: 86400
+  youtube:
+    type: http
+    behavior: domain
+    format: mrs
+    interval: 86400
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geosite/youtube.mrs
+    path: ./rule-sets/youtube.mrs
+  telegram-ips:
+    type: http
+    behavior: ipcidr
+    format: mrs
+    interval: 86400
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geoip/telegram.mrs
+    path: ./rule-sets/telegram-ips.mrs
+  telegram-domains:
+    type: http
+    behavior: domain
+    format: mrs
+    interval: 86400
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/meta/geo/geosite/telegram.mrs
+    path: ./rule-sets/telegram-domains.mrs
+  oisd_big:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/oisd/big.mrs
+    path: ./rule-sets/oisd_big.mrs
+    interval: 86400
+  torrent-trackers:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/other/torrent-trackers.mrs
+    path: ./rule-sets/torrent-trackers.mrs
+    interval: 86400
+  torrent-clients:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://github.com/legiz-ru/mihomo-rule-sets/raw/main/other/torrent-clients.yaml
+    path: ./rule-sets/torrent-clients.yaml
+    interval: 86400
+  ru-inside:
+    type: http
+    behavior: classical
+    format: text
+    url: https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-clashx.lst
+    path: ./rule-sets/ru-inside.lst
+    interval: 86400
+  ru-outside:
+    type: http
+    behavior: classical
+    format: text
+    url: https://raw.githubusercontent.com/itdoginfo/allow-domains/refs/heads/main/Russia/outside-clashx.lst
+    path: ./rule-sets/ru-outside.lst
+    interval: 86400
+  cloudflare-ips:
+    type: http
+    behavior: ipcidr
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geoip/cloudflare.mrs
+    path: ./rule-sets/cloudflare-ips.mrs
+    interval: 86400
+  cloudflare-domains:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/cloudflare.mrs
+    path: ./rule-sets/cloudflare-domains.mrs
+    interval: 86400
+  quic:
+    type: inline
+    behavior: classical
+    payload:
+      - AND,((NETWORK,udp),(DST-PORT,443))
+
+rules:
+  - RULE-SET,geoip-private,DIRECT,no-resolve
+  - RULE-SET,geosite-private,DIRECT
+  - RULE-SET,oisd_big,REJECT
+  - OR,((DOMAIN-SUFFIX,ads.twitch.tv),(DOMAIN-SUFFIX,playlist.ttvnw.net)),DIRECT
+  - RULE-SET,torrent-clients,DIRECT
+  - RULE-SET,torrent-trackers,DIRECT
+  - RULE-SET,quic,REJECT
+  - DOMAIN,ipwho.is,🚫 Недоступные сайты
+  - DOMAIN,api.myip.com,🚫 Недоступные сайты
+  - DOMAIN,ipapi.co,🚫 Недоступные сайты
+  - DOMAIN,ip-api.com,🚫 Недоступные сайты
+  - DOMAIN,ipinfo.io,🚫 Недоступные сайты
+  - RULE-SET,youtube,▶️ YouTube
+  - RULE-SET,telegram-ips,➤ Telegram
+  - RULE-SET,telegram-domains,➤ Telegram
+  - AND,((RULE-SET,cloudflare-ips),(NETWORK,udp),(DST-PORT,19200-19500)),💬 Discord
+  - RULE-SET,discord_vc,💬 Discord
+  - RULE-SET,discord_domains,💬 Discord
+  - RULE-SET,ru-inside,🚫 Недоступные сайты
+  - RULE-SET,refilter_domains,🚫 Недоступные сайты
+  - RULE-SET,ru-inline-banned,🚫 Недоступные сайты
+  - RULE-SET,ai,🚫 Недоступные сайты
+  - RULE-SET,cloudflare-ips,🟠 Cloudflare
+  - RULE-SET,cloudflare-domains,🟠 Cloudflare
+  - RULE-SET,ru-inline,⚪🔵🔴 RU сайты
+  - RULE-SET,ru-outside,⚪🔵🔴 RU сайты
+  - RULE-SET,yandex,⚪🔵🔴 RU сайты
+  - RULE-SET,mailru,⚪🔵🔴 RU сайты
+  - RULE-SET,drweb,⚪🔵🔴 RU сайты
+  - RULE-SET,geosite-ru,⚪🔵🔴 RU сайты
+  - RULE-SET,geoip-ru,⚪🔵🔴 RU сайты
+  - RULE-SET,geoip-by,⚪🔵🔴 RU сайты
+  - MATCH,🌍 Остальные сайты

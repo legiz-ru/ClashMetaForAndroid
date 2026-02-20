@@ -169,6 +169,16 @@ object Clash {
         }
     }
 
+    /**
+     * Converts proxy-link content (V2Ray/XRay URLs, SingBox JSON, or their base64 forms) and
+     * merges the resulting proxies into [templateContent] (a Clash YAML template).
+     *
+     * @return A JSON string: `{"yaml":"..."}` on success, `{"error":"..."}` on failure.
+     */
+    fun convertAndApplyTemplate(content: String, templateContent: String): String {
+        return Bridge.nativeConvertAndApplyTemplate(content, templateContent)
+    }
+
     fun queryProviders(): List<Provider> {
         val providers =
             Json.Default.decodeFromString(JsonArray.serializer(), Bridge.nativeQueryProviders())

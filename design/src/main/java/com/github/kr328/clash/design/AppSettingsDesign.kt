@@ -22,7 +22,8 @@ class AppSettingsDesign(
     onHideIconChange: (hide: Boolean) -> Unit,
 ) : Design<AppSettingsDesign.Request>(context) {
     enum class Request {
-        ReCreateAllActivities
+        ReCreateAllActivities,
+        SelectCustomTemplate,
     }
 
     private val binding = DesignSettingsCommonBinding
@@ -123,6 +124,17 @@ class AppSettingsDesign(
                 title = R.string.send_hwid_title,
                 summary = R.string.send_hwid_desc,
             )
+
+            category(R.string.templates)
+
+            clickable(
+                title = R.string.custom_template,
+                summary = R.string.custom_template_desc,
+            ) {
+                clicked {
+                    requests.trySend(Request.SelectCustomTemplate)
+                }
+            }
         }
 
         binding.content.addView(screen.root)

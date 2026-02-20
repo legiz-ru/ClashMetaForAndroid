@@ -21,6 +21,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
     sealed class Request {
         object Commit : Request()
         object BrowseFiles : Request()
+        object SelectTemplate : Request()
     }
 
     private val binding = DesignPropertiesBinding
@@ -108,12 +109,16 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
             return
 
         launch {
+            // Converted profiles accept proxy-link text or HTTP(S) URLs; everything else
+            // requires a proper http/https URL.
+            val validator = if (profile.type == Profile.Type.Converted) ValidatorNotBlank else ValidatorHttpUrl
+
             val url = context.requestModelTextInput(
                 initial = profile.source,
                 title = context.getText(R.string.url),
-                hint = context.getText(R.string.profile_url),
+                hint = context.getText(if (profile.type == Profile.Type.Converted) R.string.converted_profile_hint else R.string.profile_url),
                 error = context.getText(R.string.accept_http_content),
-                validator = ValidatorHttpUrl
+                validator = validator
             )
 
             if (url != profile.source) {
@@ -149,6 +154,10 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     fun requestBrowseFiles() {
         requests.trySend(Request.BrowseFiles)
+    }
+
+    fun requestSelectTemplate() {
+        requests.trySend(Request.SelectTemplate)
     }
 
     private fun ModelProgressBarConfigure.applyFrom(status: FetchStatus) {

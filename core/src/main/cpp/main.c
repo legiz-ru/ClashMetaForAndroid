@@ -291,6 +291,21 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeClearOverride(JNIEnv *env, 
 }
 
 JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeConvertAndApplyTemplate(JNIEnv *env,
+                                                                             jobject thiz,
+                                                                             jstring content,
+                                                                             jstring template_content) {
+    TRACE_METHOD();
+
+    scoped_string _content = get_string(content);
+    scoped_string _template = get_string(template_content);
+
+    scoped_string response = convertAndApplyTemplate(_content, _template);
+
+    return new_string(response);
+}
+
+JNIEXPORT jstring JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryConfiguration(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
