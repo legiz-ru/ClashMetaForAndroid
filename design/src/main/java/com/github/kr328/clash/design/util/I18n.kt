@@ -17,6 +17,7 @@ fun Profile.Type.toString(context: Context): String {
         Profile.Type.File -> context.getString(R.string.file)
         Profile.Type.Url -> context.getString(R.string.url)
         Profile.Type.External -> context.getString(R.string.external)
+        Profile.Type.Converted -> context.getString(R.string.converted)
     }
 }
 
