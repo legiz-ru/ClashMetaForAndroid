@@ -38,6 +38,7 @@
     <string name="url">URL</string>
     <string name="import_from_url">Импорт из URL</string>
     <string name="external">Внешний</string>
+    <string name="converted">Конвертированный</string>
     <string name="import_from_qr">Импорт из QR-кода</string>
     <string name="format_type_unsaved">%s (не сохранён)</string>
 
@@ -362,4 +363,18 @@
     <!-- TV Navigation -->
     <string name="start">Запустить</string>
     <string name="stop">Остановить</string>
+
+    <!-- Converted profile / template selection -->
+    <string name="select_template">Выбрать шаблон</string>
+    <string name="select_template_desc">Выберите шаблон маршрутизации для этого профиля</string>
+    <string name="template_default">По умолчанию (Prizrak-Box)</string>
+    <string name="template_ru_bundle">RU-Bundle от Legiz</string>
+    <string name="template_ultimate">Ultimate от Davoyan</string>
+    <string name="template_custom">Свой</string>
+    <string name="custom_template">Свой шаблон</string>
+    <string name="custom_template_desc">Загрузить свой YAML-файл шаблона для конвертированных профилей</string>
+    <string name="custom_template_not_set">Не задан (используется «По умолчанию»)</string>
+    <string name="import_converted_profile">Импортировать как конвертированный профиль</string>
+    <string name="converted_profile_hint">Ссылки прокси (vless://, trojan://, и др.) — будет применён шаблон</string>
+    <string name="templates">Шаблоны</string>
 </resources>
