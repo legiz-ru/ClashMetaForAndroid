@@ -82,8 +82,6 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
         binding.activityBarLayout.applyFrom(context)
 
-        binding.tips.text = context.getHtml(R.string.tips_properties)
-
         binding.scrollRoot.bindAppBarElevation(binding.activityBarLayout)
     }
 

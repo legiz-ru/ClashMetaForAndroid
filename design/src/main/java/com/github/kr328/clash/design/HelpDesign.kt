@@ -61,6 +61,33 @@ class HelpDesign(
                     openLink(Uri.parse(context.getString(R.string.meta_github_url)))
                 }
             }
+
+            clickable(
+                title = R.string.moshen_core,
+                summary = R.string.moshen_core_url
+            ) {
+                clicked {
+                    openLink(Uri.parse(context.getString(R.string.moshen_core_url)))
+                }
+            }
+
+            clickable(
+                title = R.string.mihomo_smart_core,
+                summary = R.string.mihomo_smart_core_url
+            ) {
+                clicked {
+                    openLink(Uri.parse(context.getString(R.string.mihomo_smart_core_url)))
+                }
+            }
+
+            clickable(
+                title = R.string.cmfa_origin,
+                summary = R.string.cmfa_origin_url
+            ) {
+                clicked {
+                    openLink(Uri.parse(context.getString(R.string.cmfa_origin_url)))
+                }
+            }
         }
 
         binding.content.addView(screen.root)

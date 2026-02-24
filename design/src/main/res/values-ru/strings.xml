@@ -209,6 +209,9 @@
     <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
     <string name="meta_github_url" translatable="false">https://github.com/legiz-ru/Prizrak-Box</string>
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/mihomo</string>
+    <string name="moshen_core">Ядро moshen</string>
+    <string name="mihomo_smart_core">Ядро mihomo smart</string>
+    <string name="cmfa_origin">CMFA</string>
 
     <string name="tips_properties"><![CDATA[Принимается только <strong>конфиг mihomo</strong> (включая <strong>Прокси</strong>/<strong>Правила</strong>)]]></string>
     <string name="tips_help"><![CDATA[Prizrak-Box — <strong>бесплатен</strong> и мы <strong>НЕ</strong> предоставляем по нему поддержку]]></string>

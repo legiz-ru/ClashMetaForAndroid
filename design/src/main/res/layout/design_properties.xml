@@ -40,7 +40,8 @@
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingVertical="@dimen/item_padding_vertical">
+                    android:paddingVertical="@dimen/item_padding_vertical"
+                    android:visibility="gone">
 
                     <View
                         android:layout_width="@dimen/tips_icon_size"
