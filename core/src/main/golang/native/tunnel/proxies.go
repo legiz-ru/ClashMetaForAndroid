@@ -88,13 +88,20 @@ func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 				hidden = v.Hidden
 			case *outboundgroup.LoadBalance:
 				hidden = v.Hidden
-			case *outboundgroup.Smart:
-				hidden = v.Hidden
 			}
 			if hidden {
 				continue
 			}
 			if !excludeNotSelectable || p.Type() == C.Selector {
+				result = append(result, p.Name())
+			}
+		} else if p.Type() == C.Smart {
+			// Smart does not implement outboundgroup.ProxyGroup (no Providers()),
+			// so handle it separately.
+			if sg, ok := p.Adapter().(*outboundgroup.Smart); ok {
+				if sg.Hidden {
+					continue
+				}
 				result = append(result, p.Name())
 			}
 		}
@@ -110,6 +117,47 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 		log.Warnln("Query group `%s`: not found", name)
 
 		return nil
+	}
+
+	// Smart groups do not implement outboundgroup.ProxyGroup — handle separately.
+	if p.Type() == C.Smart {
+		sg, ok := p.Adapter().(*outboundgroup.Smart)
+		if !ok {
+			log.Warnln("Query group `%s`: Smart cast failed", name)
+			return nil
+		}
+
+		proxies := convertProxies(sg.GetProxies(false), uiSubtitlePattern)
+
+		switch sortMode {
+		case Title:
+			sort.Sort(&sortableProxyList{
+				list: proxies,
+				less: func(a, b *Proxy) bool { return strings.Compare(a.Title, b.Title) < 0 },
+			})
+		case Delay:
+			sort.Sort(&sortableProxyList{
+				list: proxies,
+				less: func(a, b *Proxy) bool { return a.Delay < b.Delay },
+			})
+		}
+
+		icon := sg.Icon
+		if icon != "" && config.CurrentProfileDir != "" {
+			hash := fmt.Sprintf("%x", md5.Sum([]byte(icon)))
+			cachedPath := P.Join(config.CurrentProfileDir, "icons", hash)
+			if _, err := os.Stat(cachedPath); err == nil {
+				icon = "file://" + cachedPath
+			}
+		}
+
+		return &ProxyGroup{
+			Type:    p.Type().String(),
+			Now:     sg.Now(),
+			Icon:    icon,
+			Hidden:  sg.Hidden,
+			Proxies: proxies,
+		}
 	}
 
 	g, ok := p.Adapter().(outboundgroup.ProxyGroup)
@@ -160,9 +208,6 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 	case *outboundgroup.LoadBalance:
 		icon = v.Icon
 		hidden = v.Hidden
-	case *outboundgroup.Smart:
-		icon = v.Icon
-		hidden = v.Hidden
 	}
 
 	// Check for cached icon file
@@ -190,6 +235,21 @@ func PatchSelector(selector, name string) bool {
 		log.Warnln("Patch selector `%s`: not found", selector)
 
 		return false
+	}
+
+	// Smart implements SelectAble but not ProxyGroup — handle separately.
+	if p.Type() == C.Smart {
+		sg, ok := p.Adapter().(*outboundgroup.Smart)
+		if !ok {
+			log.Warnln("Patch selector `%s`: Smart cast failed", selector)
+			return false
+		}
+		if err := sg.Set(name); err != nil {
+			log.Warnln("Patch selector `%s`: %s", selector, err.Error())
+		}
+		log.Infoln("Patch selector %s -> %s", selector, name)
+		closeConnByGroup(selector)
+		return true
 	}
 
 	g, ok := p.Adapter().(outboundgroup.ProxyGroup)
