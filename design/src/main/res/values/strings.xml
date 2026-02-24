@@ -214,7 +214,7 @@
     <string name="import_from_clipboard">Import from Clipboard</string>
     <string name="export_to_clipboard">Export to Clipboard</string>
 
-    <string name="clash_meta_for_android">CMFA</string>
+    <string name="clash_meta_for_android">Prizrak-Box</string>
 
     <string name="document">Document</string>
     <string name="feedback">Feedback</string>
@@ -225,7 +225,7 @@
     <string name="google_play">Google Play</string>
     <string name="clash_meta_core">Mihomo Core</string>
     <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
-    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
+    <string name="meta_github_url" translatable="false">https://github.com/legiz-ru/Prizrak-Box</string>
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/mihomo</string>
 
     <string name="tips_properties"><![CDATA[Accept Only <strong>Prizrak-Box Config</strong>(including <strong>Proxy</strong>/<strong>Rules</strong>)]]></string>

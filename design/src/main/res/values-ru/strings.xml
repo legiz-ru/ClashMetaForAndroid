@@ -196,7 +196,7 @@
     <string name="import_from_clipboard">Импорт из буфера обмена</string>
     <string name="export_to_clipboard">Экспорт в буфер обмена</string>
 
-    <string name="clash_meta_for_android">CMFA</string>
+    <string name="clash_meta_for_android">Prizrak-Box</string>
 
     <string name="document">Документ</string>
     <string name="feedback">Обратная связь</string>
@@ -207,7 +207,7 @@
     <string name="google_play">Google Play</string>
     <string name="clash_meta_core">Ядро mihomo</string>
     <string name="clash_wiki_url" translatable="false">https://github.com/Dreamacro/clash/wiki</string>
-    <string name="meta_github_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
+    <string name="meta_github_url" translatable="false">https://github.com/legiz-ru/Prizrak-Box</string>
     <string name="clash_meta_core_url" translatable="false">https://github.com/MetaCubeX/mihomo</string>
 
     <string name="tips_properties"><![CDATA[Принимается только <strong>конфиг mihomo</strong> (включая <strong>Прокси</strong>/<strong>Правила</strong>)]]></string>
