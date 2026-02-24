@@ -110,4 +110,4 @@ require (
 
 replace cfa => ../../main/golang
 
-replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen v1.1.17-moshen
+replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen v1.1.17-moshen-splithttp

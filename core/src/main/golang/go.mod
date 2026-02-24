@@ -9,7 +9,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen v1.1.17-moshen
+replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen v1.1.17-moshen-splithttp
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
