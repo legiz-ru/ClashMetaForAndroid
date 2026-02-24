@@ -88,6 +88,8 @@ func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 				hidden = v.Hidden
 			case *outboundgroup.LoadBalance:
 				hidden = v.Hidden
+			case *outboundgroup.Smart:
+				hidden = v.Hidden
 			}
 			if hidden {
 				continue
@@ -156,6 +158,9 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 		icon = v.Icon
 		hidden = v.Hidden
 	case *outboundgroup.LoadBalance:
+		icon = v.Icon
+		hidden = v.Hidden
+	case *outboundgroup.Smart:
 		icon = v.Icon
 		hidden = v.Hidden
 	}
