@@ -63,8 +63,18 @@ func convertAndApplyTemplate(contentRaw C.c_string, templateContentRaw C.c_strin
 		templateMap = make(map[string]any)
 	}
 
-	// Replace the proxies list in the template with the converted proxies.
-	templateMap["proxies"] = proxies
+	// Merge converted proxies with any static proxies already defined in the template.
+	// Some templates define static entries (e.g. {name: 直连, type: direct}) that
+	// proxy groups reference by name; those must be preserved alongside the
+	// user-supplied proxies.
+	merged := make([]any, 0, len(proxies))
+	if existing, ok := templateMap["proxies"].([]any); ok {
+		merged = append(merged, existing...)
+	}
+	for _, p := range proxies {
+		merged = append(merged, p)
+	}
+	templateMap["proxies"] = merged
 
 	// Marshal back to YAML.
 	yamlBytes, err := yaml.Marshal(templateMap)
