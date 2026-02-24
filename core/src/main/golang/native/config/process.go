@@ -1,16 +1,15 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/dlclark/regexp2"
 
 	"cfa/native/common"
 
 	"github.com/metacubex/mihomo/common/utils"
+	"github.com/metacubex/mihomo/common/yaml"
 	"github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/log"
@@ -31,10 +30,16 @@ var processors = []processor{
 type processor func(cfg *config.RawConfig, profileDir string) error
 
 func patchOverride(cfg *config.RawConfig, _ string) error {
-	if err := json.NewDecoder(strings.NewReader(ReadOverride(OverrideSlotPersist))).Decode(cfg); err != nil {
+	// Use yaml.Unmarshal instead of json.Decode because config.RawConfig fields
+	// carry only `yaml:` struct tags (e.g. `yaml:"external-controller"`).
+	// encoding/json matches by Go field name (camelCase) and ignores yaml tags,
+	// so keys like "external-controller" are silently dropped.
+	// JSON is a strict subset of YAML, so yaml.Unmarshal handles JSON input
+	// correctly and respects the yaml: tags → keys map to the right fields.
+	if err := yaml.Unmarshal([]byte(ReadOverride(OverrideSlotPersist)), cfg); err != nil {
 		log.Warnln("Apply persist override: %s", err.Error())
 	}
-	if err := json.NewDecoder(strings.NewReader(ReadOverride(OverrideSlotSession))).Decode(cfg); err != nil {
+	if err := yaml.Unmarshal([]byte(ReadOverride(OverrideSlotSession)), cfg); err != nil {
 		log.Warnln("Apply session override: %s", err.Error())
 	}
 
