@@ -66,6 +66,8 @@ github.com/klauspost/cpuid/v2 v2.2.6 h1:ndNyv040zDGIDh8thGkXYjnFtiN02M1PVVF+JE/4
 github.com/klauspost/cpuid/v2 v2.2.6/go.mod h1:Lcz8mBdAVJIBVzewtcLocK12l3Y+JytZYpaMropDUws=
 github.com/klauspost/reedsolomon v1.12.3 h1:tzUznbfc3OFwJaTebv/QdhnFf2Xvb7gZ24XaHLBPmdc=
 github.com/klauspost/reedsolomon v1.12.3/go.mod h1:3K5rXwABAvzGeR01r6pWZieUALXO/Tq7bFKGIb4m4WI=
+github.com/legiz-ru/moshen v1.1.17-moshen h1:QRVhlIX9Y9DQ/i4SxF7zy3euGuNLXoxjXeMs489mYYg=
+github.com/legiz-ru/moshen v1.1.17-moshen/go.mod h1:RGwFOv9gh4LoU/L1cndcmKiyTLIystF1Vb1oZe2Se8c=
 github.com/mdlayher/netlink v1.7.2 h1:/UtM3ofJap7Vl4QWCPDGXY8d3GIY2UGSDbK+QWmY8/g=
 github.com/mdlayher/netlink v1.7.2/go.mod h1:xraEF7uJbxLhc5fpHL4cPe221LI2bdttWlU+ZGLfQSw=
 github.com/mdlayher/socket v0.4.1 h1:eM9y2/jlbs1M615oshPQOHZzj6R6wMT7bX5NPiQvn2U=
