@@ -46,10 +46,11 @@ func patchOverride(cfg *config.RawConfig, _ string) error {
 	return nil
 }
 
-func patchExternalController(cfg *config.RawConfig, _ string) error {
-	cfg.ExternalController = ""
-	cfg.ExternalControllerTLS = ""
-
+func patchExternalController(_ *config.RawConfig, _ string) error {
+	// Do not clear ExternalController: allow both config-file and Override Settings
+	// to supply external-controller / external-controller-tls.
+	// patchOverride (next in chain) will overwrite these fields if the user has
+	// also set them via Override Settings, so Override always takes precedence.
 	return nil
 }
 

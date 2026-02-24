@@ -247,3 +247,7 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+github.com/dmitryikh/leaves v0.0.0-20230708180554-25d19a787328 h1:ht/zhLOAy9iiEKTKGkXvpw92Z7O6NK0bIVZVREy0kIE=
+github.com/dmitryikh/leaves v0.0.0-20230708180554-25d19a787328/go.mod h1:wzMig9tMIJB8HsxXHppa9yRPo8BpO0eBM/Z4xnaohCQ=
+github.com/vernesong/leaves v0.0.0-20251129203830-02de011aefeb h1:x41uGQaw/tMtb6l4QUMhLSwEhbpMTFFFrC+SyoO+lyU=
+github.com/vernesong/leaves v0.0.0-20251129203830-02de011aefeb/go.mod h1:Ndptw/K8n2twzGNEgCBSaEdTjT3EWU5YvJ476KwDKGw=
