@@ -568,9 +568,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 infoColumn.addView(nameView)
                 infoColumn.addView(subtitleView)
 
-                if (isSmartGroup && proxy.weight > 0.0) {
+                if (isSmartGroup) {
                     val weightView = TextView(context).apply {
-                        text = "⚖️ ${"%.2f".format(proxy.weight)}"
+                        text = if (proxy.weight > 0.0) "⚖️ ${"%.2f".format(proxy.weight)}" else "⚖️⏳"
                         textSize = 11f
                         setTextColor(if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor)
                         alpha = 0.85f
