@@ -412,6 +412,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
         val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
 
+        val isSelectorGroup = group.type == com.github.kr328.clash.core.model.Proxy.Type.Selector
+        val isSmartGroup = group.type == com.github.kr328.clash.core.model.Proxy.Type.Smart
+
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
 
@@ -527,8 +530,15 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     isFocusable = true
                     background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                     setOnClickListener {
-                        requestProxySelection(groupName, proxy.name)
-                        proxyGroupDialog?.dismiss()
+                        if (isSelectorGroup) {
+                            requestProxySelection(groupName, proxy.name)
+                            proxyGroupDialog?.dismiss()
+                        } else {
+                            MaterialAlertDialogBuilder(context)
+                                .setMessage("Данная группа является автоматической, в ней запрещён ручной выбор")
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show()
+                        }
                     }
                 }
 
@@ -557,6 +567,17 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 infoColumn.addView(nameView)
                 infoColumn.addView(subtitleView)
+
+                if (isSmartGroup && proxy.weight > 0.0) {
+                    val weightView = TextView(context).apply {
+                        text = "⚖️ ${"%.2f".format(proxy.weight)}"
+                        textSize = 11f
+                        setTextColor(if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor)
+                        alpha = 0.85f
+                        maxLines = 1
+                    }
+                    infoColumn.addView(weightView)
+                }
 
                 val delayView = createDelayText(dp, proxyDelay, useDots)
 

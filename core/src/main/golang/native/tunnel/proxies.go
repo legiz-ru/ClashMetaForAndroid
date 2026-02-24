@@ -28,11 +28,12 @@ const (
 )
 
 type Proxy struct {
-	Name     string `json:"name"`
-	Title    string `json:"title"`
-	Subtitle string `json:"subtitle"`
-	Type     string `json:"type"`
-	Delay    int    `json:"delay"`
+	Name     string  `json:"name"`
+	Title    string  `json:"title"`
+	Subtitle string  `json:"subtitle"`
+	Type     string  `json:"type"`
+	Delay    int     `json:"delay"`
+	Weight   float64 `json:"weight"` // smart group weight; 0 if not applicable
 }
 
 type ProxyGroup struct {
@@ -129,6 +130,55 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 
 		proxies := convertProxies(sg.GetProxies(false), uiSubtitlePattern)
 
+		// Try to fetch weights via duck-typing (snakem982/mihomo Smart group API).
+		type weightsGetter interface {
+			GetWeights() map[string]float64
+		}
+		var proxyWeights map[string]float64
+		if wg, ok2 := any(sg).(weightsGetter); ok2 {
+			proxyWeights = wg.GetWeights()
+		}
+
+		// Populate Weight for each proxy.
+		for _, px := range proxies {
+			if w, found := proxyWeights[px.Name]; found {
+				px.Weight = w
+			}
+		}
+
+		// Determine the best proxy name to display as "Now".
+		// sg.Now() may return a mode string like "Smart" or "Select" rather than
+		// a real proxy name, so verify it against the actual proxy list.
+		bestNow := sg.Now()
+		isRealProxy := false
+		for _, px := range proxies {
+			if px.Name == bestNow {
+				isRealProxy = true
+				break
+			}
+		}
+		if !isRealProxy {
+			bestNow = ""
+			// Priority 1: highest-weight proxy from weights API.
+			var maxWeight float64 = -1
+			for _, px := range proxies {
+				if w, found := proxyWeights[px.Name]; found && w > maxWeight {
+					maxWeight = w
+					bestNow = px.Name
+				}
+			}
+			// Priority 2: lowest-delay proxy as fallback.
+			if bestNow == "" {
+				minDelay := -1
+				for _, px := range proxies {
+					if px.Delay > 0 && (minDelay < 0 || px.Delay < minDelay) {
+						minDelay = px.Delay
+						bestNow = px.Name
+					}
+				}
+			}
+		}
+
 		switch sortMode {
 		case Title:
 			sort.Sort(&sortableProxyList{
@@ -153,7 +203,7 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 
 		return &ProxyGroup{
 			Type:    p.Type().String(),
-			Now:     sg.Now(),
+			Now:     bestNow,
 			Icon:    icon,
 			Hidden:  sg.Hidden,
 			Proxies: proxies,
