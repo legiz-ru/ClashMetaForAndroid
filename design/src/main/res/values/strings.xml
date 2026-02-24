@@ -396,9 +396,13 @@
     <!-- Converted profile / template selection -->
     <string name="select_template">Select Template</string>
     <string name="select_template_desc">Choose a routing template for this profile</string>
-    <string name="template_default">Default (Prizrak-Box)</string>
-    <string name="template_ru_bundle">RU-Bundle by Legiz</string>
-    <string name="template_ultimate">Ultimate by Davoyan</string>
+    <string name="template_default">🇷🇺 Default (Prizrak-Box)</string>
+    <string name="template_ru_bundle">🇷🇺 RU-Bundle by Legiz</string>
+    <string name="template_ultimate">🇷🇺 Ultimate by Davoyan</string>
+    <string name="template_default_smart">🇷🇺 Default + smart</string>
+    <string name="template_ru_bundle_smart">🇷🇺 RU-Bundle by Legiz + smart</string>
+    <string name="template_ultimate_smart">🇷🇺 Ultimate by Davoyan + smart</string>
+    <string name="template_china_smart">🇨🇳 by qichiyuhub + smart</string>
     <string name="template_custom">Custom</string>
     <string name="custom_template">Custom Template</string>
     <string name="custom_template_desc">Load a custom YAML template file for converted profiles</string>

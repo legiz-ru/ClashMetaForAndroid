@@ -24,6 +24,10 @@ object TemplateManager {
         Default("default", "Default (Prizrak-Box)", "templates/template_default.yaml"),
         RuBundle("ru_bundle", "RU-Bundle by Legiz", "templates/template_ru_bundle.yaml"),
         Ultimate("ultimate", "Ultimate by Davoyan", "templates/template_ultimate.yaml"),
+        DefaultSmart("default_smart", "Default + smart", "templates/template_default_smart.yaml"),
+        RuBundleSmart("ru_bundle_smart", "RU-Bundle by Legiz + smart", "templates/template_ru_bundle_smart.yaml"),
+        UltimateSmart("ultimate_smart", "Ultimate by Davoyan + smart", "templates/template_ultimate_smart.yaml"),
+        ChinaSmart("china_smart", "🇨🇳 by qichiyuhub + smart", "templates/template_china_smart.yaml"),
         Custom("custom", "Custom", null);
 
         companion object {

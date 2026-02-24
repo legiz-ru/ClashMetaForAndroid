@@ -367,9 +367,13 @@
     <!-- Converted profile / template selection -->
     <string name="select_template">Выбрать шаблон</string>
     <string name="select_template_desc">Выберите шаблон маршрутизации для этого профиля</string>
-    <string name="template_default">По умолчанию (Prizrak-Box)</string>
-    <string name="template_ru_bundle">RU-Bundle от Legiz</string>
-    <string name="template_ultimate">Ultimate от Davoyan</string>
+    <string name="template_default">🇷🇺 По умолчанию</string>
+    <string name="template_ru_bundle">🇷🇺 ru-bundle от legiz</string>
+    <string name="template_ultimate">🇷🇺 Ultimate от Davoyan</string>
+    <string name="template_default_smart">🇷🇺 По умолчанию + smart</string>
+    <string name="template_ru_bundle_smart">🇷🇺 ru-bundle от legiz + smart</string>
+    <string name="template_ultimate_smart">🇷🇺 Ultimate от Davoyan + smart</string>
+    <string name="template_china_smart">🇨🇳 by qichiyuhub + smart</string>
     <string name="template_custom">Свой</string>
     <string name="custom_template">Свой шаблон</string>
     <string name="custom_template_desc">Загрузить свой YAML-файл шаблона для конвертированных профилей</string>

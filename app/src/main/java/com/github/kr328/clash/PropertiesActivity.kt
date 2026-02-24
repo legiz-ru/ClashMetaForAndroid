@@ -107,10 +107,14 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         val templates = TemplateManager.Template.entries.toList()
         val displayNames = templates.map { context.getString(
             when (it) {
-                TemplateManager.Template.Default  -> R.string.template_default
-                TemplateManager.Template.RuBundle -> R.string.template_ru_bundle
-                TemplateManager.Template.Ultimate -> R.string.template_ultimate
-                TemplateManager.Template.Custom   -> R.string.template_custom
+                TemplateManager.Template.Default       -> R.string.template_default
+                TemplateManager.Template.RuBundle      -> R.string.template_ru_bundle
+                TemplateManager.Template.Ultimate      -> R.string.template_ultimate
+                TemplateManager.Template.DefaultSmart  -> R.string.template_default_smart
+                TemplateManager.Template.RuBundleSmart -> R.string.template_ru_bundle_smart
+                TemplateManager.Template.UltimateSmart -> R.string.template_ultimate_smart
+                TemplateManager.Template.ChinaSmart    -> R.string.template_china_smart
+                TemplateManager.Template.Custom        -> R.string.template_custom
             }
         ) }.toTypedArray()
         val currentIndex = templates.indexOfFirst { it.id == currentTemplateId }.coerceAtLeast(0)
