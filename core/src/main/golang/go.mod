@@ -8,7 +8,7 @@ require (
 	golang.org/x/sync v0.11.0
 )
 
-replace github.com/metacubex/mihomo => ../../foss/golang/clash
+replace github.com/metacubex/mihomo => github.com/snakem982/mihomo v1.1.17-moshen
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

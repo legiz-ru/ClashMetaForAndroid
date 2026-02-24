@@ -404,6 +404,6 @@
     <string name="custom_template_desc">Load a custom YAML template file for converted profiles</string>
     <string name="custom_template_not_set">Not set (falls back to Default)</string>
     <string name="import_converted_profile">Import as Converted Profile</string>
-    <string name="converted_profile_hint">Proxy links (vless://, trojan://, etc.) — a template will be applied</string>
+    <string name="converted_profile_hint">Proxy links (vless://, trojan://, etc.) or SingBox JSON — a template will be applied</string>
     <string name="templates">Templates</string>
 </resources>

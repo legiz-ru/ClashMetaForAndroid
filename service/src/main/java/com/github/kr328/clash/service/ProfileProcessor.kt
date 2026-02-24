@@ -85,15 +85,18 @@ object ProfileProcessor {
     }
 
     // -------------------------------------------------------------------------
-    // Proxy-link conversion helpers
+    // Proxy-link / SingBox conversion helpers
     // -------------------------------------------------------------------------
 
     /** Broad classification of fetched profile content. */
     private enum class ContentFormat { ClashYaml, ConvertibleContent }
 
     /**
-     * Returns [ContentFormat.ConvertibleContent] when the content looks like proxy links
-     * (vless://, trojan://, etc.) or a bare base64-encoded proxy-link list.
+     * Returns [ContentFormat.ConvertibleContent] when the content looks like:
+     *  - proxy links (vless://, trojan://, vmess://, ss://, hy2://, etc.)
+     *  - a SingBox JSON object (starts with `{`)
+     *  - a bare base64-encoded proxy-link list (single long opaque line)
+     *
      * Falls back to [ContentFormat.ClashYaml] for everything else.
      */
     private fun detectContentFormat(content: String): ContentFormat {
@@ -109,6 +112,7 @@ object ProfileProcessor {
         if (proxySchemes.any { firstLine.startsWith(it, ignoreCase = true) }) {
             return ContentFormat.ConvertibleContent
         }
+        if (trimmed.startsWith("{")) return ContentFormat.ConvertibleContent // SingBox JSON
         // Single long base64-looking line (encoded proxy list)
         if (!trimmed.contains('\n') && trimmed.length > 80 &&
             trimmed.all { it.isLetterOrDigit() || it == '+' || it == '/' || it == '=' }
@@ -142,7 +146,7 @@ object ProfileProcessor {
     }
 
     /**
-     * Converts [content] (proxy links or base64-encoded proxy list) using the template selected for
+     * Converts [content] (proxy links, SingBox JSON, or base64-encoded proxy list) using the template selected for
      * [pendingDir], writes the resulting Clash YAML to [processingDir]/config.yaml, and
      * saves the chosen template id to [processingDir]/[TemplateManager.META_FILE].
      *

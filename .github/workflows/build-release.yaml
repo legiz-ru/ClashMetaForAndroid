@@ -16,9 +16,6 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Checkout submodules
-        run: git submodule update --init --recursive --force
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -78,11 +75,22 @@ jobs:
             git push --follow-tags
           fi
 
-      - name: Update CA
+      - name: Update CA and prepare moshen module
         run: |
-          sudo apt-get update && sudo apt-get install ca-certificates
+          sudo apt-get update && sudo apt-get install -y ca-certificates
           sudo update-ca-certificates
-          cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
+          cd ${{ github.workspace }}/core/src/foss/golang
+          GONOSUMDB=github.com/snakem982/mihomo go mod download github.com/snakem982/mihomo@v1.1.17-moshen
+          MOSHEN_DIR="$(go env GOMODCACHE)/github.com/snakem982/mihomo@v1.1.17-moshen"
+          chmod -R u+w "$MOSHEN_DIR"
+          cp -f /etc/ssl/certs/ca-certificates.crt "$MOSHEN_DIR/component/ca/ca-certificates.crt"
+
+      - name: Tidy Go modules
+        run: |
+          cd ${{ github.workspace }}/core/src/foss/golang
+          GONOSUMDB=github.com/snakem982/mihomo go mod tidy
+          cd ${{ github.workspace }}/core/src/main/golang
+          GONOSUMDB=github.com/snakem982/mihomo go mod tidy
 
       - name: Signing properties
         env:

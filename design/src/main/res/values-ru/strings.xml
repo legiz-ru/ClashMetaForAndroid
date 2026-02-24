@@ -375,6 +375,6 @@
     <string name="custom_template_desc">Загрузить свой YAML-файл шаблона для конвертированных профилей</string>
     <string name="custom_template_not_set">Не задан (используется «По умолчанию»)</string>
     <string name="import_converted_profile">Импортировать как конвертированный профиль</string>
-    <string name="converted_profile_hint">Ссылки прокси (vless://, trojan://, и др.) — будет применён шаблон</string>
+    <string name="converted_profile_hint">Ссылки прокси (vless://, trojan://, и др.) или SingBox JSON — будет применён шаблон</string>
     <string name="templates">Шаблоны</string>
 </resources>
