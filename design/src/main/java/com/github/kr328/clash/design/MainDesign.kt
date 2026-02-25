@@ -645,13 +645,21 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             return
         }
 
-        // Save scroll position before rebuilding to prevent reset-to-top
+        // Save scroll position before rebuilding.
+        // Use OnPreDrawListener (runs after layout, before first draw) so the
+        // view is scrolled to the saved position before it ever appears on
+        // screen — this prevents any visible flash to the top.
         val savedScrollY = proxyGroupScrollView?.scrollY ?: 0
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
         if (savedScrollY > 0) {
-            proxyGroupScrollView?.post {
-                proxyGroupScrollView?.scrollTo(0, savedScrollY)
-            }
+            val sv = proxyGroupScrollView ?: return
+            sv.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    sv.viewTreeObserver.removeOnPreDrawListener(this)
+                    sv.scrollTo(0, savedScrollY)
+                    return true
+                }
+            })
         }
     }
 
