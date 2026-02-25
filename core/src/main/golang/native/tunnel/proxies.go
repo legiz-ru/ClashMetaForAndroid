@@ -2,11 +2,9 @@ package tunnel
 
 import (
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"os"
 	P "path"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -17,6 +15,7 @@ import (
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/constant/provider"
+	"github.com/metacubex/mihomo/component/profile/cachefile"
 	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
 )
@@ -44,93 +43,6 @@ type ProxyGroup struct {
 	Icon    string   `json:"icon"`
 	Hidden  bool     `json:"hidden"`
 	Proxies []*Proxy `json:"proxies"`
-}
-
-// fetchSmartWeights tries to obtain proxy weights from a Smart group
-// adapter using reflection so it is compatible with any return type
-// the fork may use (map[string]float64, map[string]int,
-// []struct{Name,Rank,Weight}, etc.).
-//
-// The function looks for a method named "GetWeights" on the adapter,
-// calls it, JSON-marshals the result, then decodes into either a flat
-// map or a named-entry slice.  The returned map values are normalised
-// to the range [0, 1] (dividing integer percentages by 100) so that
-// the caller can compare them uniformly as float64.
-func fetchSmartWeights(adapter interface{}) map[string]float64 {
-	v := reflect.ValueOf(adapter)
-	m := v.MethodByName("GetWeights")
-	if !m.IsValid() {
-		return nil
-	}
-
-	results := m.Call(nil)
-	if len(results) == 0 {
-		return nil
-	}
-
-	raw := results[0].Interface()
-	if raw == nil {
-		return nil
-	}
-
-	// Fast paths for the two most common concrete types —
-	// avoids the JSON round-trip overhead.
-	if mf, ok := raw.(map[string]float64); ok && len(mf) > 0 {
-		return mf
-	}
-	if mi, ok := raw.(map[string]int); ok && len(mi) > 0 {
-		out := make(map[string]float64, len(mi))
-		for k, vv := range mi {
-			out[k] = float64(vv) / 100.0
-		}
-		return out
-	}
-
-	// Generic path: marshal to JSON then decode into known shapes.
-	data, err := json.Marshal(raw)
-	if err != nil {
-		return nil
-	}
-
-	// Shape A: map[string]float64 or map[string]json.Number
-	var mapFloat map[string]json.Number
-	if json.Unmarshal(data, &mapFloat) == nil && len(mapFloat) > 0 {
-		out := make(map[string]float64, len(mapFloat))
-		for k, n := range mapFloat {
-			if f, e := n.Float64(); e == nil {
-				// normalise: if the value is > 1, assume it is a
-				// 0-100 percentage
-				if f > 1 {
-					f /= 100.0
-				}
-				out[k] = f
-			}
-		}
-		return out
-	}
-
-	// Shape B: []{"Name":"...", "Rank":"...", "Weight": <number>}
-	var slice []struct {
-		Name   string      `json:"Name"`
-		Rank   string      `json:"Rank"`
-		Weight json.Number `json:"Weight"`
-	}
-	if json.Unmarshal(data, &slice) == nil && len(slice) > 0 {
-		out := make(map[string]float64, len(slice))
-		for _, item := range slice {
-			f, e := item.Weight.Float64()
-			if e != nil {
-				continue
-			}
-			if f > 1 {
-				f /= 100.0
-			}
-			out[item.Name] = f
-		}
-		return out
-	}
-
-	return nil
 }
 
 type sortableProxyList struct {
@@ -219,11 +131,17 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 
 		proxies := convertProxies(sg.GetProxies(false), uiSubtitlePattern)
 
-		// Fetch weights via reflection so we work with any return type the
-		// fork's Smart group exposes (map[string]float64, map[string]int,
-		// []*WeightInfo, etc.).  We JSON-round-trip the result and then
-		// try to decode it into two well-known shapes.
-		proxyWeights := fetchSmartWeights(sg)
+		// Fetch weights from the global smart store — same source the
+		// external-controller /group/{name}/weights route uses.
+		// NodeRank.Weight is an integer 0-100 (percentage); normalise to float64.
+		proxyWeights := make(map[string]float64)
+		if store := cachefile.GetSmartStore(); store != nil {
+			if ranking, err := store.GetNodeWeightRankingCache(sg.Name(), sg.GetConfigFilename()); err == nil {
+				for _, nr := range ranking {
+					proxyWeights[nr.Name] = float64(nr.Weight) / 100.0
+				}
+			}
+		}
 
 		// Populate Weight for each proxy.
 		for _, px := range proxies {
