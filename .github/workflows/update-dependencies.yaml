@@ -1,9 +1,11 @@
 name: Update Moshen Core and Go Modules
 on:
+  schedule:
+    - cron: '0 4 * * *'   # ежедневно в 04:00 UTC
   workflow_dispatch:
     inputs:
       moshen_version:
-        description: 'snakem982/mihomo version tag to pin (e.g. v1.1.17-moshen). Leave empty to only refresh go.sum.'
+        description: 'legiz-ru/moshen version tag (e.g. v1.1.17-moshen-splithttp). Leave empty to auto-detect latest release.'
         required: false
         default: ''
 
@@ -18,7 +20,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: "1.25"
-          check-latest: true # Always check for the latest patch release
+          check-latest: true
 
       - uses: actions/cache@v4
         with:
@@ -29,26 +31,38 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Pin new moshen version in go.mod files
-        if: ${{ inputs.moshen_version != '' }}
+      - name: Resolve moshen version
+        id: resolve
         run: |
-          NEW_VERSION="${{ inputs.moshen_version }}"
-          sed -i "s|replace github.com/metacubex/mihomo => github.com/snakem982/mihomo .*|replace github.com/metacubex/mihomo => github.com/snakem982/mihomo $NEW_VERSION|g" \
+          INPUT="${{ inputs.moshen_version }}"
+          if [ -n "$INPUT" ]; then
+            echo "version=$INPUT" >> "$GITHUB_OUTPUT"
+          else
+            LATEST=$(curl -sf "https://api.github.com/repos/legiz-ru/moshen/releases/latest" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              | jq -r '.tag_name')
+            echo "version=$LATEST" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pin new moshen version in go.mod files
+        run: |
+          NEW_VERSION="${{ steps.resolve.outputs.version }}"
+          sed -i "s|replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen .*|replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen $NEW_VERSION|g" \
             core/src/foss/golang/go.mod \
             core/src/main/golang/go.mod
-          echo "Pinned mihomo to $NEW_VERSION"
+          echo "Pinned moshen to $NEW_VERSION"
           grep "replace github.com/metacubex/mihomo" core/src/foss/golang/go.mod
           grep "replace github.com/metacubex/mihomo" core/src/main/golang/go.mod
 
       - name: Update Foss Gomod
         run: |
           cd ${{ github.workspace }}/core/src/foss/golang/
-          GONOSUMDB=github.com/snakem982/mihomo go mod tidy
+          GONOSUMDB=github.com/legiz-ru/moshen go mod tidy
 
       - name: Update Main Gomod
         run: |
           cd ${{ github.workspace }}/core/src/main/golang/
-          GONOSUMDB=github.com/snakem982/mihomo go mod tidy
+          GONOSUMDB=github.com/legiz-ru/moshen go mod tidy
 
       - uses: tibdex/github-app-token@v2
         id: generate-token
@@ -61,13 +75,13 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ steps.generate-token.outputs.token }}
-          commit-message: Update Dependencies
+          commit-message: "Update moshen to ${{ steps.resolve.outputs.version }}"
           branch: update-dependencies
           delete-branch: true
-          title: 'Update Dependencies'
+          title: "Update moshen to ${{ steps.resolve.outputs.version }}"
           draft: false
           body: |
-            - Update Moshen Core (snakem982/mihomo)
+            - Update Moshen Core (legiz-ru/moshen) → `${{ steps.resolve.outputs.version }}`
             - Update Go Module Dependencies
           labels: |
             Update
