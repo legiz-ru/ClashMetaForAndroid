@@ -1,7 +1,5 @@
 name: Update Moshen Core and Go Modules
 on:
-  schedule:
-    - cron: '0 4 * * *'   # ежедневно в 04:00 UTC
   workflow_dispatch:
     inputs:
       moshen_version:
