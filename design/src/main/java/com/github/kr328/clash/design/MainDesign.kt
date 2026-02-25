@@ -123,6 +123,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
     private var proxyGroupDialog: AppBottomSheetDialog? = null
+    private var proxyGroupScrollView: ScrollView? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -137,6 +138,28 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     suspend fun setClashRunning(running: Boolean) {
         withContext(Dispatchers.Main) {
+            if (!running) {
+                // Clear stale proxy groups so they don't flash when VPN restarts
+                latestProxyGroups = emptyMap()
+                proxyGroupScrollView = null
+                proxyGroupDialog?.dismiss()
+                val container = binding.proxyGroupsContainer
+                container.removeAllViews()
+                // Add a centered spinner as placeholder (shown when container becomes visible on next start)
+                val dp = context.resources.displayMetrics.density
+                val spinner = android.widget.ProgressBar(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        (48 * dp).toInt(),
+                        (48 * dp).toInt(),
+                    ).apply {
+                        gravity = Gravity.CENTER_HORIZONTAL
+                        topMargin = (32 * dp).toInt()
+                        bottomMargin = (32 * dp).toInt()
+                    }
+                }
+                container.gravity = Gravity.CENTER_HORIZONTAL
+                container.addView(spinner)
+            }
             binding.clashRunning = running
             tvDrawer?.isClashRunning = running
         }
@@ -483,6 +506,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 isVerticalScrollBarEnabled = true
                 isScrollbarFadingEnabled = false
             }
+            proxyGroupScrollView = listScroll
 
             val listContainer = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -568,21 +592,39 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 infoColumn.addView(nameView)
                 infoColumn.addView(subtitleView)
 
-                if (isSmartGroup) {
-                    val weightView = TextView(context).apply {
-                        text = if (proxy.weight > 0.0) "⚖️ ${"%.2f".format(proxy.weight)}" else "⚖️⏳"
-                        textSize = 11f
-                        setTextColor(if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor)
-                        alpha = 0.85f
-                        maxLines = 1
-                    }
-                    infoColumn.addView(weightView)
+                // Right column: delay indicator (dot or text) + weight for smart groups below
+                val rightColumn = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.END
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    )
                 }
 
                 val delayView = createDelayText(dp, proxyDelay, useDots)
+                rightColumn.addView(delayView)
+
+                if (isSmartGroup && proxy.weight > 0.0) {
+                    val weightView = TextView(context).apply {
+                        text = "⚖️ ${"%.2f".format(proxy.weight)}"
+                        textSize = 10f
+                        gravity = Gravity.END
+                        setTextColor(if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor)
+                        alpha = 0.85f
+                        maxLines = 1
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                        ).apply {
+                            topMargin = (2 * dp).toInt()
+                        }
+                    }
+                    rightColumn.addView(weightView)
+                }
 
                 row.addView(infoColumn)
-                row.addView(delayView)
+                row.addView(rightColumn)
                 rowCard.addView(row)
                 listContainer.addView(rowCard)
             }
@@ -603,7 +645,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             return
         }
 
+        // Save scroll position before rebuilding to prevent reset-to-top
+        val savedScrollY = proxyGroupScrollView?.scrollY ?: 0
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
+        if (savedScrollY > 0) {
+            proxyGroupScrollView?.post {
+                proxyGroupScrollView?.scrollTo(0, savedScrollY)
+            }
+        }
     }
 
     private fun openProxyGroupSheet(groupName: String) {
@@ -630,10 +679,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         useDots: Boolean = true,
     ) {
         withContext(Dispatchers.Main) {
-            if (groups.isEmpty()) return@withContext
-
             val container = binding.proxyGroupsContainer
             container.removeAllViews()
+            container.gravity = Gravity.TOP
 
             val dp = context.resources.displayMetrics.density
             val isDarkTheme =

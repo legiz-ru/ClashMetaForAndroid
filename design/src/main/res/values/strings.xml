@@ -231,6 +231,10 @@
     <string name="moshen_core_url" translatable="false">https://github.com/snakem982/mihomo/tree/moshen/</string>
     <string name="mihomo_smart_core">Mihomo Smart Core</string>
     <string name="mihomo_smart_core_url" translatable="false">https://github.com/vernesong/mihomo/releases</string>
+    <string name="mihomo_xhttp_core">Ядро mihomo + xhttp</string>
+    <string name="mihomo_xhttp_core_url" translatable="false">https://github.com/daiaji/mihomo/tree/feat/splithttp</string>
+    <string name="moshen_fork_core">Ядро moshen fork</string>
+    <string name="moshen_fork_core_url" translatable="false">https://github.com/legiz-ru/moshen/releases</string>
     <string name="cmfa_origin">CMFA</string>
     <string name="cmfa_origin_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
 
