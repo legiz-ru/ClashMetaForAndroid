@@ -92,6 +92,9 @@ jobs:
           cd ${{ github.workspace }}/core/src/main/golang
           GONOSUMDB=github.com/snakem982/mihomo go mod tidy
 
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+
       - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
