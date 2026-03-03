@@ -331,6 +331,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             textSize = 13f
             when {
                 delay <= 0 -> visibility = View.GONE
+                delay == 65535 -> {
+                    text = context.getString(R.string.timeout)
+                    setTextColor(0xFFF44336.toInt())
+                }
                 else -> {
                     text = context.getString(R.string.format_delay_ms, delay)
                     setTextColor(delayColor(delay))
@@ -519,12 +523,66 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 val proxyDelay = if (proxy.type.group) {
                     val nestedGroup = groupMap[proxy.name]
                     if (nestedGroup != null) {
-                        resolveDelay(groupMap, proxy.name, nestedGroup.now)
+                        if (proxy.type == com.github.kr328.clash.core.model.Proxy.Type.LoadBalance) {
+                            // LoadBalance distributes across all proxies — show min live delay
+                            nestedGroup.proxies.filter { it.delay in 1..65534 }
+                                .minOfOrNull { it.delay } ?: 0
+                        } else {
+                            resolveDelay(groupMap, proxy.name, nestedGroup.now)
+                        }
                     } else {
                         proxy.delay
                     }
                 } else {
                     proxy.delay
+                }
+
+                // Build weight-info message factory for Smart group proxies (6.1 and 6.2)
+                val nestedSmartGroup62 =
+                    if (!isSmartGroup && proxy.type == com.github.kr328.clash.core.model.Proxy.Type.Smart)
+                        groupMap[proxy.name] else null
+                val hasSmartData62 = nestedSmartGroup62?.proxies?.any { it.rank.isNotEmpty() && it.weight > 0.0 } == true
+
+                val weightDialogMsg: (() -> String)? = when {
+                    isSmartGroup -> {
+                        {
+                            val weight = (proxy.weight * 100).toInt()
+                            when (proxy.rank) {
+                                "MostUsed" -> context.getString(R.string.proxies_smart_most_used_tip, weight)
+                                "OccasionalUsed" -> context.getString(R.string.proxies_smart_occasional_used_tip, weight)
+                                "RarelyUsed" -> context.getString(R.string.proxies_smart_rarely_used_tip, weight)
+                                else -> context.getString(R.string.proxies_smart_no_data)
+                            }
+                        }
+                    }
+                    nestedSmartGroup62 != null -> {
+                        {
+                            if (!hasSmartData62) {
+                                context.getString(R.string.proxies_smart_no_data)
+                            } else {
+                                nestedSmartGroup62.proxies
+                                    .filter { it.rank.isNotEmpty() }
+                                    .joinToString("\n") { p ->
+                                        val rankLabel = when (p.rank) {
+                                            "MostUsed" -> context.getString(R.string.proxies_smart_most_used)
+                                            "OccasionalUsed" -> context.getString(R.string.proxies_smart_occasional_used)
+                                            "RarelyUsed" -> context.getString(R.string.proxies_smart_rarely_used)
+                                            else -> p.rank
+                                        }
+                                        "${p.title.ifEmpty { p.name }}: $rankLabel (${(p.weight * 100).toInt()})"
+                                    }.ifEmpty { context.getString(R.string.proxies_smart_no_data) }
+                            }
+                        }
+                    }
+                    else -> null
+                }
+
+                fun showWeightDialog() {
+                    val msg = weightDialogMsg?.invoke() ?: return
+                    MaterialAlertDialogBuilder(context)
+                        .setMessage(msg)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
                 }
 
                 val rowCard = MaterialCardView(context).apply {
@@ -564,6 +622,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                                 .show()
                         }
                     }
+                    if (weightDialogMsg != null) {
+                        setOnLongClickListener {
+                            showWeightDialog()
+                            true
+                        }
+                    }
                 }
 
                 val infoColumn = LinearLayout(context).apply {
@@ -592,31 +656,28 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 infoColumn.addView(nameView)
                 infoColumn.addView(subtitleView)
 
-                // Right column: delay indicator (dot or text) + weight for smart groups below
+                // Right section: [smart icon?] [delay dot/text] — horizontal, centred
                 val rightColumn = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.END
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                     )
                 }
 
-                val delayView = createDelayText(dp, proxyDelay, useDots)
-                rightColumn.addView(delayView)
-
-                // 6.1 — Smart parent group: show rank icon for each proxy
+                // 6.1 — Smart parent: rank shield icon to the left of the delay indicator
                 if (isSmartGroup) {
                     val iconRes = when (proxy.rank) {
                         "MostUsed" -> R.drawable.ic_mdi_shield
                         "OccasionalUsed" -> R.drawable.ic_mdi_shield_half_full
                         "RarelyUsed" -> R.drawable.ic_mdi_shield_outline
-                        else -> R.drawable.ic_mdi_shield_sync_outline
+                        else -> R.drawable.ic_mdi_timelapse
                     }
                     val rankIcon = ImageView(context).apply {
-                        layoutParams = LinearLayout.LayoutParams((16 * dp).toInt(), (16 * dp).toInt()).apply {
-                            topMargin = (3 * dp).toInt()
-                            gravity = Gravity.END
+                        val sz = (16 * dp).toInt()
+                        layoutParams = LinearLayout.LayoutParams(sz, sz).apply {
+                            marginEnd = (4 * dp).toInt()
                         }
                         setImageResource(iconRes)
                         imageTintList = ColorStateList.valueOf(
@@ -625,36 +686,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         isClickable = true
                         isFocusable = true
                         background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
-                        setOnClickListener {
-                            val weight = (proxy.weight * 100).toInt()
-                            val msg = when (proxy.rank) {
-                                "MostUsed" -> context.getString(R.string.proxies_smart_most_used_tip, weight)
-                                "OccasionalUsed" -> context.getString(R.string.proxies_smart_occasional_used_tip, weight)
-                                "RarelyUsed" -> context.getString(R.string.proxies_smart_rarely_used_tip, weight)
-                                else -> context.getString(R.string.proxies_smart_no_data)
-                            }
-                            com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
-                                .setMessage(msg)
-                                .setPositiveButton(android.R.string.ok, null)
-                                .show()
-                        }
+                        setOnClickListener { showWeightDialog() }
+                        setOnLongClickListener { showWeightDialog(); true }
                     }
                     rightColumn.addView(rankIcon)
                 }
 
-                // 6.2 — Nested Smart group inside non-Smart parent: shield icon with weights popup
-                if (!isSmartGroup && proxy.type == com.github.kr328.clash.core.model.Proxy.Type.Smart) {
-                    val nestedSmartGroup = groupMap[proxy.name]
-                    val hasData = nestedSmartGroup != null &&
-                        nestedSmartGroup.proxies.any { it.rank.isNotEmpty() && it.weight > 0.0 }
-                    val shieldIconRes = if (hasData)
+                // 6.2 — Nested Smart group inside non-Smart parent: shield icon to the left of delay
+                if (nestedSmartGroup62 != null) {
+                    val shieldIconRes = if (hasSmartData62)
                         R.drawable.ic_mdi_shield_check_outline
                     else
-                        R.drawable.ic_mdi_shield_sync_outline
+                        R.drawable.ic_mdi_timelapse
                     val shieldIcon = ImageView(context).apply {
-                        layoutParams = LinearLayout.LayoutParams((16 * dp).toInt(), (16 * dp).toInt()).apply {
-                            topMargin = (3 * dp).toInt()
-                            gravity = Gravity.END
+                        val sz = (16 * dp).toInt()
+                        layoutParams = LinearLayout.LayoutParams(sz, sz).apply {
+                            marginEnd = (4 * dp).toInt()
                         }
                         setImageResource(shieldIconRes)
                         imageTintList = ColorStateList.valueOf(
@@ -663,30 +710,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         isClickable = true
                         isFocusable = true
                         background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
-                        setOnClickListener {
-                            val msg = if (!hasData || nestedSmartGroup == null) {
-                                context.getString(R.string.proxies_smart_no_data)
-                            } else {
-                                nestedSmartGroup.proxies
-                                    .filter { it.rank.isNotEmpty() }
-                                    .joinToString("\n") { p ->
-                                        val rankLabel = when (p.rank) {
-                                            "MostUsed" -> context.getString(R.string.proxies_smart_most_used)
-                                            "OccasionalUsed" -> context.getString(R.string.proxies_smart_occasional_used)
-                                            "RarelyUsed" -> context.getString(R.string.proxies_smart_rarely_used)
-                                            else -> p.rank
-                                        }
-                                        "${p.title.ifEmpty { p.name }}: $rankLabel (${(p.weight * 100).toInt()})"
-                                    }.ifEmpty { context.getString(R.string.proxies_smart_no_data) }
-                            }
-                            com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
-                                .setMessage(msg)
-                                .setPositiveButton(android.R.string.ok, null)
-                                .show()
-                        }
+                        setOnClickListener { showWeightDialog() }
+                        setOnLongClickListener { showWeightDialog(); true }
                     }
                     rightColumn.addView(shieldIcon)
                 }
+
+                rightColumn.addView(createDelayText(dp, proxyDelay, useDots))
 
                 row.addView(infoColumn)
                 row.addView(rightColumn)
