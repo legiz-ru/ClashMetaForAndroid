@@ -35,6 +35,7 @@ type Proxy struct {
 	Type     string  `json:"type"`
 	Delay    int     `json:"delay"`
 	Weight   float64 `json:"weight"` // smart group weight; 0 if not applicable
+	Rank     string  `json:"rank"`   // smart group rank: MostUsed / OccasionalUsed / RarelyUsed
 }
 
 type ProxyGroup struct {
@@ -131,22 +132,30 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 
 		proxies := convertProxies(sg.GetProxies(false), uiSubtitlePattern)
 
-		// Fetch weights from the global smart store — same source the
+		// Fetch weights and ranks from the global smart store — same source the
 		// external-controller /group/{name}/weights route uses.
 		// NodeRank.Weight is an integer 0-100 (percentage); normalise to float64.
-		proxyWeights := make(map[string]float64)
+		type proxyRankInfo struct {
+			weight float64
+			rank   string
+		}
+		proxyRankMap := make(map[string]proxyRankInfo)
 		if store := cachefile.GetSmartStore(); store != nil {
 			if ranking, err := store.GetNodeWeightRankingCache(sg.Name(), sg.GetConfigFilename()); err == nil {
 				for _, nr := range ranking {
-					proxyWeights[nr.Name] = float64(nr.Weight) / 100.0
+					proxyRankMap[nr.Name] = proxyRankInfo{
+						weight: float64(nr.Weight) / 100.0,
+						rank:   nr.Rank,
+					}
 				}
 			}
 		}
 
-		// Populate Weight for each proxy.
+		// Populate Weight and Rank for each proxy.
 		for _, px := range proxies {
-			if w, found := proxyWeights[px.Name]; found {
-				px.Weight = w
+			if info, found := proxyRankMap[px.Name]; found {
+				px.Weight = info.weight
+				px.Rank = info.rank
 			}
 		}
 
@@ -166,8 +175,8 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 			// Priority 1: highest-weight proxy from weights API.
 			var maxWeight float64 = -1
 			for _, px := range proxies {
-				if w, found := proxyWeights[px.Name]; found && w > maxWeight {
-					maxWeight = w
+				if px.Weight > maxWeight {
+					maxWeight = px.Weight
 					bestNow = px.Name
 				}
 			}

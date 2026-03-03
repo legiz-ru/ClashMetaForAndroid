@@ -367,6 +367,15 @@
     <string name="start">Запустить</string>
     <string name="stop">Остановить</string>
 
+    <!-- Smart group weight display -->
+    <string name="proxies_smart_most_used">Приоритетный</string>
+    <string name="proxies_smart_occasional_used">Вспомогательный</string>
+    <string name="proxies_smart_rarely_used">Редко используемый</string>
+    <string name="proxies_smart_most_used_tip">Приоритетное подключение — вес: %d</string>
+    <string name="proxies_smart_occasional_used_tip">Вспомогательное подключение — вес: %d</string>
+    <string name="proxies_smart_rarely_used_tip">Редко используемое подключение — вес: %d</string>
+    <string name="proxies_smart_no_data">Информация о стабильности подключения ещё не получена</string>
+
     <!-- Converted profile / template selection -->
     <string name="select_template">Выбрать шаблон</string>
     <string name="select_template_desc">Выберите шаблон маршрутизации для этого профиля</string>

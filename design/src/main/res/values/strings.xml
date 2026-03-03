@@ -403,6 +403,15 @@
     <string name="start">Start</string>
     <string name="stop">Stop</string>
 
+    <!-- Smart group weight display -->
+    <string name="proxies_smart_most_used">Priority</string>
+    <string name="proxies_smart_occasional_used">Secondary</string>
+    <string name="proxies_smart_rarely_used">Rarely used</string>
+    <string name="proxies_smart_most_used_tip">Priority connection — weight: %d</string>
+    <string name="proxies_smart_occasional_used_tip">Secondary connection — weight: %d</string>
+    <string name="proxies_smart_rarely_used_tip">Rarely used connection — weight: %d</string>
+    <string name="proxies_smart_no_data">Stability information not yet available</string>
+
     <!-- Converted profile / template selection -->
     <string name="select_template">Select Template</string>
     <string name="select_template_desc">Choose a routing template for this profile</string>

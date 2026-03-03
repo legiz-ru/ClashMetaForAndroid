@@ -605,22 +605,87 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 val delayView = createDelayText(dp, proxyDelay, useDots)
                 rightColumn.addView(delayView)
 
-                if (isSmartGroup && proxy.weight > 0.0) {
-                    val weightView = TextView(context).apply {
-                        text = "⚖️ ${"%.2f".format(proxy.weight)}"
-                        textSize = 10f
-                        gravity = Gravity.END
-                        setTextColor(if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor)
-                        alpha = 0.85f
-                        maxLines = 1
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                        ).apply {
-                            topMargin = (2 * dp).toInt()
+                // 6.1 — Smart parent group: show rank icon for each proxy
+                if (isSmartGroup) {
+                    val iconRes = when (proxy.rank) {
+                        "MostUsed" -> R.drawable.ic_mdi_shield
+                        "OccasionalUsed" -> R.drawable.ic_mdi_shield_half_full
+                        "RarelyUsed" -> R.drawable.ic_mdi_shield_outline
+                        else -> R.drawable.ic_mdi_shield_sync_outline
+                    }
+                    val rankIcon = ImageView(context).apply {
+                        layoutParams = LinearLayout.LayoutParams((16 * dp).toInt(), (16 * dp).toInt()).apply {
+                            topMargin = (3 * dp).toInt()
+                            gravity = Gravity.END
+                        }
+                        setImageResource(iconRes)
+                        imageTintList = ColorStateList.valueOf(
+                            if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor
+                        )
+                        isClickable = true
+                        isFocusable = true
+                        background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                        setOnClickListener {
+                            val weight = (proxy.weight * 100).toInt()
+                            val msg = when (proxy.rank) {
+                                "MostUsed" -> context.getString(R.string.proxies_smart_most_used_tip, weight)
+                                "OccasionalUsed" -> context.getString(R.string.proxies_smart_occasional_used_tip, weight)
+                                "RarelyUsed" -> context.getString(R.string.proxies_smart_rarely_used_tip, weight)
+                                else -> context.getString(R.string.proxies_smart_no_data)
+                            }
+                            com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                                .setMessage(msg)
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show()
                         }
                     }
-                    rightColumn.addView(weightView)
+                    rightColumn.addView(rankIcon)
+                }
+
+                // 6.2 — Nested Smart group inside non-Smart parent: shield icon with weights popup
+                if (!isSmartGroup && proxy.type == com.github.kr328.clash.core.model.Proxy.Type.Smart) {
+                    val nestedSmartGroup = groupMap[proxy.name]
+                    val hasData = nestedSmartGroup != null &&
+                        nestedSmartGroup.proxies.any { it.rank.isNotEmpty() && it.weight > 0.0 }
+                    val shieldIconRes = if (hasData)
+                        R.drawable.ic_mdi_shield_check_outline
+                    else
+                        R.drawable.ic_mdi_shield_sync_outline
+                    val shieldIcon = ImageView(context).apply {
+                        layoutParams = LinearLayout.LayoutParams((16 * dp).toInt(), (16 * dp).toInt()).apply {
+                            topMargin = (3 * dp).toInt()
+                            gravity = Gravity.END
+                        }
+                        setImageResource(shieldIconRes)
+                        imageTintList = ColorStateList.valueOf(
+                            if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor
+                        )
+                        isClickable = true
+                        isFocusable = true
+                        background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                        setOnClickListener {
+                            val msg = if (!hasData || nestedSmartGroup == null) {
+                                context.getString(R.string.proxies_smart_no_data)
+                            } else {
+                                nestedSmartGroup.proxies
+                                    .filter { it.rank.isNotEmpty() }
+                                    .joinToString("\n") { p ->
+                                        val rankLabel = when (p.rank) {
+                                            "MostUsed" -> context.getString(R.string.proxies_smart_most_used)
+                                            "OccasionalUsed" -> context.getString(R.string.proxies_smart_occasional_used)
+                                            "RarelyUsed" -> context.getString(R.string.proxies_smart_rarely_used)
+                                            else -> p.rank
+                                        }
+                                        "${p.title.ifEmpty { p.name }}: $rankLabel (${(p.weight * 100).toInt()})"
+                                    }.ifEmpty { context.getString(R.string.proxies_smart_no_data) }
+                            }
+                            com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+                                .setMessage(msg)
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show()
+                        }
+                    }
+                    rightColumn.addView(shieldIcon)
                 }
 
                 row.addView(infoColumn)
