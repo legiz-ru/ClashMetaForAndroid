@@ -75,7 +75,15 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     val isTv = TvUtils.isTv(context)
 
-    private val tvDrawer: TvNavigationDrawer? = if (isTv) {
+    // Use the side-rail navigation drawer on TV and on tablet/foldable devices
+    // in landscape mode (smallest screen dimension ≥ 600 dp — not a phone).
+    private val useDrawerNav: Boolean = isTv || run {
+        val cfg = context.resources.configuration
+        cfg.smallestScreenWidthDp >= 600 &&
+            cfg.orientation == Configuration.ORIENTATION_LANDSCAPE
+    }
+
+    private val tvDrawer: TvNavigationDrawer? = if (useDrawerNav) {
         TvNavigationDrawer(context, TvNavigationDrawer.NavItem.Home).apply {
             onNavigate = { item ->
                 when (item) {
@@ -88,8 +96,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     } else null
 
-    private val rootView: View = if (isTv) {
-        // On TV: hide bottom nav and FAB, wrap with drawer
+    private val rootView: View = if (useDrawerNav) {
+        // Drawer layout: hide bottom nav and FAB — drawer provides navigation and toggle
         binding.bottomNav.visibility = View.GONE
         binding.disconnectFab.visibility = View.GONE
         tvDrawer!!.wrapContent(binding.root)
@@ -955,11 +963,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.hasTrafficInfo = false
         binding.hasExpireInfo = false
 
-        // On TV: allow D-pad to reach buttons inside the profile card
-        if (isTv) {
+        // Drawer layout (TV or tablet/foldable landscape): D-pad focus + hide FAB on rebind
+        if (useDrawerNav) {
             (binding.profileCard as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 
-            // Prevent data binding from re-showing the FAB on TV after rebind
+            // Prevent data binding from re-showing the FAB after rebind
             binding.addOnRebindCallback(object : OnRebindCallback<DesignMainBinding>() {
                 override fun onBound(binding: DesignMainBinding?) {
                     binding?.disconnectFab?.visibility = View.GONE
@@ -967,7 +975,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             })
         }
 
-        if (!isTv) {
+        if (!useDrawerNav) {
             binding.bottomNav.setOnItemSelectedListener { item ->
                 when (item.itemId) {
                     R.id.nav_home -> true
@@ -989,6 +997,17 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     binding.disconnectFab.layoutParams = params
                 }
             })
+        }
+
+        // When using the drawer, skip landscape content-width constraining — the drawer
+        // already divides the screen and the computed padding (based on full screen width)
+        // would make the content area unnecessarily narrow.
+        if (useDrawerNav && context is androidx.appcompat.app.AppCompatActivity) {
+            context.window.decorView.setOnInsertsChangedListener(adaptLandscape = false) {
+                if (surface.insets != it) {
+                    surface.insets = it
+                }
+            }
         }
     }
 
