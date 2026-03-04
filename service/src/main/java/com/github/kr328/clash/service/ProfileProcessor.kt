@@ -72,6 +72,8 @@ object ProfileProcessor {
         val allowTemplateSelection: Boolean = true,
         /** True when the source was an HTTP URL and headers were actually read. */
         val headersAvailable: Boolean = false,
+        /** Raw HTTP response headers; null for non-HTTP sources. */
+        val rawHeaders: okhttp3.Headers? = null,
     )
 
     // -------------------------------------------------------------------------
@@ -131,8 +133,30 @@ object ProfileProcessor {
                 it == "1" || it.equals("true", ignoreCase = true)
             } ?: false
             val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
-            return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, headersAvailable = true)
+            return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, headersAvailable = true, rawHeaders = response.headers)
         }
+    }
+
+    /**
+     * Parses the `subscription-userinfo` header and returns [upload, download, total, expire] in bytes/ms.
+     */
+    private fun parseSubscriptionUserInfo(headers: okhttp3.Headers?): LongArray {
+        val out = LongArray(4) { 0L }
+        val userinfo = headers?.get("subscription-userinfo") ?: return out
+        try {
+            userinfo.split(";").forEach { flag ->
+                val parts = flag.trim().split("=")
+                if (parts.size < 2 || parts[1].isEmpty()) return@forEach
+                val v = parts[1].trim()
+                when {
+                    parts[0].contains("upload")   -> out[0] = BigDecimal(v.split('.').first()).longValueExact()
+                    parts[0].contains("download") -> out[1] = BigDecimal(v.split('.').first()).longValueExact()
+                    parts[0].contains("total")    -> out[2] = BigDecimal(v.split('.').first()).longValueExact()
+                    parts[0].contains("expire")   -> out[3] = (v.toDouble() * 1000).toLong()
+                }
+            }
+        } catch (_: Exception) {}
+        return out
     }
 
     /**
@@ -292,6 +316,10 @@ object ProfileProcessor {
                     pending
                 }
 
+                // Accumulates HTTP response headers for profiles that end up being converted,
+                // so we can save profile metadata (title, logo, subscription info, etc.) later.
+                var convertedHeaders: okhttp3.Headers? = null
+
                 // Converted profiles: fetch source (with pxa headers), update meta, convert.
                 if (snapshot.type == Profile.Type.Converted) {
                     val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
@@ -302,6 +330,7 @@ object ProfileProcessor {
                             fetchResult.pxaTemplateUrl,
                             fetchResult.allowTemplateSelection,
                         )
+                        convertedHeaders = fetchResult.rawHeaders
                     }
                     convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
                 }
@@ -337,8 +366,15 @@ object ProfileProcessor {
 
                             convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                             effectiveType = Profile.Type.Converted
+                            convertedHeaders = hdrs
                         }
                     }
+                }
+
+                // For profiles that converted to Converted type, persist standard profile headers
+                // into processingDir so they are carried over to importedDir on copy.
+                if (effectiveType == Profile.Type.Converted && convertedHeaders != null) {
+                    saveProfileHeaders(context.processingDir, convertedHeaders!!)
                 }
 
                 val fetchTarget = resolveFetchTarget(
@@ -369,14 +405,18 @@ object ProfileProcessor {
                         var total: Long = 0
                         var expire: Long = 0
                         if (effectiveType == Profile.Type.Converted) {
-                            // Converted profile — no subscription traffic tracking.
+                            val sub = parseSubscriptionUserInfo(convertedHeaders)
+                            val profileTitle = convertedHeaders?.get("profile-title")?.let { decodeHeaderValue(it) } ?: ""
+                            val updateIntervalHours = convertedHeaders?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                            val resolvedName = if (profileTitle.isNotEmpty()) profileTitle else snapshot.name
+                            val resolvedInterval = if (updateIntervalHours > 0) updateIntervalHours.toLong() * 60 * 60 * 1000 else snapshot.interval
                             val new = Imported(
                                 snapshot.uuid,
-                                snapshot.name,
+                                resolvedName,
                                 Profile.Type.Converted,
                                 snapshot.source,
-                                snapshot.interval,
-                                0L, 0L, 0L, 0L,
+                                resolvedInterval,
+                                sub[0], sub[1], sub[2], sub[3],
                                 old?.createdAt ?: System.currentTimeMillis()
                             )
                             if (old != null) ImportedDao().update(new) else ImportedDao().insert(new)
@@ -490,9 +530,11 @@ object ProfileProcessor {
                 }
 
                 // Converted profiles: re-fetch source (with pxa headers) and re-apply template.
+                var convertedFetchResult: FetchedSource? = null
                 if (snapshot.type == Profile.Type.Converted) {
                     val importedDir = context.importedDir.resolve(snapshot.uuid.toString())
                     val fetchResult = fetchSourceContentWithPxa(context, snapshot.source)
+                    convertedFetchResult = fetchResult
 
                     if (fetchResult.headersAvailable) {
                         // Update stored pxa meta with fresh header values.
@@ -526,9 +568,35 @@ object ProfileProcessor {
 
                 profileLock.withLock {
                     if (ImportedDao().exists(snapshot.uuid)) {
-                        context.importedDir.resolve(snapshot.uuid.toString()).deleteRecursively()
-                        context.processingDir
-                            .copyRecursively(context.importedDir.resolve(snapshot.uuid.toString()))
+                        val importedDir = context.importedDir.resolve(snapshot.uuid.toString())
+                        importedDir.deleteRecursively()
+                        context.processingDir.copyRecursively(importedDir)
+
+                        // For Converted profiles: save standard profile headers and update
+                        // subscription info in the DB record.
+                        val fetchResult = convertedFetchResult
+                        if (fetchResult != null && fetchResult.headersAvailable && fetchResult.rawHeaders != null) {
+                            saveProfileHeaders(importedDir, fetchResult.rawHeaders)
+
+                            val current = ImportedDao().queryByUUID(snapshot.uuid)
+                            if (current != null) {
+                                val sub = parseSubscriptionUserInfo(fetchResult.rawHeaders)
+                                val profileTitle = fetchResult.rawHeaders["profile-title"]?.let { decodeHeaderValue(it) } ?: ""
+                                val updateIntervalHours = fetchResult.rawHeaders["profile-update-interval"]?.trim()?.toIntOrNull() ?: 0
+                                val resolvedName = if (profileTitle.isNotEmpty()) profileTitle else current.name
+                                val resolvedInterval = if (updateIntervalHours > 0) updateIntervalHours.toLong() * 60 * 60 * 1000 else current.interval
+                                ImportedDao().update(
+                                    current.copy(
+                                        name = resolvedName,
+                                        interval = resolvedInterval,
+                                        upload = sub[0],
+                                        download = sub[1],
+                                        total = sub[2],
+                                        expire = sub[3],
+                                    )
+                                )
+                            }
+                        }
 
                         context.sendProfileChanged(snapshot.uuid)
                     }
