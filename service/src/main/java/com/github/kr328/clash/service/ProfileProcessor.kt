@@ -265,6 +265,114 @@ object ProfileProcessor {
     }
 
     // -------------------------------------------------------------------------
+    // payload template helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Extracts the proxy items from the `proxies:` section of a Clash YAML config.
+     * Returns the list block text (lines starting with `- `) without the `proxies:` header,
+     * each item at column 0 indentation. Returns empty string if the section is absent.
+     */
+    private fun extractProxiesFromYaml(configYaml: String): String {
+        val lines = configYaml.lines()
+        val startIdx = lines.indexOfFirst { it == "proxies:" || it.startsWith("proxies:") }
+        if (startIdx < 0) return ""
+        val result = mutableListOf<String>()
+        var i = startIdx + 1
+        while (i < lines.size) {
+            val line = lines[i]
+            // Stop at the next non-indented, non-list key (top-level YAML key).
+            if (line.isNotEmpty() && !line[0].isWhitespace() && !line.startsWith('-')) break
+            result.add(line)
+            i++
+        }
+        return result.dropLastWhile { it.isBlank() }.joinToString("\n")
+    }
+
+    /**
+     * Substitutes the `$payload$` placeholder in [templateContent] with [proxiesYaml].
+     *
+     * The placeholder must appear as the sole content on its line (possibly with leading
+     * whitespace for indentation). Each line of [proxiesYaml] is prefixed with that same
+     * indentation so the resulting YAML stays properly indented.
+     *
+     * Example template line (6 spaces indent):
+     *   `      $payload$`
+     * After substitution the 6-space prefix is added to every proxy item line.
+     */
+    private fun applyPayloadTemplate(templateContent: String, proxiesYaml: String): String {
+        val lines = templateContent.lines()
+        val sb = StringBuilder()
+        lines.forEachIndexed { idx, line ->
+            val trimmed = line.trim()
+            if (trimmed == "\$payload\$") {
+                val indent = line.takeWhile { it == ' ' }
+                val proxiesLines = proxiesYaml.lines()
+                proxiesLines.forEachIndexed { pi, proxyLine ->
+                    if (pi > 0) sb.append('\n')
+                    sb.append(if (proxyLine.isBlank()) proxyLine else indent + proxyLine)
+                }
+            } else if (line.contains("\$payload\$")) {
+                // Inline occurrence — replace without re-indenting.
+                sb.append(line.replace("\$payload\$", proxiesYaml))
+            } else {
+                sb.append(line)
+            }
+            if (idx < lines.size - 1) sb.append('\n')
+        }
+        return sb.toString()
+    }
+
+    /**
+     * Implements `pxa-template-scheme: payload` processing:
+     *  1. Converts [content] via convert.go using the built-in Default template
+     *     to obtain the Clash-format proxy list.
+     *  2. Extracts the `proxies:` block from the converted YAML.
+     *  3. Downloads the pxa-template from the URL stored in [pendingDir] metadata.
+     *  4. Substitutes `$payload$` in the template with the proxy list.
+     *  5. Writes the final YAML to [processingDir]/config.yaml.
+     *
+     * Throws [IOException] on any failure.
+     */
+    private fun writePayloadConfig(
+        context: Context,
+        content: String,
+        pendingDir: File,
+        processingDir: File,
+    ) {
+        val pxaTemplateUrl = TemplateManager.getPxaTemplateUrl(pendingDir)
+            ?: throw IOException("payload mode requires a pxa-template URL")
+
+        // Use Default template for the intermediate conversion; we only need proxies: from it.
+        val conversionTemplate = TemplateManager.loadTemplate(context, TemplateManager.Template.Default.id)
+        val resultJson = Clash.convertAndApplyTemplate(content, conversionTemplate)
+        val result = JSONObject(resultJson)
+        val error = result.optString("error", "")
+        if (error.isNotEmpty()) throw IOException("Conversion failed: $error")
+        val configYaml = result.optString("yaml", "")
+        if (configYaml.isEmpty()) throw IOException("Conversion produced empty config")
+
+        val proxiesYaml = extractProxiesFromYaml(configYaml)
+        if (proxiesYaml.isEmpty()) throw IOException("No proxies found in converted config for payload mode")
+
+        val payloadTemplate = fetchTemplateFromUrl(pxaTemplateUrl)
+            ?: throw IOException("Failed to download pxa-template for payload mode")
+
+        val finalConfig = applyPayloadTemplate(payloadTemplate, proxiesYaml)
+
+        processingDir.mkdirs()
+        processingDir.resolve("config.yaml").writeText(finalConfig, Charsets.UTF_8)
+        // Carry template meta forward so it survives processingDir→importedDir copy.
+        TemplateManager.saveSelectedTemplateId(processingDir, TemplateManager.getSelectedTemplateId(pendingDir))
+        TemplateManager.savePxaMeta(
+            processingDir,
+            pxaTemplateUrl,
+            TemplateManager.isTemplateSelectionAllowed(pendingDir),
+            TemplateManager.getPxaTemplateScheme(pendingDir),
+        )
+    }
+
+    // -------------------------------------------------------------------------
     // Proxy-link / SingBox conversion helpers
     // -------------------------------------------------------------------------
 
@@ -434,18 +542,24 @@ object ProfileProcessor {
                         }
                         convertedHeaders = fetchResult.rawHeaders
                     }
-                    // proxy-providers mode: substitute placeholders; no convert.go needed.
-                    // Condition: pxa-template-scheme=proxy-providers AND no pxa-change-template
+                    // Route to the appropriate conversion mode based on pxa-template-scheme.
+                    // proxy-providers: placeholder substitution only; no convert.go.
+                    // payload: convert via convert.go → extract proxies → substitute $payload$.
+                    // Condition for special modes: scheme set AND pxa-change-template absent
                     // (allowTemplateSelection=false means pxa-change-template is absent).
-                    val isProxyProviderMode = fetchResult.pxaTemplateScheme == "proxy-providers"
-                        && !fetchResult.allowTemplateSelection
-                        && !fetchResult.pxaTemplateUrl.isNullOrBlank()
-                    if (isProxyProviderMode) {
-                        val intervalHours = fetchResult.rawHeaders
-                            ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
-                        writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
-                    } else {
-                        convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
+                    val scheme = fetchResult.pxaTemplateScheme
+                    val hasPxaTemplate = !fetchResult.pxaTemplateUrl.isNullOrBlank()
+                    val isSpecialMode = !fetchResult.allowTemplateSelection && hasPxaTemplate
+                    when {
+                        isSpecialMode && scheme == "proxy-providers" -> {
+                            val intervalHours = fetchResult.rawHeaders
+                                ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                            writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
+                        }
+                        isSpecialMode && scheme == "payload" -> {
+                            writePayloadConfig(context, fetchResult.content, pendingDir, context.processingDir)
+                        }
+                        else -> convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
                     }
                 }
 
@@ -484,14 +598,17 @@ object ProfileProcessor {
                                 )
                             }
 
-                            val isProxyProviderMode = pxaTemplateScheme == "proxy-providers"
-                                && !allowTemplateSelection
-                                && !pxaTemplateUrl.isNullOrBlank()
-                            if (isProxyProviderMode) {
-                                val intervalHours = hdrs?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
-                                writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
-                            } else {
-                                convertAndWriteConfig(context, content, pendingDir, context.processingDir)
+                            val hasPxaTemplateUrl = !pxaTemplateUrl.isNullOrBlank()
+                            val isSpecialModeUrl = !allowTemplateSelection && hasPxaTemplateUrl
+                            when {
+                                isSpecialModeUrl && pxaTemplateScheme == "proxy-providers" -> {
+                                    val intervalHours = hdrs?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                                    writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
+                                }
+                                isSpecialModeUrl && pxaTemplateScheme == "payload" -> {
+                                    writePayloadConfig(context, content, pendingDir, context.processingDir)
+                                }
+                                else -> convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                             }
                             effectiveType = Profile.Type.Converted
                             convertedHeaders = hdrs
@@ -674,7 +791,7 @@ object ProfileProcessor {
                         )
                     }
 
-                    // Re-determine proxy-providers mode from fresh headers (or stored scheme as fallback).
+                    // Re-determine mode from fresh headers (or stored scheme as fallback).
                     val scheme = if (fetchResult.headersAvailable)
                         fetchResult.pxaTemplateScheme
                     else
@@ -683,16 +800,18 @@ object ProfileProcessor {
                         fetchResult.allowTemplateSelection
                     else
                         TemplateManager.isTemplateSelectionAllowed(importedDir)
-                    val isProxyProviderMode = scheme == "proxy-providers"
-                        && !allowSel
-                        && !TemplateManager.getPxaTemplateUrl(importedDir).isNullOrBlank()
-
-                    if (isProxyProviderMode) {
-                        val intervalHours = fetchResult.rawHeaders
-                            ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
-                        writeProxyProviderConfig(context, snapshot.source, intervalHours, importedDir, context.processingDir)
-                    } else {
-                        convertAndWriteConfig(
+                    val hasPxaTemplateUpd = !TemplateManager.getPxaTemplateUrl(importedDir).isNullOrBlank()
+                    val isSpecialModeUpd = !allowSel && hasPxaTemplateUpd
+                    when {
+                        isSpecialModeUpd && scheme == "proxy-providers" -> {
+                            val intervalHours = fetchResult.rawHeaders
+                                ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                            writeProxyProviderConfig(context, snapshot.source, intervalHours, importedDir, context.processingDir)
+                        }
+                        isSpecialModeUpd && scheme == "payload" -> {
+                            writePayloadConfig(context, fetchResult.content, importedDir, context.processingDir)
+                        }
+                        else -> convertAndWriteConfig(
                             context,
                             fetchResult.content,
                             importedDir,
