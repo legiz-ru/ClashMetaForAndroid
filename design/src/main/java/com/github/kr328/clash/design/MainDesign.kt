@@ -363,6 +363,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val selected = currentGroup.proxies.find { it.name == now } ?: return 0
         if (!selected.type.group) return selected.delay
         val nestedGroup = groupMap[selected.name] ?: return selected.delay
+        if (nestedGroup.type == com.github.kr328.clash.core.model.Proxy.Type.LoadBalance) {
+            return nestedGroup.proxies.filter { it.delay in 1..65534 }
+                .minOfOrNull { it.delay } ?: 0
+        }
         return resolveDelay(groupMap, selected.name, nestedGroup.now, visited)
     }
 
