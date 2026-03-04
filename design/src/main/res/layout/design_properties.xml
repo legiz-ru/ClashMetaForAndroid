@@ -103,7 +103,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/properties_element_margin_vertical"
                     android:onClick="@{() -> self.requestSelectTemplate()}"
-                    android:visibility="@{profile.type == Type.Converted ? View.VISIBLE : View.GONE}"
+                    android:visibility="@{profile.type == Type.Converted &amp;&amp; profile.allowTemplateSelection ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_outline_article"
                     app:subtext="@string/select_template_desc"
                     app:text="@string/select_template" />

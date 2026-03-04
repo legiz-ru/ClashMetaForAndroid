@@ -33,6 +33,7 @@ data class Profile(
     val profileLogo: String = "",
     val profileUpdateInterval: Int = 0,
     val announce: String = "",
+    val allowTemplateSelection: Boolean = true,
 ) : Parcelable {
     enum class Type {
         File, Url, External,

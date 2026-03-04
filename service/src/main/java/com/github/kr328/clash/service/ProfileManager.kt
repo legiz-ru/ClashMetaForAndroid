@@ -277,6 +277,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
 
         val profileDir = context.importedDir.resolve(uuid.toString())
         val hdrs = ProfileProcessor.readProfileHeaders(profileDir)
+        val allowTemplateSelection = TemplateManager.isTemplateSelectionAllowed(profileDir)
 
         return Profile(
             uuid,
@@ -298,6 +299,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.profileLogo,
             hdrs.profileUpdateInterval,
             hdrs.announce,
+            allowTemplateSelection,
         )
     }
 

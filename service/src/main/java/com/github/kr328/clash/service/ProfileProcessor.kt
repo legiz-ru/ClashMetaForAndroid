@@ -52,10 +52,33 @@ object ProfileProcessor {
 
         return builder.build()
     }
+
     private val profileLock = Mutex()
     private val processLock = Mutex()
 
-    private fun prefetchProfileConfig(context: Context, source: String, targetConfigFile: File): Boolean {
+    // -------------------------------------------------------------------------
+    // Internal fetch result types
+    // -------------------------------------------------------------------------
+
+    private data class PrefetchResult(
+        val success: Boolean,
+        val headers: okhttp3.Headers? = null,
+    )
+
+    /** Result of fetching a Converted profile source URL, including pxa header values. */
+    private data class FetchedSource(
+        val content: String,
+        val pxaTemplateUrl: String? = null,
+        val allowTemplateSelection: Boolean = true,
+        /** True when the source was an HTTP URL and headers were actually read. */
+        val headersAvailable: Boolean = false,
+    )
+
+    // -------------------------------------------------------------------------
+    // Fetch helpers
+    // -------------------------------------------------------------------------
+
+    private fun prefetchProfileConfig(context: Context, source: String, targetConfigFile: File): PrefetchResult {
         return try {
             val request = buildProfileRequest(context, source)
             val client = OkHttpClient.Builder()
@@ -64,21 +87,71 @@ object ProfileProcessor {
                 .build()
 
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return false
+                if (!response.isSuccessful) return PrefetchResult(false)
 
-                val body = response.body ?: return false
+                val body = response.body ?: return PrefetchResult(false)
                 targetConfigFile.parentFile?.mkdirs()
                 targetConfigFile.outputStream().use { output ->
                     body.byteStream().use { input ->
                         input.copyTo(output)
                     }
                 }
-                true
+                PrefetchResult(true, response.headers)
             }
         } catch (_: IOException) {
-            false
+            PrefetchResult(false)
         } catch (_: Exception) {
-            false
+            PrefetchResult(false)
+        }
+    }
+
+    /**
+     * Fetches a Converted profile source URL and extracts pxa-template /
+     * pxa-change-template headers. For non-HTTP sources (direct proxy text)
+     * the content is returned as-is with no headers.
+     */
+    private fun fetchSourceContentWithPxa(context: Context, source: String): FetchedSource {
+        if (!source.startsWith("http://", ignoreCase = true) &&
+            !source.startsWith("https://", ignoreCase = true)
+        ) {
+            return FetchedSource(source) // Direct proxy-link text, no headers
+        }
+        val request = buildProfileRequest(context, source)
+        val client = OkHttpClient.Builder()
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Failed to fetch profile: HTTP ${response.code}")
+            }
+            val body = response.body?.string() ?: throw IOException("Empty response body")
+            val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
+            val pxaChangeTemplate = response.headers["pxa-change-template"]?.trim()?.let {
+                it == "1" || it.equals("true", ignoreCase = true)
+            } ?: false
+            val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
+            return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, headersAvailable = true)
+        }
+    }
+
+    /**
+     * Downloads a YAML template from [url]. Returns null on any error so the
+     * caller can fall back to the user-selected built-in template.
+     */
+    private fun fetchTemplateFromUrl(url: String): String? {
+        return try {
+            val client = OkHttpClient.Builder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .build()
+            val request = Request.Builder().url(url).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) null
+                else response.body?.string()
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -121,32 +194,13 @@ object ProfileProcessor {
     }
 
     /**
-     * Fetches raw content from an HTTP(S) URL, or returns [source] as-is for
-     * direct proxy-link text (non-HTTP sources such as vless://, ss://, etc.).
-     */
-    private fun fetchSourceContent(context: Context, source: String): String {
-        if (!source.startsWith("http://", ignoreCase = true) &&
-            !source.startsWith("https://", ignoreCase = true)
-        ) {
-            return source  // Direct proxy-link text
-        }
-        val request = buildProfileRequest(context, source)
-        val client = OkHttpClient.Builder()
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IOException("Failed to fetch profile: HTTP ${response.code}")
-            }
-            return response.body?.string() ?: throw IOException("Empty response body")
-        }
-    }
-
-    /**
-     * Converts [content] (proxy links, SingBox JSON, or base64-encoded proxy list) using the template selected for
-     * [pendingDir], writes the resulting Clash YAML to [processingDir]/config.yaml, and
-     * saves the chosen template id to [processingDir]/[TemplateManager.META_FILE].
+     * Converts [content] using the template configured for [pendingDir], writes
+     * the resulting Clash YAML to [processingDir]/config.yaml, and copies the
+     * full template metadata (selected template id + pxa values) to [processingDir].
+     *
+     * If a pxa-template URL is stored in [pendingDir]'s metadata, that URL is
+     * fetched and used as the template instead of the user-selected built-in
+     * template (with fallback to the built-in on network error).
      *
      * Throws [IOException] if conversion fails.
      */
@@ -157,16 +211,30 @@ object ProfileProcessor {
         processingDir: File,
     ) {
         val templateId = TemplateManager.getSelectedTemplateId(pendingDir)
-        val templateContent = TemplateManager.loadTemplate(context, templateId)
+        val pxaTemplateUrl = TemplateManager.getPxaTemplateUrl(pendingDir)
+
+        val templateContent = if (!pxaTemplateUrl.isNullOrBlank()) {
+            // Use server-specified template; fall back to user selection on error.
+            fetchTemplateFromUrl(pxaTemplateUrl)
+                ?: TemplateManager.loadTemplate(context, templateId)
+        } else {
+            TemplateManager.loadTemplate(context, templateId)
+        }
+
         val resultJson = Clash.convertAndApplyTemplate(content, templateContent)
         val result = JSONObject(resultJson)
         val error = result.optString("error", "")
         if (error.isNotEmpty()) throw IOException("Conversion failed: $error")
         val configYaml = result.optString("yaml", "")
         if (configYaml.isEmpty()) throw IOException("Conversion produced an empty config")
+
         processingDir.mkdirs()
         processingDir.resolve("config.yaml").writeText(configYaml, Charsets.UTF_8)
+
+        // Copy full template meta (templateId + pxa values) to processingDir.
         TemplateManager.saveSelectedTemplateId(processingDir, templateId)
+        val allowTemplateSelection = TemplateManager.isTemplateSelectionAllowed(pendingDir)
+        TemplateManager.savePxaMeta(processingDir, pxaTemplateUrl, allowTemplateSelection)
     }
 
     // -------------------------------------------------------------------------
@@ -176,18 +244,23 @@ object ProfileProcessor {
         val force: Boolean,
     )
 
-    private fun resolveFetchTarget(context: Context, type: Profile.Type, source: String): FetchTarget {
+    private fun resolveFetchTarget(
+        context: Context,
+        type: Profile.Type,
+        source: String,
+        alreadyPrefetched: Boolean = false,
+    ): FetchTarget {
         val isHttpUrl = source.startsWith("https://", true) || source.startsWith("http://", true)
 
         if (type == Profile.Type.Url && isHttpUrl) {
-            val localConfig = context.processingDir.resolve("config.yaml")
-            val prefetched = prefetchProfileConfig(context, source, localConfig)
-
-            if (!prefetched) {
-                throw IOException("Unable to fetch url profile with HWID headers")
+            if (!alreadyPrefetched) {
+                val localConfig = context.processingDir.resolve("config.yaml")
+                val result = prefetchProfileConfig(context, source, localConfig)
+                if (!result.success) {
+                    throw IOException("Unable to fetch url profile with HWID headers")
+                }
             }
-
-            return FetchTarget(localConfig.toURI().toString(), false)
+            return FetchTarget(context.processingDir.resolve("config.yaml").toURI().toString(), false)
         }
 
         // For Converted profiles the config.yaml is pre-written; just validate in place.
@@ -219,37 +292,58 @@ object ProfileProcessor {
                     pending
                 }
 
-                // Converted profiles: convert proxy content and write config.yaml before validation.
+                // Converted profiles: fetch source (with pxa headers), update meta, convert.
                 if (snapshot.type == Profile.Type.Converted) {
                     val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
-                    convertAndWriteConfig(
-                        context,
-                        fetchSourceContent(context, snapshot.source),
-                        pendingDir,
-                        context.processingDir,
-                    )
+                    val fetchResult = fetchSourceContentWithPxa(context, snapshot.source)
+                    if (fetchResult.headersAvailable) {
+                        TemplateManager.savePxaMeta(
+                            pendingDir,
+                            fetchResult.pxaTemplateUrl,
+                            fetchResult.allowTemplateSelection,
+                        )
+                    }
+                    convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
                 }
 
                 var effectiveType = snapshot.type
-                val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
+                var alreadyPrefetched = false
 
-                // For Url+HTTP profiles: detect if the downloaded content is proxy links.
-                // If so, convert using the selected template and mark the profile as Converted.
+                // For Url+HTTP profiles: prefetch content and check for convertible format.
                 if (snapshot.type == Profile.Type.Url &&
                     (snapshot.source.startsWith("http://", ignoreCase = true) ||
                      snapshot.source.startsWith("https://", ignoreCase = true))
                 ) {
-                    val configFile = context.processingDir.resolve("config.yaml")
-                    if (configFile.exists()) {
-                        val content = configFile.readText(Charsets.UTF_8)
+                    val localConfig = context.processingDir.resolve("config.yaml")
+                    val prefetchResult = prefetchProfileConfig(context, snapshot.source, localConfig)
+                    if (!prefetchResult.success) {
+                        throw IOException("Unable to fetch url profile with HWID headers")
+                    }
+                    alreadyPrefetched = true
+
+                    if (localConfig.exists()) {
+                        val content = localConfig.readText(Charsets.UTF_8)
                         if (detectContentFormat(content) == ContentFormat.ConvertibleContent) {
                             val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
+
+                            // Extract and save pxa headers for the auto-converted profile.
+                            val hdrs = prefetchResult.headers
+                            val pxaTemplateUrl = hdrs?.get("pxa-template")?.trim()?.ifBlank { null }
+                            val pxaChangeTemplate = hdrs?.get("pxa-change-template")?.trim()?.let {
+                                it == "1" || it.equals("true", ignoreCase = true)
+                            } ?: false
+                            val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
+                            TemplateManager.savePxaMeta(pendingDir, pxaTemplateUrl, allowTemplateSelection)
+
                             convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                             effectiveType = Profile.Type.Converted
                         }
                     }
                 }
 
+                val fetchTarget = resolveFetchTarget(
+                    context, snapshot.type, snapshot.source, alreadyPrefetched
+                )
                 var cb = callback
 
                 Clash.fetchAndValid(context.processingDir, fetchTarget.source, fetchTarget.force) {
@@ -395,12 +489,23 @@ object ProfileProcessor {
                     imported
                 }
 
-                // Converted profiles: re-fetch source and re-apply the template.
+                // Converted profiles: re-fetch source (with pxa headers) and re-apply template.
                 if (snapshot.type == Profile.Type.Converted) {
                     val importedDir = context.importedDir.resolve(snapshot.uuid.toString())
+                    val fetchResult = fetchSourceContentWithPxa(context, snapshot.source)
+
+                    if (fetchResult.headersAvailable) {
+                        // Update stored pxa meta with fresh header values.
+                        TemplateManager.savePxaMeta(
+                            importedDir,
+                            fetchResult.pxaTemplateUrl,
+                            fetchResult.allowTemplateSelection,
+                        )
+                    }
+
                     convertAndWriteConfig(
                         context,
-                        fetchSourceContent(context, snapshot.source),
+                        fetchResult.content,
                         importedDir,      // template metadata lives in the imported dir
                         context.processingDir,
                     )
