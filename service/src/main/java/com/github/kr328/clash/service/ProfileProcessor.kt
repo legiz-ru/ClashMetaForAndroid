@@ -559,6 +559,8 @@ object ProfileProcessor {
                         isSpecialMode && scheme == "payload" -> {
                             writePayloadConfig(context, fetchResult.content, pendingDir, context.processingDir)
                         }
+                        scheme == "proxies" ->
+                            convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
                         else -> convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
                     }
                 }
@@ -608,6 +610,8 @@ object ProfileProcessor {
                                 isSpecialModeUrl && pxaTemplateScheme == "payload" -> {
                                     writePayloadConfig(context, content, pendingDir, context.processingDir)
                                 }
+                                pxaTemplateScheme == "proxies" ->
+                                    convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                                 else -> convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                             }
                             effectiveType = Profile.Type.Converted
@@ -811,6 +815,8 @@ object ProfileProcessor {
                         isSpecialModeUpd && scheme == "payload" -> {
                             writePayloadConfig(context, fetchResult.content, importedDir, context.processingDir)
                         }
+                        scheme == "proxies" ->
+                            convertAndWriteConfig(context, fetchResult.content, importedDir, context.processingDir)
                         else -> convertAndWriteConfig(
                             context,
                             fetchResult.content,
