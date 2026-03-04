@@ -33,6 +33,7 @@ import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
+import com.github.kr328.clash.design.util.setOnInsertsChangedListener
 import com.github.kr328.clash.design.util.toBytesString
 import com.github.kr328.clash.design.util.elapsedIntervalString
 import com.github.kr328.clash.service.model.Profile
