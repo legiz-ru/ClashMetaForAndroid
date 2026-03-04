@@ -2,6 +2,7 @@ package com.github.kr328.clash.design
 
 import android.app.Dialog
 import android.content.Context
+import android.content.res.Configuration
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
@@ -63,7 +64,13 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
 
     private val isTv = TvUtils.isTv(context)
 
-    private val tvDrawer: TvNavigationDrawer? = if (isTv) {
+    private val useDrawerNav: Boolean = isTv || run {
+        val cfg = context.resources.configuration
+        cfg.smallestScreenWidthDp >= 600 &&
+            cfg.orientation == Configuration.ORIENTATION_LANDSCAPE
+    }
+
+    private val tvDrawer: TvNavigationDrawer? = if (useDrawerNav) {
         TvNavigationDrawer(context, TvNavigationDrawer.NavItem.Profiles).apply {
             onNavigate = { item ->
                 when (item) {
@@ -76,7 +83,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         }
     } else null
 
-    private val rootView: View = if (isTv) {
+    private val rootView: View = if (useDrawerNav) {
         tvDrawer!!.wrapContent(binding.root)
     } else {
         binding.root

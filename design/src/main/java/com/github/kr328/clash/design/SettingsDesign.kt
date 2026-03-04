@@ -1,6 +1,7 @@
 package com.github.kr328.clash.design
 
 import android.content.Context
+import android.content.res.Configuration
 import android.view.View
 import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.design.component.TvNavigationDrawer
@@ -20,7 +21,13 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
 
     private val isTv = TvUtils.isTv(context)
 
-    private val tvDrawer: TvNavigationDrawer? = if (isTv) {
+    private val useDrawerNav: Boolean = isTv || run {
+        val cfg = context.resources.configuration
+        cfg.smallestScreenWidthDp >= 600 &&
+            cfg.orientation == Configuration.ORIENTATION_LANDSCAPE
+    }
+
+    private val tvDrawer: TvNavigationDrawer? = if (useDrawerNav) {
         TvNavigationDrawer(context, TvNavigationDrawer.NavItem.Settings).apply {
             onNavigate = { item ->
                 when (item) {
@@ -33,7 +40,7 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
         }
     } else null
 
-    private val rootView: View = if (isTv) {
+    private val rootView: View = if (useDrawerNav) {
         binding.bottomNav.visibility = View.GONE
         tvDrawer!!.wrapContent(binding.root)
     } else {
@@ -50,7 +57,7 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
     init {
         binding.self = this
 
-        if (!isTv) {
+        if (!useDrawerNav) {
             // Select settings tab by default
             binding.bottomNav.selectedItemId = R.id.nav_settings
 
