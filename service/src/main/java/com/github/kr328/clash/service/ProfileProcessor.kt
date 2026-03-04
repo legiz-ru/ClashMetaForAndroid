@@ -232,6 +232,9 @@ object ProfileProcessor {
             result = result.replace("\$x-device-model\$", "")
         }
 
+        // Clean up $payload$ if it wasn't substituted (not applicable in proxy-providers mode).
+        result = result.replace("\$payload\$", "")
+
         return result
     }
 
@@ -330,13 +333,16 @@ object ProfileProcessor {
      *  2. Extracts the `proxies:` block from the converted YAML.
      *  3. Downloads the pxa-template from the URL stored in [pendingDir] metadata.
      *  4. Substitutes `$payload$` in the template with the proxy list.
-     *  5. Writes the final YAML to [processingDir]/config.yaml.
+     *  5. Substitutes all standard placeholders ($profile-update-interval$, $subscription_url$, etc.).
+     *  6. Writes the final YAML to [processingDir]/config.yaml.
      *
      * Throws [IOException] on any failure.
      */
     private fun writePayloadConfig(
         context: Context,
         content: String,
+        sourceUrl: String,
+        profileUpdateIntervalHours: Int,
         pendingDir: File,
         processingDir: File,
     ) {
@@ -358,7 +364,10 @@ object ProfileProcessor {
         val payloadTemplate = fetchTemplateFromUrl(pxaTemplateUrl)
             ?: throw IOException("Failed to download pxa-template for payload mode")
 
-        val finalConfig = applyPayloadTemplate(payloadTemplate, proxiesYaml)
+        // First substitute $payload$, then run standard placeholder substitutions so that
+        // $profile-update-interval$, $subscription_url$, $x-hwid$, etc. are also replaced.
+        val afterPayload = applyPayloadTemplate(payloadTemplate, proxiesYaml)
+        val finalConfig = applyProxyProviderTemplate(context, afterPayload, sourceUrl, profileUpdateIntervalHours)
 
         processingDir.mkdirs()
         processingDir.resolve("config.yaml").writeText(finalConfig, Charsets.UTF_8)
@@ -543,24 +552,22 @@ object ProfileProcessor {
                         convertedHeaders = fetchResult.rawHeaders
                     }
                     // Route to the appropriate conversion mode based on pxa-template-scheme.
-                    // proxy-providers: placeholder substitution only; no convert.go.
-                    // payload: convert via convert.go → extract proxies → substitute $payload$.
-                    // Condition for special modes: scheme set AND pxa-change-template absent
-                    // (allowTemplateSelection=false means pxa-change-template is absent).
+                    // pxa-template-scheme is the authoritative routing key; pxa-change-template
+                    // only controls whether the user may manually switch templates, it does NOT
+                    // disable proxy-providers / payload processing modes.
                     val scheme = fetchResult.pxaTemplateScheme
                     val hasPxaTemplate = !fetchResult.pxaTemplateUrl.isNullOrBlank()
-                    val isSpecialMode = !fetchResult.allowTemplateSelection && hasPxaTemplate
                     when {
-                        isSpecialMode && scheme == "proxy-providers" -> {
+                        hasPxaTemplate && scheme == "proxy-providers" -> {
                             val intervalHours = fetchResult.rawHeaders
                                 ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
                             writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
                         }
-                        isSpecialMode && scheme == "payload" -> {
-                            writePayloadConfig(context, fetchResult.content, pendingDir, context.processingDir)
+                        hasPxaTemplate && scheme == "payload" -> {
+                            val intervalHours = fetchResult.rawHeaders
+                                ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                            writePayloadConfig(context, fetchResult.content, snapshot.source, intervalHours, pendingDir, context.processingDir)
                         }
-                        scheme == "proxies" ->
-                            convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
                         else -> convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
                     }
                 }
@@ -601,17 +608,15 @@ object ProfileProcessor {
                             }
 
                             val hasPxaTemplateUrl = !pxaTemplateUrl.isNullOrBlank()
-                            val isSpecialModeUrl = !allowTemplateSelection && hasPxaTemplateUrl
                             when {
-                                isSpecialModeUrl && pxaTemplateScheme == "proxy-providers" -> {
+                                hasPxaTemplateUrl && pxaTemplateScheme == "proxy-providers" -> {
                                     val intervalHours = hdrs?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
                                     writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
                                 }
-                                isSpecialModeUrl && pxaTemplateScheme == "payload" -> {
-                                    writePayloadConfig(context, content, pendingDir, context.processingDir)
+                                hasPxaTemplateUrl && pxaTemplateScheme == "payload" -> {
+                                    val intervalHours = hdrs?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                                    writePayloadConfig(context, content, snapshot.source, intervalHours, pendingDir, context.processingDir)
                                 }
-                                pxaTemplateScheme == "proxies" ->
-                                    convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                                 else -> convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                             }
                             effectiveType = Profile.Type.Converted
@@ -805,24 +810,18 @@ object ProfileProcessor {
                     else
                         TemplateManager.isTemplateSelectionAllowed(importedDir)
                     val hasPxaTemplateUpd = !TemplateManager.getPxaTemplateUrl(importedDir).isNullOrBlank()
-                    val isSpecialModeUpd = !allowSel && hasPxaTemplateUpd
                     when {
-                        isSpecialModeUpd && scheme == "proxy-providers" -> {
+                        hasPxaTemplateUpd && scheme == "proxy-providers" -> {
                             val intervalHours = fetchResult.rawHeaders
                                 ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
                             writeProxyProviderConfig(context, snapshot.source, intervalHours, importedDir, context.processingDir)
                         }
-                        isSpecialModeUpd && scheme == "payload" -> {
-                            writePayloadConfig(context, fetchResult.content, importedDir, context.processingDir)
+                        hasPxaTemplateUpd && scheme == "payload" -> {
+                            val intervalHours = fetchResult.rawHeaders
+                                ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                            writePayloadConfig(context, fetchResult.content, snapshot.source, intervalHours, importedDir, context.processingDir)
                         }
-                        scheme == "proxies" ->
-                            convertAndWriteConfig(context, fetchResult.content, importedDir, context.processingDir)
-                        else -> convertAndWriteConfig(
-                            context,
-                            fetchResult.content,
-                            importedDir,
-                            context.processingDir,
-                        )
+                        else -> convertAndWriteConfig(context, fetchResult.content, importedDir, context.processingDir)
                     }
                 }
 
