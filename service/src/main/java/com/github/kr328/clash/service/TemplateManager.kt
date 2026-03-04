@@ -46,6 +46,7 @@ object TemplateManager {
     private const val KEY_TEMPLATE_ID = "templateId"
     private const val KEY_PXA_TEMPLATE_URL = "pxaTemplateUrl"
     private const val KEY_ALLOW_TEMPLATE_SELECTION = "allowTemplateSelection"
+    private const val KEY_PXA_TEMPLATE_SCHEME = "pxaTemplateScheme"
 
     /**
      * Special template id meaning "use the server-specified pxa-template URL".
@@ -132,13 +133,26 @@ object TemplateManager {
         readMeta(profileDir).optBoolean(KEY_ALLOW_TEMPLATE_SELECTION, true)
 
     /**
+     * Returns the pxa-template-scheme value stored for this profile, e.g. "proxy-providers".
+     * Null when not set (normal convert.go mode).
+     */
+    fun getPxaTemplateScheme(profileDir: File): String? =
+        readMeta(profileDir).optString(KEY_PXA_TEMPLATE_SCHEME, "").ifBlank { null }
+
+    /**
      * Saves pxa header values to [profileDir]/[META_FILE], preserving the
      * existing selected template id.
      *
-     * @param pxaTemplateUrl  URL from the pxa-template response header, or null to clear.
-     * @param allowTemplateSelection  Whether the user may change the template.
+     * @param pxaTemplateUrl        URL from the pxa-template response header, or null to clear.
+     * @param allowTemplateSelection Whether the user may change the template.
+     * @param pxaTemplateScheme     Value of pxa-template-scheme header (e.g. "proxy-providers"), or null to clear.
      */
-    fun savePxaMeta(profileDir: File, pxaTemplateUrl: String?, allowTemplateSelection: Boolean) {
+    fun savePxaMeta(
+        profileDir: File,
+        pxaTemplateUrl: String?,
+        allowTemplateSelection: Boolean,
+        pxaTemplateScheme: String? = null,
+    ) {
         val json = readMeta(profileDir)
         if (!pxaTemplateUrl.isNullOrBlank()) {
             json.put(KEY_PXA_TEMPLATE_URL, pxaTemplateUrl)
@@ -146,6 +160,11 @@ object TemplateManager {
             json.remove(KEY_PXA_TEMPLATE_URL)
         }
         json.put(KEY_ALLOW_TEMPLATE_SELECTION, allowTemplateSelection)
+        if (!pxaTemplateScheme.isNullOrBlank()) {
+            json.put(KEY_PXA_TEMPLATE_SCHEME, pxaTemplateScheme)
+        } else {
+            json.remove(KEY_PXA_TEMPLATE_SCHEME)
+        }
         writeMeta(profileDir, json)
     }
 

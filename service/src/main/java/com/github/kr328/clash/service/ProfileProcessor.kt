@@ -70,6 +70,8 @@ object ProfileProcessor {
         val content: String,
         val pxaTemplateUrl: String? = null,
         val allowTemplateSelection: Boolean = true,
+        /** Value of pxa-template-scheme header, e.g. "proxy-providers". Null = normal mode. */
+        val pxaTemplateScheme: String? = null,
         /** True when the source was an HTTP URL and headers were actually read. */
         val headersAvailable: Boolean = false,
         /** Raw HTTP response headers; null for non-HTTP sources. */
@@ -133,7 +135,8 @@ object ProfileProcessor {
                 it == "1" || it.equals("true", ignoreCase = true)
             } ?: false
             val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
-            return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, headersAvailable = true, rawHeaders = response.headers)
+            val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
+            return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme, headersAvailable = true, rawHeaders = response.headers)
         }
     }
 
@@ -177,6 +180,88 @@ object ProfileProcessor {
         } catch (_: Exception) {
             null
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // proxy-providers template substitution
+    // -------------------------------------------------------------------------
+
+    /**
+     * Performs placeholder substitution in [templateContent] for proxy-providers mode.
+     *
+     * Placeholders:
+     *  $subscription_url$          → profile source URL
+     *  $User-Agent$                → app User-Agent string
+     *  $profile-update-interval$   → profile-update-interval header value × 3600 (hours→seconds), or 0
+     *  $x-hwid$                    → HWID if enabled, else removed
+     *  $x-device-os$               → "Android" if HWID enabled, else removed
+     *  $x-ver-os$                  → Android version if HWID enabled, else removed
+     *  $x-device-model$            → device model if HWID enabled, else removed
+     */
+    private fun applyProxyProviderTemplate(
+        context: Context,
+        templateContent: String,
+        sourceUrl: String,
+        profileUpdateIntervalHours: Int,
+    ): String {
+        val versionName = context.packageManager
+            .getPackageInfo(context.packageName, 0).versionName
+        val userAgent = "Clash-Meta/Prizrak-Box (Android Build $versionName)"
+        val uiPrefs = context.getSharedPreferences("ui", Context.MODE_PRIVATE)
+        val sendHwid = uiPrefs.getBoolean("send_hwid", true)
+
+        val intervalSeconds = (profileUpdateIntervalHours * 3600).coerceAtLeast(0)
+
+        var result = templateContent
+        result = result.replace("\$subscription_url\$", sourceUrl)
+        result = result.replace("\$User-Agent\$", userAgent)
+        result = result.replace("\$profile-update-interval\$", intervalSeconds.toString())
+
+        if (sendHwid) {
+            val deviceId = Settings.Secure.getString(
+                context.contentResolver, Settings.Secure.ANDROID_ID
+            ) ?: "unknown"
+            result = result.replace("\$x-hwid\$", deviceId)
+            result = result.replace("\$x-device-os\$", "Android")
+            result = result.replace("\$x-ver-os\$", Build.VERSION.RELEASE ?: "unknown")
+            result = result.replace("\$x-device-model\$", Build.MODEL ?: "unknown")
+        } else {
+            result = result.replace("\$x-hwid\$", "")
+            result = result.replace("\$x-device-os\$", "")
+            result = result.replace("\$x-ver-os\$", "")
+            result = result.replace("\$x-device-model\$", "")
+        }
+
+        return result
+    }
+
+    /**
+     * Downloads the pxa-template, applies placeholder substitution, and writes the
+     * result to [processingDir]/config.yaml. Used instead of [convertAndWriteConfig]
+     * when pxa-template-scheme == "proxy-providers".
+     */
+    private fun writeProxyProviderConfig(
+        context: Context,
+        sourceUrl: String,
+        profileUpdateIntervalHours: Int,
+        pendingDir: File,
+        processingDir: File,
+    ) {
+        val pxaTemplateUrl = TemplateManager.getPxaTemplateUrl(pendingDir)
+            ?: throw IOException("proxy-providers mode requires a pxa-template URL")
+        val template = fetchTemplateFromUrl(pxaTemplateUrl)
+            ?: throw IOException("Failed to download pxa-template for proxy-providers mode")
+        val result = applyProxyProviderTemplate(context, template, sourceUrl, profileUpdateIntervalHours)
+        processingDir.mkdirs()
+        processingDir.resolve("config.yaml").writeText(result, Charsets.UTF_8)
+        // Carry template meta forward so it survives processingDir→importedDir copy.
+        TemplateManager.saveSelectedTemplateId(processingDir, TemplateManager.getSelectedTemplateId(pendingDir))
+        TemplateManager.savePxaMeta(
+            processingDir,
+            pxaTemplateUrl,
+            TemplateManager.isTemplateSelectionAllowed(pendingDir),
+            TemplateManager.getPxaTemplateScheme(pendingDir),
+        )
     }
 
     // -------------------------------------------------------------------------
@@ -264,8 +349,12 @@ object ProfileProcessor {
 
         // Copy full template meta (templateId + pxa values) to processingDir.
         TemplateManager.saveSelectedTemplateId(processingDir, templateId)
-        val allowTemplateSelection = TemplateManager.isTemplateSelectionAllowed(pendingDir)
-        TemplateManager.savePxaMeta(processingDir, pxaTemplateUrl, allowTemplateSelection)
+        TemplateManager.savePxaMeta(
+            processingDir,
+            pxaTemplateUrl,
+            allowTemplateSelection,
+            TemplateManager.getPxaTemplateScheme(pendingDir),
+        )
     }
 
     // -------------------------------------------------------------------------
@@ -336,9 +425,8 @@ object ProfileProcessor {
                             pendingDir,
                             fetchResult.pxaTemplateUrl,
                             fetchResult.allowTemplateSelection,
+                            fetchResult.pxaTemplateScheme,
                         )
-                        // On initial import, default the selected template to "Шаблон из подписки"
-                        // so the pxa-template URL is used immediately without extra user action.
                         if (!fetchResult.pxaTemplateUrl.isNullOrBlank()) {
                             TemplateManager.saveSelectedTemplateId(
                                 pendingDir, TemplateManager.PXA_SUBSCRIPTION_TEMPLATE_ID
@@ -346,7 +434,19 @@ object ProfileProcessor {
                         }
                         convertedHeaders = fetchResult.rawHeaders
                     }
-                    convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
+                    // proxy-providers mode: substitute placeholders; no convert.go needed.
+                    // Condition: pxa-template-scheme=proxy-providers AND no pxa-change-template
+                    // (allowTemplateSelection=false means pxa-change-template is absent).
+                    val isProxyProviderMode = fetchResult.pxaTemplateScheme == "proxy-providers"
+                        && !fetchResult.allowTemplateSelection
+                        && !fetchResult.pxaTemplateUrl.isNullOrBlank()
+                    if (isProxyProviderMode) {
+                        val intervalHours = fetchResult.rawHeaders
+                            ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                        writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
+                    } else {
+                        convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
+                    }
                 }
 
                 var effectiveType = snapshot.type
@@ -376,15 +476,23 @@ object ProfileProcessor {
                                 it == "1" || it.equals("true", ignoreCase = true)
                             } ?: false
                             val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
-                            TemplateManager.savePxaMeta(pendingDir, pxaTemplateUrl, allowTemplateSelection)
-                            // On initial auto-conversion, default selected template to "Шаблон из подписки".
+                            val pxaTemplateScheme = hdrs?.get("pxa-template-scheme")?.trim()?.ifBlank { null }
+                            TemplateManager.savePxaMeta(pendingDir, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme)
                             if (!pxaTemplateUrl.isNullOrBlank()) {
                                 TemplateManager.saveSelectedTemplateId(
                                     pendingDir, TemplateManager.PXA_SUBSCRIPTION_TEMPLATE_ID
                                 )
                             }
 
-                            convertAndWriteConfig(context, content, pendingDir, context.processingDir)
+                            val isProxyProviderMode = pxaTemplateScheme == "proxy-providers"
+                                && !allowTemplateSelection
+                                && !pxaTemplateUrl.isNullOrBlank()
+                            if (isProxyProviderMode) {
+                                val intervalHours = hdrs?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                                writeProxyProviderConfig(context, snapshot.source, intervalHours, pendingDir, context.processingDir)
+                            } else {
+                                convertAndWriteConfig(context, content, pendingDir, context.processingDir)
+                            }
                             effectiveType = Profile.Type.Converted
                             convertedHeaders = hdrs
                         }
@@ -562,15 +670,35 @@ object ProfileProcessor {
                             importedDir,
                             fetchResult.pxaTemplateUrl,
                             fetchResult.allowTemplateSelection,
+                            fetchResult.pxaTemplateScheme,
                         )
                     }
 
-                    convertAndWriteConfig(
-                        context,
-                        fetchResult.content,
-                        importedDir,      // template metadata lives in the imported dir
-                        context.processingDir,
-                    )
+                    // Re-determine proxy-providers mode from fresh headers (or stored scheme as fallback).
+                    val scheme = if (fetchResult.headersAvailable)
+                        fetchResult.pxaTemplateScheme
+                    else
+                        TemplateManager.getPxaTemplateScheme(importedDir)
+                    val allowSel = if (fetchResult.headersAvailable)
+                        fetchResult.allowTemplateSelection
+                    else
+                        TemplateManager.isTemplateSelectionAllowed(importedDir)
+                    val isProxyProviderMode = scheme == "proxy-providers"
+                        && !allowSel
+                        && !TemplateManager.getPxaTemplateUrl(importedDir).isNullOrBlank()
+
+                    if (isProxyProviderMode) {
+                        val intervalHours = fetchResult.rawHeaders
+                            ?.get("profile-update-interval")?.trim()?.toIntOrNull() ?: 0
+                        writeProxyProviderConfig(context, snapshot.source, intervalHours, importedDir, context.processingDir)
+                    } else {
+                        convertAndWriteConfig(
+                            context,
+                            fetchResult.content,
+                            importedDir,
+                            context.processingDir,
+                        )
+                    }
                 }
 
                 val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
