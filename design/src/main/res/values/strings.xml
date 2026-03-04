@@ -415,6 +415,7 @@
     <!-- Converted profile / template selection -->
     <string name="select_template">Select Template</string>
     <string name="select_template_desc">Choose a routing template for this profile</string>
+    <string name="template_pxa_subscription">⭐ Template from subscription</string>
     <string name="template_default">🇷🇺 Default (Prizrak-Box)</string>
     <string name="template_ru_bundle">🇷🇺 RU-Bundle by Legiz</string>
     <string name="template_ultimate">🇷🇺 Ultimate by Davoyan</string>

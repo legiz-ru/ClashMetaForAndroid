@@ -47,6 +47,12 @@ object TemplateManager {
     private const val KEY_PXA_TEMPLATE_URL = "pxaTemplateUrl"
     private const val KEY_ALLOW_TEMPLATE_SELECTION = "allowTemplateSelection"
 
+    /**
+     * Special template id meaning "use the server-specified pxa-template URL".
+     * Stored as the selected templateId when the user picks "Шаблон из подписки".
+     */
+    const val PXA_SUBSCRIPTION_TEMPLATE_ID = "pxa_subscription"
+
     // -------------------------------------------------------------------------
     // Template content loading
     // -------------------------------------------------------------------------

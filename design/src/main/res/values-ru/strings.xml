@@ -379,6 +379,7 @@
     <!-- Converted profile / template selection -->
     <string name="select_template">Выбрать шаблон</string>
     <string name="select_template_desc">Выберите шаблон маршрутизации для этого профиля</string>
+    <string name="template_pxa_subscription">⭐ Шаблон из подписки</string>
     <string name="template_default">🇷🇺 По умолчанию</string>
     <string name="template_ru_bundle">🇷🇺 ru-bundle от legiz</string>
     <string name="template_ultimate">🇷🇺 Ultimate от Davoyan</string>

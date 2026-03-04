@@ -103,26 +103,41 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
         val pendingProfileDir = pendingDir.resolve(profile.uuid.toString())
         val currentTemplateId = TemplateManager.getSelectedTemplateId(pendingProfileDir)
+        val pxaTemplateUrl = TemplateManager.getPxaTemplateUrl(pendingProfileDir)
 
-        val templates = TemplateManager.Template.entries.toList()
-        val displayNames = templates.map { context.getString(
-            when (it) {
-                TemplateManager.Template.Default       -> R.string.template_default
-                TemplateManager.Template.RuBundle      -> R.string.template_ru_bundle
-                TemplateManager.Template.Ultimate      -> R.string.template_ultimate
-                TemplateManager.Template.DefaultSmart  -> R.string.template_default_smart
-                TemplateManager.Template.RuBundleSmart -> R.string.template_ru_bundle_smart
-                TemplateManager.Template.UltimateSmart -> R.string.template_ultimate_smart
-                TemplateManager.Template.ChinaSmart    -> R.string.template_china_smart
-                TemplateManager.Template.Custom        -> R.string.template_custom
-            }
-        ) }.toTypedArray()
-        val currentIndex = templates.indexOfFirst { it.id == currentTemplateId }.coerceAtLeast(0)
+        // Build flat lists of ids and display names.
+        // "Шаблон из подписки" is prepended when a pxa-template URL is available.
+        val templateIds = mutableListOf<String>()
+        val displayNames = mutableListOf<String>()
+
+        if (!pxaTemplateUrl.isNullOrBlank()) {
+            templateIds.add(TemplateManager.PXA_SUBSCRIPTION_TEMPLATE_ID)
+            displayNames.add(context.getString(R.string.template_pxa_subscription))
+        }
+
+        val builtinTemplates = TemplateManager.Template.entries.toList()
+        builtinTemplates.forEach { t ->
+            templateIds.add(t.id)
+            displayNames.add(context.getString(
+                when (t) {
+                    TemplateManager.Template.Default       -> R.string.template_default
+                    TemplateManager.Template.RuBundle      -> R.string.template_ru_bundle
+                    TemplateManager.Template.Ultimate      -> R.string.template_ultimate
+                    TemplateManager.Template.DefaultSmart  -> R.string.template_default_smart
+                    TemplateManager.Template.RuBundleSmart -> R.string.template_ru_bundle_smart
+                    TemplateManager.Template.UltimateSmart -> R.string.template_ultimate_smart
+                    TemplateManager.Template.ChinaSmart    -> R.string.template_china_smart
+                    TemplateManager.Template.Custom        -> R.string.template_custom
+                }
+            ))
+        }
+
+        val currentIndex = templateIds.indexOfFirst { it == currentTemplateId }.coerceAtLeast(0)
 
         val selectedIndex = suspendCancellableCoroutine<Int?> { continuation ->
             val dialog = MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.select_template)
-                .setSingleChoiceItems(displayNames, currentIndex) { dlg, which ->
+                .setSingleChoiceItems(displayNames.toTypedArray(), currentIndex) { dlg, which ->
                     dlg.dismiss()
                     continuation.resume(which)
                 }
@@ -132,24 +147,31 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
             continuation.invokeOnCancellation { dialog.dismiss() }
         } ?: return
 
-        val selectedTemplate = templates[selectedIndex]
+        val selectedId = templateIds[selectedIndex]
 
-        // For Custom template, let the user pick a YAML file to use as the template.
-        if (selectedTemplate == TemplateManager.Template.Custom) {
-            val uri = this@PropertiesActivity.startActivityForResult(
-                ActivityResultContracts.GetContent(), "*/*"
-            )
-            if (uri == null) return // User cancelled the file picker
-            val content = withContext(Dispatchers.IO) {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+        // "Шаблон из подписки" — just save the special id; pxa URL is already in meta.
+        if (selectedId == TemplateManager.PXA_SUBSCRIPTION_TEMPLATE_ID) {
+            TemplateManager.saveSelectedTemplateId(pendingProfileDir, selectedId)
+        } else {
+            val selectedTemplate = builtinTemplates.first { it.id == selectedId }
+
+            // For Custom template, let the user pick a YAML file to use as the template.
+            if (selectedTemplate == TemplateManager.Template.Custom) {
+                val uri = this@PropertiesActivity.startActivityForResult(
+                    ActivityResultContracts.GetContent(), "*/*"
+                )
+                if (uri == null) return // User cancelled the file picker
+                val content = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                }
+                if (content.isNullOrBlank()) return
+                val customFile = context.filesDir.resolve("custom_template.yaml")
+                withContext(Dispatchers.IO) { customFile.writeText(content, Charsets.UTF_8) }
+                TemplateManager.setCustomTemplatePath(context, customFile.absolutePath)
             }
-            if (content.isNullOrBlank()) return
-            val customFile = context.filesDir.resolve("custom_template.yaml")
-            withContext(Dispatchers.IO) { customFile.writeText(content, Charsets.UTF_8) }
-            TemplateManager.setCustomTemplatePath(context, customFile.absolutePath)
-        }
 
-        TemplateManager.saveSelectedTemplateId(pendingProfileDir, selectedTemplate.id)
+            TemplateManager.saveSelectedTemplateId(pendingProfileDir, selectedTemplate.id)
+        }
 
         // Re-commit so the new template is applied.
         verifyAndCommit()

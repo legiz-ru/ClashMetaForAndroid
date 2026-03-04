@@ -236,11 +236,18 @@ object ProfileProcessor {
     ) {
         val templateId = TemplateManager.getSelectedTemplateId(pendingDir)
         val pxaTemplateUrl = TemplateManager.getPxaTemplateUrl(pendingDir)
+        val allowTemplateSelection = TemplateManager.isTemplateSelectionAllowed(pendingDir)
 
-        val templateContent = if (!pxaTemplateUrl.isNullOrBlank()) {
-            // Use server-specified template; fall back to user selection on error.
-            fetchTemplateFromUrl(pxaTemplateUrl)
-                ?: TemplateManager.loadTemplate(context, templateId)
+        // Template priority:
+        //  1. allowTemplateSelection=false → pxa-template is mandatory, always use it.
+        //  2. User explicitly chose "Шаблон из подписки" (pxa_subscription id) → use pxa-template URL.
+        //  3. Otherwise → use the user-selected built-in / custom template.
+        val usePxaTemplate = !pxaTemplateUrl.isNullOrBlank() &&
+            (!allowTemplateSelection || templateId == TemplateManager.PXA_SUBSCRIPTION_TEMPLATE_ID)
+
+        val templateContent = if (usePxaTemplate) {
+            fetchTemplateFromUrl(pxaTemplateUrl!!)
+                ?: TemplateManager.loadTemplate(context, TemplateManager.Template.Default.id)
         } else {
             TemplateManager.loadTemplate(context, templateId)
         }
@@ -330,6 +337,13 @@ object ProfileProcessor {
                             fetchResult.pxaTemplateUrl,
                             fetchResult.allowTemplateSelection,
                         )
+                        // On initial import, default the selected template to "Шаблон из подписки"
+                        // so the pxa-template URL is used immediately without extra user action.
+                        if (!fetchResult.pxaTemplateUrl.isNullOrBlank()) {
+                            TemplateManager.saveSelectedTemplateId(
+                                pendingDir, TemplateManager.PXA_SUBSCRIPTION_TEMPLATE_ID
+                            )
+                        }
                         convertedHeaders = fetchResult.rawHeaders
                     }
                     convertAndWriteConfig(context, fetchResult.content, pendingDir, context.processingDir)
@@ -363,6 +377,12 @@ object ProfileProcessor {
                             } ?: false
                             val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
                             TemplateManager.savePxaMeta(pendingDir, pxaTemplateUrl, allowTemplateSelection)
+                            // On initial auto-conversion, default selected template to "Шаблон из подписки".
+                            if (!pxaTemplateUrl.isNullOrBlank()) {
+                                TemplateManager.saveSelectedTemplateId(
+                                    pendingDir, TemplateManager.PXA_SUBSCRIPTION_TEMPLATE_ID
+                                )
+                            }
 
                             convertAndWriteConfig(context, content, pendingDir, context.processingDir)
                             effectiveType = Profile.Type.Converted
