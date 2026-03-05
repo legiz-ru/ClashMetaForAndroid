@@ -231,7 +231,7 @@
                                     android:focusable="true"
                                     android:onClick="@{() -> self.request(Request.ManageProfiles)}"
                                     android:padding="4dp"
-                                    android:src="@drawable/ic_mdi_arrange_bring_forward"
+                                    android:src="@drawable/ic_mdi_account_cog_outline"
                                     android:contentDescription="@string/manage_profiles"
                                     app:tint="?attr/colorOnSurfaceVariant" />
                             </LinearLayout>
