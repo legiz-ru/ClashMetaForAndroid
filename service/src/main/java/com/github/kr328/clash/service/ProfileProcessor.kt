@@ -132,12 +132,8 @@ object ProfileProcessor {
             val body = response.body?.string() ?: throw IOException("Empty response body")
             val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
             val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
-            // pxa-change-template is ignored when pxa-template or pxa-template-scheme is present.
-            val pxaChangeTemplate = response.headers["pxa-change-template"]?.trim()?.let {
-                it == "1" || it.equals("true", ignoreCase = true)
-            } ?: false
-            val allowTemplateSelection = if (pxaTemplateUrl != null || pxaTemplateScheme != null) false
-                                         else pxaChangeTemplate
+            // Template selection is allowed unless the server locks it via pxa-template.
+            val allowTemplateSelection = pxaTemplateUrl == null && pxaTemplateScheme == null
             return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme, headersAvailable = true, rawHeaders = response.headers)
         }
     }
@@ -598,12 +594,8 @@ object ProfileProcessor {
                             val hdrs = prefetchResult.headers
                             val pxaTemplateUrl = hdrs?.get("pxa-template")?.trim()?.ifBlank { null }
                             val pxaTemplateScheme = hdrs?.get("pxa-template-scheme")?.trim()?.ifBlank { null }
-                            // pxa-change-template is ignored when pxa-template or pxa-template-scheme is present.
-                            val pxaChangeTemplate = hdrs?.get("pxa-change-template")?.trim()?.let {
-                                it == "1" || it.equals("true", ignoreCase = true)
-                            } ?: false
-                            val allowTemplateSelection = if (pxaTemplateUrl != null || pxaTemplateScheme != null) false
-                                                         else pxaChangeTemplate
+                            // Template selection is allowed unless the server locks it via pxa-template.
+                            val allowTemplateSelection = pxaTemplateUrl == null && pxaTemplateScheme == null
                             TemplateManager.savePxaMeta(pendingDir, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme)
                             if (!pxaTemplateUrl.isNullOrBlank()) {
                                 TemplateManager.saveSelectedTemplateId(
