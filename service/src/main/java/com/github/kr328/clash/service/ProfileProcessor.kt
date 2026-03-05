@@ -131,11 +131,13 @@ object ProfileProcessor {
             }
             val body = response.body?.string() ?: throw IOException("Empty response body")
             val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
+            val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
+            // pxa-change-template is ignored when pxa-template or pxa-template-scheme is present.
             val pxaChangeTemplate = response.headers["pxa-change-template"]?.trim()?.let {
                 it == "1" || it.equals("true", ignoreCase = true)
             } ?: false
-            val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
-            val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
+            val allowTemplateSelection = if (pxaTemplateUrl != null || pxaTemplateScheme != null) false
+                                         else pxaChangeTemplate
             return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme, headersAvailable = true, rawHeaders = response.headers)
         }
     }
@@ -595,11 +597,13 @@ object ProfileProcessor {
                             // Extract and save pxa headers for the auto-converted profile.
                             val hdrs = prefetchResult.headers
                             val pxaTemplateUrl = hdrs?.get("pxa-template")?.trim()?.ifBlank { null }
+                            val pxaTemplateScheme = hdrs?.get("pxa-template-scheme")?.trim()?.ifBlank { null }
+                            // pxa-change-template is ignored when pxa-template or pxa-template-scheme is present.
                             val pxaChangeTemplate = hdrs?.get("pxa-change-template")?.trim()?.let {
                                 it == "1" || it.equals("true", ignoreCase = true)
                             } ?: false
-                            val allowTemplateSelection = if (pxaTemplateUrl != null) pxaChangeTemplate else true
-                            val pxaTemplateScheme = hdrs?.get("pxa-template-scheme")?.trim()?.ifBlank { null }
+                            val allowTemplateSelection = if (pxaTemplateUrl != null || pxaTemplateScheme != null) false
+                                                         else pxaChangeTemplate
                             TemplateManager.savePxaMeta(pendingDir, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme)
                             if (!pxaTemplateUrl.isNullOrBlank()) {
                                 TemplateManager.saveSelectedTemplateId(
