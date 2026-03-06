@@ -67,6 +67,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         AddManually,
         OpenHelp,
         OpenAbout,
+        CheckUpdate,
         SelectProxy,
         UrlTest,
     }
@@ -126,6 +127,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var pendingSelectGroup: String? = null
     private var pendingSelectName: String? = null
     private var pendingUrlTestGroup: String? = null
+    var pendingUpdateTag: String? = null
+    var pendingUpdateUrl: String? = null
 
     private var latestProxyGroups: Map<String, ProxyGroup> = emptyMap()
     private var latestUseDots: Boolean = true
@@ -906,6 +909,44 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
             AlertDialog.Builder(context)
                 .setView(binding.root)
+                .setPositiveButton(R.string.check_for_updates) { _, _ ->
+                    requests.trySend(Request.CheckUpdate)
+                }
+                .show()
+        }
+    }
+
+    suspend fun showUpdateAvailableDialog(tagName: String, downloadUrl: String) {
+        withContext(Dispatchers.Main) {
+            AlertDialog.Builder(context)
+                .setTitle(R.string.update_available_title)
+                .setMessage(context.getString(R.string.update_available_message, tagName))
+                .setPositiveButton(R.string.update_download) { _, _ ->
+                    pendingUpdateTag = tagName
+                    pendingUpdateUrl = downloadUrl
+                    requests.trySend(Request.CheckUpdate)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+    }
+
+    suspend fun showUpdateNotFoundDialog() {
+        withContext(Dispatchers.Main) {
+            AlertDialog.Builder(context)
+                .setTitle(R.string.update_not_found_title)
+                .setMessage(R.string.update_not_found_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+    }
+
+    suspend fun showUpdateErrorDialog(message: String) {
+        withContext(Dispatchers.Main) {
+            AlertDialog.Builder(context)
+                .setTitle(R.string.update_error_title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
                 .show()
         }
     }
@@ -1041,6 +1082,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val group = pendingUrlTestGroup ?: return null
         pendingUrlTestGroup = null
         return group
+    }
+
+    fun consumePendingUpdate(): Pair<String, String>? {
+        val tag = pendingUpdateTag ?: return null
+        val url = pendingUpdateUrl ?: return null
+        pendingUpdateTag = null
+        pendingUpdateUrl = null
+        return tag to url
     }
 
     fun request(request: Request) {

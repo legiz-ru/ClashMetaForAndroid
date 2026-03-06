@@ -15,6 +15,7 @@ import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.util.clashDir
 import java.io.File
 import java.io.FileOutputStream
+import com.github.kr328.clash.update.UpdateChecker
 import com.github.kr328.clash.design.R as DesignR
 
 
@@ -37,6 +38,7 @@ class MainApplication : Application() {
         if (processName == packageName) {
             Remote.launch()
             setupShortcuts()
+            UpdateChecker.createNotificationChannel(this)
         } else {
             sendServiceRecreated()
         }

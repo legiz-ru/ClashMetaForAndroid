@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- App-specific external Downloads directory — no WRITE_EXTERNAL_STORAGE needed on API 29+ -->
+    <external-files-path
+        name="update_apk"
+        path="Download/" />
+</paths>

@@ -22,6 +22,7 @@ import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.withProfile
 import com.github.kr328.clash.core.bridge.*
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.update.UpdateChecker
 import io.github.g00fy2.quickie.QRResult
 import io.github.g00fy2.quickie.ScanQRCode
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +73,14 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         extractInstallConfigUrl(intent)?.let {
             importProfileFromUrl(it, forceAutoImport = true)
+        }
+
+        // Handle update deep-link from notification tap
+        intent?.let { handleUpdateIntent(it, design) }
+
+        // Periodic automatic update check (every 12 hours)
+        if (UpdateChecker.shouldCheck(this)) {
+            launch { runUpdateCheck(design, silent = true) }
         }
 
         val ticker = ticker(TimeUnit.SECONDS.toMillis(5))
@@ -147,6 +156,16 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(HelpActivity::class.intent)
                         MainDesign.Request.OpenAbout ->
                             design.showAbout(queryAppVersionName())
+                        MainDesign.Request.CheckUpdate -> {
+                            val pending = design.consumePendingUpdate()
+                            if (pending != null) {
+                                // User confirmed download from update dialog
+                                UpdateChecker.startDownload(this@MainActivity, pending.second, pending.first)
+                            } else {
+                                // Manual check from About dialog
+                                launch { runUpdateCheck(design, silent = false) }
+                            }
+                        }
                         MainDesign.Request.SelectProxy -> {
                             val (group, selected) = design.consumePendingProxySelection() ?: return@onReceive
                             withClash {
@@ -246,6 +265,33 @@ class MainActivity : BaseActivity<MainDesign>() {
     private suspend fun queryAppVersionName(): String {
         return withContext(Dispatchers.IO) {
             packageManager.getPackageInfo(packageName, 0).versionName + "\n" + Bridge.nativeCoreVersion().replace("_", "-")
+        }
+    }
+
+    private suspend fun runUpdateCheck(design: MainDesign, silent: Boolean) {
+        when (val result = UpdateChecker.check(this)) {
+            is UpdateChecker.CheckResult.UpdateAvailable -> {
+                if (silent) {
+                    UpdateChecker.showUpdateNotification(this, result.tagName, result.downloadUrl)
+                } else {
+                    design.showUpdateAvailableDialog(result.tagName, result.downloadUrl)
+                }
+            }
+            is UpdateChecker.CheckResult.UpToDate -> {
+                if (!silent) design.showUpdateNotFoundDialog()
+            }
+            is UpdateChecker.CheckResult.Error -> {
+                if (!silent) design.showUpdateErrorDialog(result.message)
+            }
+        }
+    }
+
+    private fun handleUpdateIntent(intent: Intent, design: MainDesign) {
+        if (intent.action != UpdateChecker.ACTION_SHOW_UPDATE) return
+        val tag = intent.getStringExtra(UpdateChecker.EXTRA_TAG) ?: return
+        val url = intent.getStringExtra(UpdateChecker.EXTRA_URL) ?: return
+        lifecycleScope.launch {
+            design.showUpdateAvailableDialog(tag, url)
         }
     }
 

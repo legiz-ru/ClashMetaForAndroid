@@ -431,6 +431,15 @@
     <string name="converted_profile_hint">Proxy links (vless://, trojan://, etc.) or SingBox JSON — a template will be applied</string>
     <string name="templates">Templates</string>
 
+    <!-- Update checker -->
+    <string name="check_for_updates">Check for Updates</string>
+    <string name="update_available_title">Update Available</string>
+    <string name="update_available_message">Version %s is available. Download and install?</string>
+    <string name="update_download">Download</string>
+    <string name="update_not_found_title">No Updates</string>
+    <string name="update_not_found_message">You are using the latest version.</string>
+    <string name="update_error_title">Update Check Failed</string>
+
     <string name="shortcut_toggle_short">Toggle Clash</string>
     <string name="shortcut_toggle_long">Toggle Clash service on/off</string>
     <string name="shortcut_start_short">Start Clash</string>

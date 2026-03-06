@@ -395,6 +395,15 @@
     <string name="converted_profile_hint">Ссылки прокси (vless://, trojan://, и др.) или SingBox JSON — будет применён шаблон</string>
     <string name="templates">Шаблоны</string>
 
+    <!-- Update checker -->
+    <string name="check_for_updates">Проверить обновления</string>
+    <string name="update_available_title">Доступно обновление</string>
+    <string name="update_available_message">Версия %s доступна для загрузки. Скачать и установить?</string>
+    <string name="update_download">Скачать</string>
+    <string name="update_not_found_title">Обновлений нет</string>
+    <string name="update_not_found_message">У вас установлена последняя версия.</string>
+    <string name="update_error_title">Ошибка проверки обновлений</string>
+
     <string name="shortcut_toggle_short">Вкл/выкл Clash</string>
     <string name="shortcut_toggle_long">Включить или выключить сервис Clash</string>
     <string name="shortcut_start_short">Запустить Clash</string>
