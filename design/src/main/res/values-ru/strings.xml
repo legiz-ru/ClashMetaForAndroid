@@ -394,4 +394,11 @@
     <string name="import_converted_profile">Импортировать как конвертированный профиль</string>
     <string name="converted_profile_hint">Ссылки прокси (vless://, trojan://, и др.) или SingBox JSON — будет применён шаблон</string>
     <string name="templates">Шаблоны</string>
+
+    <string name="shortcut_toggle_short">Вкл/выкл Clash</string>
+    <string name="shortcut_toggle_long">Включить или выключить сервис Clash</string>
+    <string name="shortcut_start_short">Запустить Clash</string>
+    <string name="shortcut_start_long">Запустить сервис Clash</string>
+    <string name="shortcut_stop_short">Остановить Clash</string>
+    <string name="shortcut_stop_long">Остановить сервис Clash</string>
 </resources>
