@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/apk/res/generated"
+    xmlns:aapt="http://schemas.android.com/apk/res-auto"
     android:width="320dp"
     android:height="160dp"
     android:viewportWidth="1280"
