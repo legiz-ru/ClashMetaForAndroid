@@ -170,16 +170,6 @@ class ProfileWorker : BaseService() {
     }
 
     private fun completed(uuid: UUID, name: String) {
-        val id = UndefinedIds.next()
-
-        val notification = resultBuilder(id, uuid)
-            .setContentTitle(getString(R.string.update_successfully))
-            .setContentText(getString(R.string.format_update_complete, name))
-            .build()
-
-        NotificationManagerCompat.from(this)
-            .notify(id, notification)
-
         sendProfileUpdateCompleted(uuid)
     }
 
