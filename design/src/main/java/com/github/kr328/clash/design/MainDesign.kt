@@ -19,7 +19,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
+import androidx.core.widget.NestedScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.common.util.TvUtils
@@ -135,7 +135,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
     private var proxyGroupDialog: AppBottomSheetDialog? = null
-    private var proxyGroupScrollView: ScrollView? = null
+    private var proxyGroupScrollView: NestedScrollView? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -517,7 +517,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             topBar.addView(urlTestButton)
             addView(topBar)
 
-            val listScroll = ScrollView(context).apply {
+            val listScroll = NestedScrollView(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     listHeight,
