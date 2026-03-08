@@ -3,6 +3,7 @@ package com.github.kr328.clash.design.view
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import kotlin.math.absoluteValue
 import kotlin.math.tan
@@ -17,6 +18,7 @@ class VerticalScrollableHost @JvmOverloads constructor(
     private var initialY = 0f
 
     private val degree = tan(Math.toRadians(15.0))
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         val parentView = parent ?: return super.onInterceptTouchEvent(ev)
@@ -29,9 +31,7 @@ class VerticalScrollableHost @JvmOverloads constructor(
             val dx = ev.x - initialX
             val dy = ev.y - initialY
 
-            val t = dy.absoluteValue / dx.absoluteValue
-
-            if (t < degree) {
+            if (dx.absoluteValue > touchSlop && (dy.absoluteValue / dx.absoluteValue) < degree) {
                 parentView.requestDisallowInterceptTouchEvent(false)
             }
         }
