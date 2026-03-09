@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tv_import_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="32dp"
+            android:text="@string/tv_import_title"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+            android:gravity="center" />
+
+        <!-- QR Code card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@android:color/white"
+            android:layout_marginBottom="24dp">
+
+            <ImageView
+                android:id="@+id/qr_image"
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:padding="12dp"
+                android:contentDescription="@string/tv_import_qr_desc"
+                android:scaleType="fitCenter" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- URL text -->
+        <TextView
+            android:id="@+id/url_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:gravity="center"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textIsSelectable="true"
+            android:hint="@string/tv_import_loading" />
+
+        <!-- Instruction -->
+        <TextView
+            android:id="@+id/instruction_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center"
+            android:text="@string/tv_import_instruction"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:alpha="0.7" />
+
+        <!-- Status message (visible after receiving profile) -->
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:visibility="gone" />
+
+        <!-- Cancel button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/cancel"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+    </LinearLayout>
+
+</ScrollView>

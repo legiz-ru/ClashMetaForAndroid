@@ -152,6 +152,8 @@ class MainActivity : BaseActivity<MainDesign>() {
                             }
                             startActivity(PropertiesActivity::class.intent.setUUID(uuid))
                         }
+                        MainDesign.Request.TvImport ->
+                            startActivity(TvImportActivity::class.intent)
                         MainDesign.Request.OpenHelp ->
                             startActivity(HelpActivity::class.intent)
                         MainDesign.Request.OpenAbout ->

@@ -181,6 +181,11 @@
             android:configChanges="uiMode"
             android:exported="false"
             android:label="@string/files" />
+        <activity
+            android:name=".TvImportActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/tv_import_title" />
 
         <service
             android:name=".LogcatService"

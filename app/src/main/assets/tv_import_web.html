@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prizrak-Box — Импорт на TV</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3edf7;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 28px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.08);
+      padding: 32px 28px 28px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 48px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1c1b1f;
+      margin-bottom: 4px;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #49454f;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #49454f;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      border: 1.5px solid #cac4d0;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1c1b1f;
+      background: #fffbfe;
+      resize: vertical;
+      outline: none;
+      transition: border-color .15s;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      border-color: #6750a4;
+      box-shadow: 0 0 0 3px rgba(103,80,164,.15);
+    }
+
+    textarea::placeholder { color: #938f99; }
+
+    button#submit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px;
+      margin-top: 16px;
+      background: #6750a4;
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, opacity .2s;
+      letter-spacing: .4px;
+    }
+
+    button#submit:hover { background: #7965af; }
+    button#submit:active { background: #5c4a95; }
+    button#submit:disabled { opacity: .55; cursor: not-allowed; }
+
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #status {
+      margin-top: 18px;
+      min-height: 36px;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      display: none;
+    }
+
+    #status.success {
+      display: block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+
+    #status.error {
+      display: block;
+      background: #fce4ec;
+      color: #b71c1c;
+      border: 1px solid #ef9a9a;
+    }
+
+    .hint {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: #f3edf7;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #49454f;
+      line-height: 1.5;
+    }
+
+    .hint strong { color: #6750a4; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <span class="logo">🛡</span>
+      <h1>Prizrak-Box</h1>
+      <p>Импорт профиля на TV</p>
+    </div>
+
+    <label for="content">Ссылка на подписку или YAML-конфигурация</label>
+    <textarea
+      id="content"
+      placeholder="Вставьте ссылку (https://, clash://, sub://) или YAML-конфигурацию..."></textarea>
+
+    <button id="submit" onclick="send()">
+      <span id="btn-icon">📡</span>
+      <span id="btn-text">Отправить на TV</span>
+      <span class="spinner" id="spinner"></span>
+    </button>
+
+    <div id="status"></div>
+
+    <div class="hint">
+      <strong>Что поддерживается:</strong><br>
+      • Ссылки на подписку (https://, clash://, sub://)<br>
+      • Raw YAML конфигурация<br>
+      • Base64-encoded конфигурация
+    </div>
+  </div>
+
+  <script>
+    async function send() {
+      const content = document.getElementById('content').value.trim();
+      if (!content) {
+        showStatus('error', '❌ Поле не может быть пустым');
+        return;
+      }
+
+      const btn = document.getElementById('submit');
+      const icon = document.getElementById('btn-icon');
+      const text = document.getElementById('btn-text');
+      const spinner = document.getElementById('spinner');
+
+      btn.disabled = true;
+      icon.style.display = 'none';
+      spinner.style.display = 'inline-block';
+      text.textContent = 'Отправка...';
+      document.getElementById('status').className = '';
+      document.getElementById('status').style.display = 'none';
+
+      try {
+        const res = await fetch('/Prizrak-BoxTVimport/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          showStatus('success', '✅ Профиль успешно передан на TV!');
+          document.getElementById('content').value = '';
+        } else {
+          showStatus('error', '❌ Ошибка: ' + (data.message || 'Неизвестная ошибка'));
+        }
+      } catch (e) {
+        showStatus('error', '❌ Не удалось подключиться к TV. Проверьте Wi-Fi.');
+      } finally {
+        btn.disabled = false;
+        icon.style.display = 'inline';
+        spinner.style.display = 'none';
+        text.textContent = 'Отправить на TV';
+      }
+    }
+
+    function showStatus(type, msg) {
+      const el = document.getElementById('status');
+      el.className = type;
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    document.getElementById('content').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send();
+    });
+  </script>
+</body>
+</html>

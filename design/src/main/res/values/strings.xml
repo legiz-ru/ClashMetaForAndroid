@@ -381,6 +381,15 @@
     <string name="scan_qr_code">Scan QR Code</string>
     <string name="add_manually">Add Manually</string>
     <string name="add_from_file">Add from File</string>
+    <string name="add_from_tv">From another device</string>
+    <string name="add_from_tv_badge">Wi-Fi</string>
+    <string name="add_from_tv_summary">Import profile via Wi-Fi using QR code</string>
+    <string name="tv_import_title">Import from another device</string>
+    <string name="tv_import_qr_desc">QR code for Wi-Fi import</string>
+    <string name="tv_import_loading">Getting network address…</string>
+    <string name="tv_import_instruction">Open the link in Prizrak-Box or a browser\non a device connected to the same Wi-Fi</string>
+    <string name="tv_import_received">Profile received, importing…</string>
+    <string name="tv_import_no_wifi">Device is not connected to Wi-Fi</string>
     <string name="manage_profiles">Profiles</string>
     <string name="new_profile_btn">New Profile</string>
     <string name="update_subscriptions">Update Subscriptions</string>

@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.quickie.bundled)
     implementation(libs.androidx.activity.ktx)
+    implementation("com.google.zxing:core:3.5.3")
 }
 
 tasks.getByName("clean", type = Delete::class) {
