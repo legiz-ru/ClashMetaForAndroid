@@ -765,13 +765,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
 
-        // Restore scroll position after the new content has been laid out.
+        // Restore scroll position before the first layout pass so RecyclerView
+        // never renders at position 0 first. LinearLayoutManager stores the
+        // pending scroll and applies it during onLayoutChildren — no visible flash.
         if (savedFirstPos > 0 || savedFirstOffset < 0) {
-            val rv = proxyGroupRecyclerView ?: return
-            rv.post {
-                (rv.layoutManager as? LinearLayoutManager)
-                    ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
-            }
+            (proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager)
+                ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
         }
     }
 
