@@ -67,7 +67,8 @@ class AppBottomSheetDialog(
 
         setOnShowListener {
             if (forceExpanded) {
-                behavior.halfExpandedRatio = 0.99f
+                behavior.skipCollapsed = true
+                behavior.isHideable = true
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
             }
         }

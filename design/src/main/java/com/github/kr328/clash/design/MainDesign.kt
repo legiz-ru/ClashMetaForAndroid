@@ -19,7 +19,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.github.kr328.clash.common.util.TvUtils
@@ -135,7 +136,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
     private var proxyGroupDialog: AppBottomSheetDialog? = null
-    private var proxyGroupScrollView: NestedScrollView? = null
+    private var proxyGroupRecyclerView: RecyclerView? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -153,7 +154,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             if (!running) {
                 // Clear stale proxy groups so they don't flash when VPN restarts
                 latestProxyGroups = emptyMap()
-                proxyGroupScrollView = null
+                proxyGroupRecyclerView = null
                 proxyGroupDialog?.dismiss()
                 val container = binding.proxyGroupsContainer
                 container.removeAllViews()
@@ -517,30 +518,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             topBar.addView(urlTestButton)
             addView(topBar)
 
-            val listScroll = NestedScrollView(context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    listHeight,
-                )
-                isFillViewport = true
-                isVerticalScrollBarEnabled = true
-                isScrollbarFadingEnabled = false
-            }
-            proxyGroupScrollView = listScroll
-
-            val listContainer = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), (12 * dp).toInt())
-            }
-
-            for (proxy in sortedProxies(group)) {
+            // Build each proxy row as a standalone view.
+            // Using unique item view types prevents RecyclerView from recycling
+            // views across different positions — safe for pre-built complex rows.
+            fun buildProxyRow(proxy: com.github.kr328.clash.core.model.Proxy): View {
                 val isSelected = proxy.name == group.now
                 val proxyDisplayName = proxy.title.ifEmpty { proxy.name }
                 val proxyDelay = if (proxy.type.group) {
                     val nestedGroup = groupMap[proxy.name]
                     if (nestedGroup != null) {
                         if (proxy.type == com.github.kr328.clash.core.model.Proxy.Type.LoadBalance) {
-                            // LoadBalance distributes across all proxies — show min live delay
                             nestedGroup.proxies.filter { it.delay in 1..65534 }
                                 .minOfOrNull { it.delay } ?: 0
                         } else {
@@ -553,7 +540,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     proxy.delay
                 }
 
-                // Build weight-info message factory for Smart group proxies (6.1 and 6.2)
                 val nestedSmartGroup62 =
                     if (!isSmartGroup && proxy.type == com.github.kr328.clash.core.model.Proxy.Type.Smart)
                         groupMap[proxy.name] else null
@@ -672,7 +658,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 infoColumn.addView(nameView)
                 infoColumn.addView(subtitleView)
 
-                // Right section: [smart icon?] [delay dot/text] — horizontal, centred
                 val rightColumn = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -682,7 +667,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     )
                 }
 
-                // 6.1 — Smart parent: rank shield icon to the left of the delay indicator
                 if (isSmartGroup) {
                     val iconRes = when (proxy.rank) {
                         "MostUsed" -> R.drawable.ic_mdi_shield
@@ -708,7 +692,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     rightColumn.addView(rankIcon)
                 }
 
-                // 6.2 — Nested Smart group inside non-Smart parent: shield icon to the left of delay
                 if (nestedSmartGroup62 != null) {
                     val shieldIconRes = if (hasSmartData62)
                         R.drawable.ic_mdi_shield_check_outline
@@ -733,15 +716,34 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
 
                 rightColumn.addView(createDelayText(dp, proxyDelay, useDots))
-
                 row.addView(infoColumn)
                 row.addView(rightColumn)
                 rowCard.addView(row)
-                listContainer.addView(rowCard)
+                return rowCard
             }
 
-            listScroll.addView(listContainer)
-            addView(listScroll)
+            val proxyRows = sortedProxies(group).map { buildProxyRow(it) }
+
+            val rv = RecyclerView(context).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    listHeight,
+                )
+                layoutManager = LinearLayoutManager(context)
+                clipToPadding = false
+                setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), (12 * dp).toInt())
+                // Each position gets a unique view type so RecyclerView never
+                // tries to rebind a pre-built view into the wrong slot.
+                adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                    override fun getItemCount() = proxyRows.size
+                    override fun getItemViewType(position: Int) = position
+                    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+                        object : RecyclerView.ViewHolder(proxyRows[viewType]) {}
+                    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {}
+                }
+            }
+            proxyGroupRecyclerView = rv
+            addView(rv)
         }
     }
 
@@ -756,21 +758,20 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             return
         }
 
-        // Save scroll position before rebuilding.
-        // Use OnPreDrawListener (runs after layout, before first draw) so the
-        // view is scrolled to the saved position before it ever appears on
-        // screen — this prevents any visible flash to the top.
-        val savedScrollY = proxyGroupScrollView?.scrollY ?: 0
+        // Save RecyclerView scroll position (first visible item + pixel offset within it).
+        val lm = proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager
+        val savedFirstPos = lm?.findFirstVisibleItemPosition() ?: 0
+        val savedFirstOffset = lm?.findViewByPosition(savedFirstPos)?.top ?: 0
+
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
-        if (savedScrollY > 0) {
-            val sv = proxyGroupScrollView ?: return
-            sv.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
-                override fun onPreDraw(): Boolean {
-                    sv.viewTreeObserver.removeOnPreDrawListener(this)
-                    sv.scrollTo(0, savedScrollY)
-                    return true
-                }
-            })
+
+        // Restore scroll position after the new content has been laid out.
+        if (savedFirstPos > 0 || savedFirstOffset < 0) {
+            val rv = proxyGroupRecyclerView ?: return
+            rv.post {
+                (rv.layoutManager as? LinearLayoutManager)
+                    ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
+            }
         }
     }
 
