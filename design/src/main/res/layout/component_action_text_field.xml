@@ -51,6 +51,7 @@
             </LinearLayout>
 
             <ImageView
+                android:id="@+id/action_icon_view"
                 android:layout_width="@dimen/item_tailing_component_size"
                 android:layout_height="@dimen/item_tailing_component_size"
                 android:layout_gravity="bottom|end"

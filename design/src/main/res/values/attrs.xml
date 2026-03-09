@@ -39,6 +39,7 @@
         <attr name="title" />
         <attr name="text" />
         <attr name="placeholder" />
+        <attr name="locked" format="boolean" />
     </declare-styleable>
 
     <declare-styleable name="Clickable">

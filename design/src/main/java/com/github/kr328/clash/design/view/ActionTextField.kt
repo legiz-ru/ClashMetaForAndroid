@@ -46,6 +46,14 @@ class ActionTextField @JvmOverloads constructor(
             binding.textView.hint = value
         }
 
+    var locked: Boolean = false
+        set(value) {
+            field = value
+            binding.actionIconView.setImageResource(
+                if (value) R.drawable.ic_baseline_lock else R.drawable.ic_baseline_edit
+            )
+        }
+
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
 
@@ -75,6 +83,7 @@ class ActionTextField @JvmOverloads constructor(
         ).apply {
             try {
                 isEnabled = getBoolean(R.styleable.ActionTextField_enabled, true)
+                locked = getBoolean(R.styleable.ActionTextField_locked, false)
                 icon = getDrawable(R.styleable.ActionTextField_icon)
                 title = getString(R.styleable.ActionTextField_title)
                 text = getString(R.styleable.ActionTextField_text)

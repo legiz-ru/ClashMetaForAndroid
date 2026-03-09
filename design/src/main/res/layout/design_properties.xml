@@ -63,6 +63,7 @@
                     android:layout_marginVertical="@dimen/properties_element_margin_vertical"
                     android:onClick="@{() -> self.inputName()}"
                     app:icon="@drawable/ic_outline_label"
+                    app:locked="@{!profile.profileTitle.isEmpty()}"
                     app:placeholder="@string/profile_name"
                     app:text="@{profile.name}"
                     app:title="@string/name" />
@@ -85,6 +86,7 @@
                     android:onClick="@{() -> self.inputInterval()}"
                     app:enabled="@{profile.type != Type.File}"
                     app:icon="@drawable/ic_outline_update"
+                    app:locked="@{profile.profileUpdateInterval > 0}"
                     app:placeholder="@string/at_least_15_minutes"
                     app:text="@{profile.interval == 0 ? @string/disabled : @string/format_minutes(profile.interval / 1000 / 60)}"
                     app:title="@string/auto_update" />
