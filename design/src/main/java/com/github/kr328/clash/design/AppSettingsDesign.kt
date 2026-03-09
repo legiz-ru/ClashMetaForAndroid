@@ -2,6 +2,8 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
+import androidx.appcompat.app.AlertDialog
+import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
 import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.model.DarkMode
@@ -12,6 +14,8 @@ import com.github.kr328.clash.design.util.bindAppBarElevation
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.root
 import com.github.kr328.clash.service.store.ServiceStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AppSettingsDesign(
     context: Context,
@@ -24,7 +28,12 @@ class AppSettingsDesign(
     enum class Request {
         ReCreateAllActivities,
         SelectCustomTemplate,
+        ShowAbout,
+        CheckUpdate,
     }
+
+    var pendingUpdateTag: String? = null
+    var pendingUpdateUrl: String? = null
 
     private val binding = DesignSettingsCommonBinding
         .inflate(context.layoutInflater, context.root, false)
@@ -125,6 +134,17 @@ class AppSettingsDesign(
                 summary = R.string.send_hwid_desc,
             )
 
+            category(R.string.about)
+
+            clickable(
+                title = R.string.about,
+                icon = R.drawable.ic_baseline_info,
+            ) {
+                clicked {
+                    requests.trySend(Request.ShowAbout)
+                }
+            }
+
             category(R.string.templates)
 
             clickable(
@@ -138,5 +158,63 @@ class AppSettingsDesign(
         }
 
         binding.content.addView(screen.root)
+    }
+
+    suspend fun showAbout(versionName: String) {
+        withContext(Dispatchers.Main) {
+            val binding = DesignAboutBinding.inflate(context.layoutInflater).apply {
+                this.versionName = versionName
+            }
+
+            AlertDialog.Builder(context)
+                .setView(binding.root)
+                .setPositiveButton(R.string.check_for_updates) { _, _ ->
+                    requests.trySend(Request.CheckUpdate)
+                }
+                .show()
+        }
+    }
+
+    suspend fun showUpdateAvailableDialog(tagName: String, downloadUrl: String) {
+        withContext(Dispatchers.Main) {
+            AlertDialog.Builder(context)
+                .setTitle(R.string.update_available_title)
+                .setMessage(context.getString(R.string.update_available_message, tagName))
+                .setPositiveButton(R.string.update_download) { _, _ ->
+                    pendingUpdateTag = tagName
+                    pendingUpdateUrl = downloadUrl
+                    requests.trySend(Request.CheckUpdate)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+    }
+
+    suspend fun showUpdateNotFoundDialog() {
+        withContext(Dispatchers.Main) {
+            AlertDialog.Builder(context)
+                .setTitle(R.string.update_not_found_title)
+                .setMessage(R.string.update_not_found_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+    }
+
+    suspend fun showUpdateErrorDialog(message: String) {
+        withContext(Dispatchers.Main) {
+            AlertDialog.Builder(context)
+                .setTitle(R.string.update_error_title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+    }
+
+    fun consumePendingUpdate(): Pair<String, String>? {
+        val tag = pendingUpdateTag ?: return null
+        val url = pendingUpdateUrl ?: return null
+        pendingUpdateTag = null
+        pendingUpdateUrl = null
+        return tag to url
     }
 }

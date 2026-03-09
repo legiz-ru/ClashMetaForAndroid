@@ -4,13 +4,16 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.common.util.componentName
+import com.github.kr328.clash.core.bridge.Bridge
 import com.github.kr328.clash.design.AppSettingsDesign
 import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.store.ServiceStore
+import com.github.kr328.clash.update.UpdateChecker
 import com.github.kr328.clash.util.ApplicationObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 
@@ -63,6 +66,16 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
                                 }
                             }
                         }
+                        AppSettingsDesign.Request.ShowAbout ->
+                            design.showAbout(queryAppVersionName())
+                        AppSettingsDesign.Request.CheckUpdate -> {
+                            val pending = design.consumePendingUpdate()
+                            if (pending != null) {
+                                UpdateChecker.startDownload(this@AppSettingsActivity, pending.second, pending.first)
+                            } else {
+                                launch { runUpdateCheck(design) }
+                            }
+                        }
                     }
                 }
             }
@@ -101,5 +114,22 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
             newState,
             PackageManager.DONT_KILL_APP
         )
+    }
+
+    private suspend fun queryAppVersionName(): String {
+        return withContext(Dispatchers.IO) {
+            packageManager.getPackageInfo(packageName, 0).versionName + "\n" + Bridge.nativeCoreVersion().replace("_", "-")
+        }
+    }
+
+    private suspend fun runUpdateCheck(design: AppSettingsDesign) {
+        when (val result = UpdateChecker.check(this)) {
+            is UpdateChecker.CheckResult.UpdateAvailable ->
+                design.showUpdateAvailableDialog(result.tagName, result.downloadUrl)
+            is UpdateChecker.CheckResult.UpToDate ->
+                design.showUpdateNotFoundDialog()
+            is UpdateChecker.CheckResult.Error ->
+                design.showUpdateErrorDialog(result.message)
+        }
     }
 }
