@@ -2,7 +2,7 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignSettingsCommonBinding
 import com.github.kr328.clash.design.model.Behavior
@@ -166,7 +166,7 @@ class AppSettingsDesign(
                 this.versionName = versionName
             }
 
-            AlertDialog.Builder(context)
+            MaterialAlertDialogBuilder(context)
                 .setView(binding.root)
                 .setPositiveButton(R.string.check_for_updates) { _, _ ->
                     requests.trySend(Request.CheckUpdate)
@@ -177,7 +177,7 @@ class AppSettingsDesign(
 
     suspend fun showUpdateAvailableDialog(tagName: String, downloadUrl: String) {
         withContext(Dispatchers.Main) {
-            AlertDialog.Builder(context)
+            MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.update_available_title)
                 .setMessage(context.getString(R.string.update_available_message, tagName))
                 .setPositiveButton(R.string.update_download) { _, _ ->
@@ -192,7 +192,7 @@ class AppSettingsDesign(
 
     suspend fun showUpdateNotFoundDialog() {
         withContext(Dispatchers.Main) {
-            AlertDialog.Builder(context)
+            MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.update_not_found_title)
                 .setMessage(R.string.update_not_found_message)
                 .setPositiveButton(android.R.string.ok, null)
@@ -202,7 +202,7 @@ class AppSettingsDesign(
 
     suspend fun showUpdateErrorDialog(message: String) {
         withContext(Dispatchers.Main) {
-            AlertDialog.Builder(context)
+            MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.update_error_title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, null)
