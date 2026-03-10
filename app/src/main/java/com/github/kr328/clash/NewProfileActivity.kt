@@ -175,7 +175,15 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                     val url = result.content.rawValue
                         ?: result.content.rawBytes?.let { String(it) }.orEmpty()
 
-                    createProfileByQrCode(url)
+                    if (url.contains("/Prizrak-BoxTVimport")) {
+                        try {
+                            startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            )
+                        } catch (_: Exception) {}
+                    } else {
+                        createProfileByQrCode(url)
+                    }
                 }
 
                 QRUserCanceled -> {}

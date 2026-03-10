@@ -344,7 +344,7 @@
     <string name="tv_import_title">Импорт с другого устройства</string>
     <string name="tv_import_qr_desc">QR-код для импорта по Wi-Fi</string>
     <string name="tv_import_loading">Определяется сетевой адрес…</string>
-    <string name="tv_import_instruction">Откройте ссылку в Prizrak-Box или браузере\nна устройстве в той же сети Wi-Fi</string>
+    <string name="tv_import_instruction">Откройте ссылку в Prizrak-Box Android или браузере\nна устройстве в той же сети Wi-Fi</string>
     <string name="tv_import_received">Профиль получен, импортируется…</string>
     <string name="tv_import_no_wifi">Устройство не подключено к Wi-Fi</string>
     <string name="manage_profiles">Профили</string>

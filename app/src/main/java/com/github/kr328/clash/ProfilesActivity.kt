@@ -33,7 +33,18 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                     val url = result.content.rawValue
                         ?: result.content.rawBytes?.let { String(it) }.orEmpty()
                     if (url.isNotEmpty()) {
-                        importProfileFromUrl(url)
+                        if (url.contains("/Prizrak-BoxTVimport")) {
+                            try {
+                                startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(url)
+                                    )
+                                )
+                            } catch (_: Exception) {}
+                        } else {
+                            importProfileFromUrl(url)
+                        }
                     }
                 }
                 QRResult.QRUserCanceled -> {}
