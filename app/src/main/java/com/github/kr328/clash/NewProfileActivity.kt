@@ -15,6 +15,7 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProfileProvider
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.util.sendProfileToTv
 import com.github.kr328.clash.util.withProfile
 import io.github.g00fy2.quickie.QRResult
 import io.github.g00fy2.quickie.QRResult.QRError
@@ -176,11 +177,7 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                         ?: result.content.rawBytes?.let { String(it) }.orEmpty()
 
                     if (url.contains("/Prizrak-BoxTVimport")) {
-                        try {
-                            startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            )
-                        } catch (_: Exception) {}
+                        sendProfileToTv(url)
                     } else {
                         createProfileByQrCode(url)
                     }

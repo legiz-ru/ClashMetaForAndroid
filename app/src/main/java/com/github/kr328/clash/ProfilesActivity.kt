@@ -9,6 +9,7 @@ import com.github.kr328.clash.design.ProfilesDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.importProfileFromUrl
+import com.github.kr328.clash.util.sendProfileToTv
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withProfile
@@ -34,14 +35,7 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                         ?: result.content.rawBytes?.let { String(it) }.orEmpty()
                     if (url.isNotEmpty()) {
                         if (url.contains("/Prizrak-BoxTVimport")) {
-                            try {
-                                startActivity(
-                                    android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse(url)
-                                    )
-                                )
-                            } catch (_: Exception) {}
+                            sendProfileToTv(url)
                         } else {
                             importProfileFromUrl(url)
                         }

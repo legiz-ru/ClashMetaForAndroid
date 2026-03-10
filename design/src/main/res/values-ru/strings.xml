@@ -421,4 +421,13 @@
     <string name="shortcut_start_long">Запустить сервис Clash</string>
     <string name="shortcut_stop_short">Остановить Clash</string>
     <string name="shortcut_stop_long">Остановить сервис Clash</string>
+
+    <!-- TV profile send dialog -->
+    <string name="tv_send_profile_title">Передать профиль на TV\n%s</string>
+    <string name="tv_send_button">Передать</string>
+    <string name="tv_send_success">Профиль успешно отправлен</string>
+    <string name="tv_send_error">Ошибка отправки профиля</string>
+    <string name="tv_send_no_profiles">Нет импортированных профилей для передачи</string>
+    <string name="tv_profile_type_url">URL</string>
+    <string name="tv_profile_type_yaml">YAML</string>
 </resources>
