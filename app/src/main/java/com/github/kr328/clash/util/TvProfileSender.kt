@@ -146,13 +146,14 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
 // ── Minimal JSON builder (no external dependency) ────────────────────────────
 
 private fun escapeJson(s: String): String = buildString {
-    for (ch in s) when (ch) {
-        '"'  -> append("\\\"")
-        '\\' -> append("\\\\")
-        '\n' -> append("\\n")
-        '\r' -> append("\\r")
-        '\t' -> append("\\t")
-        else -> append(ch)
+    for (ch in s) when {
+        ch == '"'        -> append("\\\"")
+        ch == '\\'       -> append("\\\\")
+        ch == '\n'       -> append("\\n")
+        ch == '\r'       -> append("\\r")
+        ch == '\t'       -> append("\\t")
+        ch.code > 0x7F   -> append("\\u%04x".format(ch.code))
+        else             -> append(ch)
     }
 }
 

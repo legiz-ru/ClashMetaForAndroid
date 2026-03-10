@@ -203,6 +203,9 @@ class TvImportServer(val port: Int, private val html: String) {
             ?.replace("\\t", "\t")
             ?.replace("\\\"", "\"")
             ?.replace("\\\\", "\\")
+            ?.replace(Regex("""\\u([0-9a-fA-F]{4})""")) {
+                it.groupValues[1].toInt(16).toChar().toString()
+            }
     }
 
     companion object {
