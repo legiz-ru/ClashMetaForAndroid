@@ -1,6 +1,7 @@
 package com.github.kr328.clash.util
 
 import android.app.Activity
+import android.util.Log
 import android.widget.Toast
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.service.model.Profile
@@ -97,8 +98,10 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
     // {"content":"..."} – identical format to the browser web page POST
     val jsonBody = """{"content":"${escapeJson(content)}"}"""
 
+    var errorMsg: String? = null
     val success = withContext(Dispatchers.IO) {
         try {
+            Log.d("TvSender", "POST $submitUrl body=${jsonBody.length} chars")
             val conn = URL(submitUrl).openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -109,18 +112,31 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
             conn.setRequestProperty("Content-Length", bytes.size.toString())
             conn.outputStream.use { it.write(bytes) }
             val code = conn.responseCode
+            val responseBody = try {
+                (if (code in 200..299) conn.inputStream else conn.errorStream)
+                    ?.bufferedReader()?.readText() ?: ""
+            } catch (_: Exception) { "" }
             conn.disconnect()
+            Log.d("TvSender", "Response code=$code body=$responseBody")
+            if (code !in 200..299) {
+                errorMsg = "HTTP $code: $responseBody"
+            }
             code in 200..299
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e("TvSender", "Transfer failed", e)
+            errorMsg = e.javaClass.simpleName + ": " + e.message
             false
         }
     }
 
-    Toast.makeText(
-        this,
-        if (success) getString(R.string.tv_send_success) else getString(R.string.tv_send_error),
-        Toast.LENGTH_LONG
-    ).show()
+    val toastText = if (success) {
+        getString(R.string.tv_send_success)
+    } else {
+        val detail = errorMsg
+        if (detail != null) "${getString(R.string.tv_send_error)}\n$detail"
+        else getString(R.string.tv_send_error)
+    }
+    Toast.makeText(this, toastText, Toast.LENGTH_LONG).show()
 }
 
 private fun escapeJson(s: String): String = buildString {
