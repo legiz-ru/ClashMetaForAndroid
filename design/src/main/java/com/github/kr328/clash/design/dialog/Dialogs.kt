@@ -3,6 +3,8 @@ package com.github.kr328.clash.design.dialog
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -24,6 +26,28 @@ class AppBottomSheetDialog(
     private val forceExpanded: Boolean = true,
 ) : BottomSheetDialog(context) {
     private var insets: Insets = Insets.EMPTY
+
+    /**
+     * When set, UP/DOWN D-pad keys that are not handled by the dialog content
+     * are redirected to this view rather than escaping to the parent window.
+     * Set to the proxy group RecyclerView to keep D-pad focus trapped in the dialog.
+     */
+    var focusTrapView: View? = null
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val handled = super.dispatchKeyEvent(event)
+        // If not handled and it's UP/DOWN navigation, redirect to the trap view
+        // instead of letting focus escape to the main activity window.
+        if (!handled && event.action == KeyEvent.ACTION_DOWN && focusTrapView != null) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    focusTrapView?.requestFocus()
+                    return true
+                }
+            }
+        }
+        return handled
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

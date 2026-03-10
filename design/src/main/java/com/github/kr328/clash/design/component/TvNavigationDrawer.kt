@@ -42,6 +42,12 @@ class TvNavigationDrawer(
     private var lastContentFocusRef: java.lang.ref.WeakReference<View>? = null
     private var isRedirectingFocus = false
 
+    /**
+     * When set, returns the active dialog's focusable view (e.g. proxy group RecyclerView).
+     * When focus escapes to the drawer while the dialog is open, it is redirected here first.
+     */
+    var dialogFocusTarget: (() -> View?)? = null
+
     fun wrapContent(contentView: View): View {
         this.contentView = contentView
         val dp = context.resources.displayMetrics.density
@@ -100,7 +106,8 @@ class TvNavigationDrawer(
         }
 
         // When focus moves into content, track it and set nextFocusLeftId to return to selected nav item.
-        // When a drawer item steals focus from content via UP/DOWN traversal, redirect back to content.
+        // When a drawer item steals focus from content (via UP/DOWN traversal or view detachment),
+        // redirect back to content or to the active dialog.
         val selectedId = selectedNavItemView?.id ?: return
         wrapper.viewTreeObserver.addOnGlobalFocusChangeListener { oldFocus, newFocus ->
             if (isRedirectingFocus) return@addOnGlobalFocusChangeListener
@@ -112,22 +119,33 @@ class TvNavigationDrawer(
                 return@addOnGlobalFocusChangeListener
             }
 
-            // A drawer item gained focus while the previous focus was in content
-            // (e.g. UP/DOWN traversal leaked into the sidebar). Redirect back.
-            if (newFocus != null && !isDescendantOf(newFocus, content) &&
-                oldFocus != null && isDescendantOf(oldFocus, content)
-            ) {
-                val lastContent = lastContentFocusRef?.get()
-                val target = when {
-                    lastContent != null && lastContent.isAttachedToWindow -> lastContent
-                    oldFocus.isAttachedToWindow -> oldFocus
-                    else -> findFirstFocusable(content)
-                }
-                if (target != null) {
-                    isRedirectingFocus = true
-                    target.requestFocus()
-                    isRedirectingFocus = false
-                }
+            val drawerGotFocus = newFocus != null && !isDescendantOf(newFocus, content)
+            // Came from content via D-pad (e.g. UP/DOWN leaked into drawer)
+            val fromContent = oldFocus != null && isDescendantOf(oldFocus, content)
+            // Came from nowhere: previous focus was detached (view removal) or from another window
+            val fromDetached = oldFocus == null && lastContentFocusRef?.get() != null
+
+            if (!drawerGotFocus || (!fromContent && !fromDetached)) return@addOnGlobalFocusChangeListener
+
+            // Allow intentional DPAD_LEFT navigation: content item → selectedNavItem only.
+            // Any other path (e.g. UP/DOWN reaching the toggle button) should be blocked.
+            if (fromContent && newFocus!!.id == selectedId) {
+                return@addOnGlobalFocusChangeListener
+            }
+
+            // Redirect focus: prefer active dialog, then last content item, then first focusable.
+            val dialogView = dialogFocusTarget?.invoke()
+            val lastContent = lastContentFocusRef?.get()
+            val target = when {
+                dialogView != null && dialogView.isAttachedToWindow -> dialogView
+                lastContent != null && lastContent.isAttachedToWindow -> lastContent
+                fromContent && oldFocus!!.isAttachedToWindow -> oldFocus
+                else -> findFirstFocusable(content)
+            }
+            if (target != null) {
+                isRedirectingFocus = true
+                target.requestFocus()
+                isRedirectingFocus = false
             }
         }
     }

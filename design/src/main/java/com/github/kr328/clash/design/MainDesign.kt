@@ -773,10 +773,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
         }
 
-        // On TV: replacing setContentView() detaches the previously focused view, which
-        // causes Android to search for the next focusable across all windows and land on
-        // the sidebar toggle button. Restore focus inside the dialog immediately.
+        // On TV: update the dialog focus trap after content replacement so UP/DOWN
+        // keys that hit the list boundary stay inside the dialog instead of jumping
+        // to the sidebar toggle button.
         if (isTv) {
+            dialog.focusTrapView = proxyGroupRecyclerView
             proxyGroupRecyclerView?.post { proxyGroupRecyclerView?.requestFocus() }
         }
     }
@@ -790,14 +791,21 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             proxyGroupDialog = it
             it.setOnDismissListener {
                 openedProxyGroupName = null
+                // On TV: clear the dialog focus target so the drawer redirect logic
+                // stops trying to return focus to the (now closed) dialog.
+                if (isTv) tvDrawer?.dialogFocusTarget = null
             }
         }
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
         if (!dialog.isShowing) dialog.show()
 
-        // On TV: ensure D-pad focus starts inside the dialog, not in the main window sidebar.
+        // On TV: register the dialog's RecyclerView as the active focus target so
+        // the drawer redirect logic (TvNavigationDrawer) returns focus here when
+        // focus accidentally escapes to the sidebar. Also trap UP/DOWN keys.
         if (isTv) {
+            tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
+            dialog.focusTrapView = proxyGroupRecyclerView
             proxyGroupRecyclerView?.post { proxyGroupRecyclerView?.requestFocus() }
         }
 
