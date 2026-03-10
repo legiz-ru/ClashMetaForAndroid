@@ -354,6 +354,8 @@
     <string name="geofile_imported">%1$s imported</string>
     <string name="toast_profile_updated_complete">Update profile %s completed</string>
     <string name="toast_profile_updated_failed">Update profile %1$s failed: %2$s</string>
+    <string name="profile_updating_title">Update Already In Progress</string>
+    <string name="profile_updating_message">Profile update is currently in progress. Please wait for it to complete before starting another one.</string>
     <string name="external_control_activity">External Control</string>
     <string name="external_control_started">Prizrak-Box service started</string>
     <string name="external_control_stopped">Prizrak-Box service stopped</string>

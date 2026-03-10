@@ -194,10 +194,18 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
         }
     }
 
+    override fun onProfileUpdateCompleted(uuid: UUID?) {
+        super.onProfileUpdateCompleted(uuid)
+        if (uuid != null) {
+            launch { design?.markProfileFinished(uuid) }
+        }
+    }
+
     override fun onProfileUpdateFailed(uuid: UUID?, reason: String?) {
         if(uuid == null)
             return;
         launch {
+            design?.markProfileFinished(uuid)
             var name: String? = null;
             withProfile {
                 name = queryByUUID(uuid)?.name
