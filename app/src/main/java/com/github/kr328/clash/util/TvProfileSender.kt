@@ -78,8 +78,7 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
     val profile = profiles[pendingSelection]
 
     // Build POST endpoint: strip trailing /Prizrak-BoxTVimport if present, then append /api/transfer
-    val baseUrl = tvUrl.trimEnd('/')
-        .let { if (it.endsWith("/Prizrak-BoxTVimport")) it else "$it/Prizrak-BoxTVimport" }
+    val baseUrl = tvUrl.trimEnd('/').removeSuffix("/Prizrak-BoxTVimport")
     val transferUrl = "$baseUrl/api/transfer"
 
     // Build JSON payload based on profile type
