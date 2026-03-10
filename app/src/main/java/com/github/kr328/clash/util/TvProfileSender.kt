@@ -13,17 +13,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Shows a dialog to select an imported profile and sends it to the TV device.
+ * Shows a dialog to select an imported profile and sends it to the TV device
+ * via the same /submit endpoint used by the browser web page.
  *
  * [tvUrl] is the URL from the QR code, e.g.
  *   "http://192.168.1.100:48291/Prizrak-BoxTVimport"
- *
- * Profile types:
- *  - Url / Converted  → POST type="url", url=profile.source  (TV imports like clipboard paste)
- *  - File             → read importedDir/{uuid}/config.yaml, POST type="yaml", content=...
  */
 suspend fun Activity.sendProfileToTv(tvUrl: String) {
-    // Load all imported profiles (not pending/unimported)
     val profiles = withProfile { queryAll() }.filter { it.imported }
 
     if (profiles.isEmpty()) {
@@ -31,7 +27,6 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
         return
     }
 
-    // Extract host:port for the dialog subtitle
     val hostPort = try {
         val u = URL(tvUrl)
         "${u.host}:${u.port}"
@@ -39,7 +34,6 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
         tvUrl
     }
 
-    // Build display items: "Profile Name (URL)" or "Profile Name (YAML)"
     val displayItems = profiles.map { p ->
         val typeLabel = when (p.type) {
             Profile.Type.Url, Profile.Type.Converted ->
@@ -52,7 +46,6 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
         "${p.name} ($typeLabel)"
     }.toTypedArray()
 
-    // Show single-choice dialog; suspends until user picks or cancels
     var pendingSelection = -1
     val confirmed = suspendCancellableCoroutine<Boolean> { continuation ->
         val dialog = MaterialAlertDialogBuilder(this)
@@ -77,49 +70,36 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
 
     val profile = profiles[pendingSelection]
 
-    // Build POST endpoint: strip trailing /Prizrak-BoxTVimport if present, then append /api/transfer
+    // Resolve the /submit endpoint – same one the browser web page uses
     val baseUrl = tvUrl.trimEnd('/').removeSuffix("/Prizrak-BoxTVimport")
-    val transferUrl = "$baseUrl/Prizrak-BoxTVimport/api/transfer"
+    val submitUrl = "$baseUrl/Prizrak-BoxTVimport/submit"
 
-    // Build JSON payload based on profile type
-    val jsonBody = when (profile.type) {
-        Profile.Type.Url, Profile.Type.Converted -> {
-            buildJsonObject(
-                "type" to "url",
-                "url" to profile.source,
-                "name" to profile.name
-            )
-        }
+    // Content to send: subscription URL for Url/Converted/External,
+    // raw YAML for File profiles (mirrors what a user would paste in the browser)
+    val content: String = when (profile.type) {
+        Profile.Type.Url, Profile.Type.Converted, Profile.Type.External ->
+            profile.source
+
         Profile.Type.File -> {
-            val yamlContent = withContext(Dispatchers.IO) {
+            val yaml = withContext(Dispatchers.IO) {
                 importedDir.resolve("${profile.uuid}/config.yaml")
                     .takeIf { it.exists() }
                     ?.readText()
             }
-            if (yamlContent == null) {
+            if (yaml == null) {
                 Toast.makeText(this, getString(R.string.tv_send_error), Toast.LENGTH_LONG).show()
                 return
             }
-            buildJsonObject(
-                "type" to "yaml",
-                "content" to yamlContent,
-                "name" to profile.name
-            )
-        }
-        Profile.Type.External -> {
-            // External profiles cannot be serialised; send source URL
-            buildJsonObject(
-                "type" to "url",
-                "url" to profile.source,
-                "name" to profile.name
-            )
+            yaml
         }
     }
 
-    // POST to TV server (network on IO dispatcher)
+    // {"content":"..."} – identical format to the browser web page POST
+    val jsonBody = """{"content":"${escapeJson(content)}"}"""
+
     val success = withContext(Dispatchers.IO) {
         try {
-            val conn = URL(transferUrl).openConnection() as HttpURLConnection
+            val conn = URL(submitUrl).openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             conn.doOutput = true
@@ -143,21 +123,14 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
     ).show()
 }
 
-// ── Minimal JSON builder (no external dependency) ────────────────────────────
-
 private fun escapeJson(s: String): String = buildString {
     for (ch in s) when {
-        ch == '"'        -> append("\\\"")
-        ch == '\\'       -> append("\\\\")
-        ch == '\n'       -> append("\\n")
-        ch == '\r'       -> append("\\r")
-        ch == '\t'       -> append("\\t")
-        ch.code > 0x7F   -> append("\\u%04x".format(ch.code))
-        else             -> append(ch)
+        ch == '"'      -> append("\\\"")
+        ch == '\\'     -> append("\\\\")
+        ch == '\n'     -> append("\\n")
+        ch == '\r'     -> append("\\r")
+        ch == '\t'     -> append("\\t")
+        ch.code > 0x7F -> append("\\u%04x".format(ch.code))
+        else           -> append(ch)
     }
 }
-
-private fun buildJsonObject(vararg pairs: Pair<String, String>): String =
-    pairs.joinToString(",", "{", "}") { (k, v) ->
-        "\"${escapeJson(k)}\":\"${escapeJson(v)}\""
-    }
