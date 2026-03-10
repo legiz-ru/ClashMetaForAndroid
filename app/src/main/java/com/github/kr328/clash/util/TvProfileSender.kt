@@ -61,13 +61,13 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
                 pendingSelection = which
             }
             .setPositiveButton(R.string.tv_send_button) { _, _ ->
-                if (!continuation.isCompleted) continuation.resume(pendingSelection >= 0)
+                if (!continuation.isCompleted) continuation.resume(pendingSelection >= 0) {}
             }
             .setNegativeButton(R.string.cancel) { _, _ ->
-                if (!continuation.isCompleted) continuation.resume(false)
+                if (!continuation.isCompleted) continuation.resume(false) {}
             }
             .setOnCancelListener {
-                if (!continuation.isCompleted) continuation.resume(false)
+                if (!continuation.isCompleted) continuation.resume(false) {}
             }
             .show()
         continuation.invokeOnCancellation { dialog.dismiss() }
