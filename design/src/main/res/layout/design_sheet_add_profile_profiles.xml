@@ -10,7 +10,12 @@
             name="dialog"
             type="android.app.Dialog" />
 
+        <variable
+            name="isTv"
+            type="boolean" />
+
         <import type="com.github.kr328.clash.design.ProfilesDesign.Request" />
+        <import type="android.view.View" />
     </data>
 
     <LinearLayout
@@ -28,6 +33,57 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="20dp"
             android:background="@drawable/bg_drag_handle" />
+
+        <!-- Import from another device (TV only) -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:visibility="@{isTv ? View.VISIBLE : View.GONE}"
+            app:cardBackgroundColor="?attr/colorPrimaryContainer"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="@drawable/bg_card_focus_ripple"
+            app:strokeColor="@color/card_stroke_focus"
+            app:strokeWidth="2dp"
+            android:onClick="@{() -> master.requestSheet(dialog, Request.TvImport.INSTANCE)}">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="16dp"
+                android:paddingHorizontal="20dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_mdi_home_import_outline"
+                    android:contentDescription="@string/add_from_tv"
+                    app:tint="?attr/colorOnPrimaryContainer" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/add_from_tv"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                    android:textColor="?attr/colorOnPrimaryContainer" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/add_from_tv_badge"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="?attr/colorOnPrimaryContainer"
+                    android:alpha="0.7" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Two large square buttons side by side (equal height) -->
         <LinearLayout

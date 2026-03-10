@@ -40,6 +40,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
         data class Delete(val profile: Profile) : Request()
         data class OpenUrl(val url: String) : Request()
         data class ShowAnnounce(val profile: Profile) : Request()
+        object TvImport : Request()
     }
 
     private val binding = DesignProfilesBinding
@@ -183,6 +184,7 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
 
         sheetBinding.master = this
         sheetBinding.dialog = dialog
+        sheetBinding.isTv = isTv
 
         dialog.setContentView(sheetBinding.root)
         dialog.show()

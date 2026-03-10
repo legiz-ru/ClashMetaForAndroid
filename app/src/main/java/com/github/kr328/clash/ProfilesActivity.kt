@@ -154,6 +154,8 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
                         }
                         ProfilesDesign.Request.OpenSettings ->
                             startActivity(SettingsActivity::class.intent)
+                        ProfilesDesign.Request.TvImport ->
+                            startActivity(TvImportActivity::class.intent)
                         ProfilesDesign.Request.ToggleStatus -> {
                             if (clashRunning) {
                                 stopClashService()
