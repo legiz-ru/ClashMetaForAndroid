@@ -772,6 +772,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             (proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager)
                 ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
         }
+
+        // On TV: replacing setContentView() detaches the previously focused view, which
+        // causes Android to search for the next focusable across all windows and land on
+        // the sidebar toggle button. Restore focus inside the dialog immediately.
+        if (isTv) {
+            proxyGroupRecyclerView?.post { proxyGroupRecyclerView?.requestFocus() }
+        }
     }
 
     private fun openProxyGroupSheet(groupName: String) {
@@ -788,6 +795,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
         if (!dialog.isShowing) dialog.show()
+
+        // On TV: ensure D-pad focus starts inside the dialog, not in the main window sidebar.
+        if (isTv) {
+            proxyGroupRecyclerView?.post { proxyGroupRecyclerView?.requestFocus() }
+        }
 
         pendingUrlTestGroup = groupName
         requests.trySend(Request.UrlTest)

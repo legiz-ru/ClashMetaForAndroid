@@ -39,6 +39,8 @@ class TvNavigationDrawer(
     private val drawerFocusableItems = mutableListOf<View>()
     private var selectedNavItemView: View? = null
     private var contentView: View? = null
+    private var lastContentFocusRef: java.lang.ref.WeakReference<View>? = null
+    private var isRedirectingFocus = false
 
     fun wrapContent(contentView: View): View {
         this.contentView = contentView
@@ -97,11 +99,35 @@ class TvNavigationDrawer(
             }
         }
 
-        // When focus moves into content, set nextFocusLeftId to return to selected nav item
+        // When focus moves into content, track it and set nextFocusLeftId to return to selected nav item.
+        // When a drawer item steals focus from content via UP/DOWN traversal, redirect back to content.
         val selectedId = selectedNavItemView?.id ?: return
-        wrapper.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
-            if (newFocus != null && contentView != null && isDescendantOf(newFocus, contentView!!)) {
+        wrapper.viewTreeObserver.addOnGlobalFocusChangeListener { oldFocus, newFocus ->
+            if (isRedirectingFocus) return@addOnGlobalFocusChangeListener
+            val content = contentView ?: return@addOnGlobalFocusChangeListener
+
+            if (newFocus != null && isDescendantOf(newFocus, content)) {
                 newFocus.nextFocusLeftId = selectedId
+                lastContentFocusRef = java.lang.ref.WeakReference(newFocus)
+                return@addOnGlobalFocusChangeListener
+            }
+
+            // A drawer item gained focus while the previous focus was in content
+            // (e.g. UP/DOWN traversal leaked into the sidebar). Redirect back.
+            if (newFocus != null && !isDescendantOf(newFocus, content) &&
+                oldFocus != null && isDescendantOf(oldFocus, content)
+            ) {
+                val lastContent = lastContentFocusRef?.get()
+                val target = when {
+                    lastContent != null && lastContent.isAttachedToWindow -> lastContent
+                    oldFocus.isAttachedToWindow -> oldFocus
+                    else -> findFirstFocusable(content)
+                }
+                if (target != null) {
+                    isRedirectingFocus = true
+                    target.requestFocus()
+                    isRedirectingFocus = false
+                }
             }
         }
     }
