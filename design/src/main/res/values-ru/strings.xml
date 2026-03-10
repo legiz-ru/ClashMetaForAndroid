@@ -357,6 +357,8 @@
     <string name="hide_from_recents_desc">Скрыть приложение из списка недавних</string>
     <string name="toast_profile_updated_complete">Обновление профиля %s завершено</string>
     <string name="toast_profile_updated_failed">Обновление профиля %1$s не удалось: %2$s</string>
+    <string name="profile_updating_title">Обновление уже выполняется</string>
+    <string name="profile_updating_message">Обновление профиля уже выполняется. Пожалуйста, подождите его завершения перед началом нового.</string>
     <string name="external_control_activity">Внешнее управление</string>
     <string name="proxy_groups">Группы прокси</string>
     <string name="format_delay_ms">%d мс</string>
