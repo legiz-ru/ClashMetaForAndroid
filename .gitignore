@@ -30,6 +30,10 @@ gradle-app.setting
 # Ignore builtin geofiles (but allow hand-crafted assets)
 app/src/main/assets
 !app/src/main/assets/tv_import_web.html
+!app/src/main/assets/js/
+!app/src/main/assets/js/**
+!app/src/main/assets/fonts/
+!app/src/main/assets/fonts/**
 
 # KeyStore
 signing.properties

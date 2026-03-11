@@ -3,114 +3,262 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d0d12">
   <title>Prizrak-Box — Импорт на TV</title>
+
+  <!-- Local dependencies (no CDN required) -->
+  <script src="js/jsQR.min.js"></script>
+  <script type="module">
+    import QrScanner from './js/qr-scanner.min.js';
+    window._QrScanner = QrScanner;
+  </script>
+
   <style>
+    /* Local fonts — Syne + DM Sans */
+    @font-face {
+      font-family: 'Syne';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('fonts/syne-latin-400-normal.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Syne';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url('fonts/syne-latin-600-normal.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Syne';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('fonts/syne-latin-700-normal.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Syne';
+      font-style: normal;
+      font-weight: 800;
+      font-display: swap;
+      src: url('fonts/syne-latin-800-normal.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'DM Sans';
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+      src: url('fonts/dm-sans-latin-300-normal.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'DM Sans';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('fonts/dm-sans-latin-400-normal.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'DM Sans';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url('fonts/dm-sans-latin-500-normal.woff2') format('woff2');
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg: #0d0d12;
+      --surface: #16161f;
+      --surface2: #1e1e2a;
+      --border: #2a2a3a;
+      --accent: #7c5cfc;
+      --accent2: #c084fc;
+      --text: #e8e6f0;
+      --muted: #6b6880;
+      --success-bg: #0d2218;
+      --success: #34d399;
+      --error-bg: #200d10;
+      --error: #f87171;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f3edf7;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 16px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,92,252,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,92,252,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(124,92,252,.18) 0%, transparent 70%);
+      pointer-events: none;
     }
 
     .card {
-      background: #fff;
-      border-radius: 28px;
-      box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.08);
-      padding: 32px 28px 28px;
-      max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 32px 32px;
+      max-width: 500px;
       width: 100%;
+      position: relative;
+      box-shadow: 0 0 0 1px rgba(124,92,252,.08), 0 32px 64px rgba(0,0,0,.5);
+      animation: cardIn .5s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle at top left, rgba(124,92,252,.15), transparent 70%);
+      border-radius: 24px 0 0 0;
+      pointer-events: none;
     }
 
     .header {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      margin-bottom: 28px;
-      text-align: center;
+      gap: 14px;
+      margin-bottom: 32px;
     }
 
-    .logo {
-      font-size: 48px;
-      line-height: 1;
-      margin-bottom: 10px;
+    .logo-wrap {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
     }
 
-    .header h1 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1c1b1f;
-      margin-bottom: 4px;
+    .header-text h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.3px;
+      line-height: 1.1;
     }
 
-    .header p {
-      font-size: 14px;
-      color: #49454f;
-    }
-
-    label {
-      display: block;
+    .header-text p {
       font-size: 13px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* URL prefill banner */
+    .prefill-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(124,92,252,.1);
+      border: 1px solid rgba(124,92,252,.25);
+      border-radius: 10px;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+      color: var(--accent2);
+      transition: opacity .5s ease;
+    }
+    .prefill-badge.visible { display: flex; }
+    .prefill-badge .pb-icon { font-size: 15px; }
+
+    .field-label {
+      font-size: 12px;
       font-weight: 500;
-      color: #49454f;
-      margin-bottom: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 10px;
     }
 
     textarea {
       width: 100%;
-      min-height: 140px;
-      border: 1.5px solid #cac4d0;
-      border-radius: 16px;
+      min-height: 120px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
       padding: 14px 16px;
-      font-size: 14px;
-      font-family: inherit;
-      color: #1c1b1f;
-      background: #fffbfe;
+      font-size: 13.5px;
+      font-family: 'DM Mono', 'Fira Code', 'Courier New', monospace;
+      color: var(--text);
       resize: vertical;
       outline: none;
-      transition: border-color .15s;
-      line-height: 1.5;
+      transition: border-color .2s, box-shadow .2s;
+      line-height: 1.6;
     }
 
     textarea:focus {
-      border-color: #6750a4;
-      box-shadow: 0 0 0 3px rgba(103,80,164,.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,92,252,.15);
     }
 
-    textarea::placeholder { color: #938f99; }
+    textarea::placeholder { color: var(--muted); font-family: 'DM Sans', sans-serif; }
 
-    button#submit {
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    #submit {
+      flex: 1;
+      height: 50px;
+      background: linear-gradient(135deg, var(--accent), #9b6dff);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      width: 100%;
-      padding: 16px;
-      margin-top: 16px;
-      background: #6750a4;
-      color: #fff;
-      border: none;
-      border-radius: 50px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .2s, opacity .2s;
-      letter-spacing: .4px;
+      box-shadow: 0 4px 20px rgba(124,92,252,.35);
+      letter-spacing: .2px;
+      transition: all .2s;
+      white-space: nowrap;
     }
 
-    button#submit:hover { background: #7965af; }
-    button#submit:active { background: #5c4a95; }
-    button#submit:disabled { opacity: .55; cursor: not-allowed; }
+    #submit:hover {
+      background: linear-gradient(135deg, #8b6cff, #a97dff);
+      box-shadow: 0 6px 28px rgba(124,92,252,.5);
+      transform: translateY(-1px);
+    }
+    #submit:active { transform: translateY(0); }
+    #submit:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
     .spinner {
       display: none;
-      width: 18px;
-      height: 18px;
-      border: 2.5px solid rgba(255,255,255,.4);
+      width: 17px; height: 17px;
+      border: 2.5px solid rgba(255,255,255,.3);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin .7s linear infinite;
@@ -119,11 +267,10 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     #status {
-      margin-top: 18px;
-      min-height: 36px;
+      margin-top: 16px;
       border-radius: 12px;
-      padding: 10px 16px;
-      font-size: 14px;
+      padding: 12px 16px;
+      font-size: 13.5px;
       font-weight: 500;
       text-align: center;
       display: none;
@@ -131,53 +278,72 @@
 
     #status.success {
       display: block;
-      background: #e8f5e9;
-      color: #2e7d32;
-      border: 1px solid #a5d6a7;
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid rgba(52,211,153,.2);
     }
 
     #status.error {
       display: block;
-      background: #fce4ec;
-      color: #b71c1c;
-      border: 1px solid #ef9a9a;
+      background: var(--error-bg);
+      color: var(--error);
+      border: 1px solid rgba(248,113,113,.2);
     }
 
-    .hint {
+    .hint-block {
       margin-top: 20px;
-      padding: 12px 16px;
-      background: #f3edf7;
-      border-radius: 12px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
       font-size: 12px;
-      color: #49454f;
-      line-height: 1.5;
+      color: var(--muted);
+      line-height: 1.7;
     }
 
-    .hint strong { color: #6750a4; }
+    .hint-block strong { color: var(--accent2); font-weight: 500; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <span class="logo">🛡</span>
-      <h1>Prizrak-Box</h1>
-      <p>Импорт профиля на TV</p>
+      <div class="logo-wrap">
+        <svg width="36" height="36" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="50" height="50" rx="12" fill="#FAFAFA"/>
+          <path d="M16.519 18.4845C20.3639 15.5401 19.5043 8.43845 25.5007 8.02291C33.2105 7.48864 31.627 16.4316 35.9102 20.9755C37.7728 22.9515 40.6866 20.2735 42.9969 24.2991C43.5516 25.2656 42.3157 25.9003 41.9326 26.9469C41.6858 27.6212 42.0469 28.5879 41.3356 28.6861C40.8008 28.7599 40.7312 27.8598 40.1934 27.9073C39.4708 27.9711 39.5785 28.8762 39.3627 29.5687C39.1434 30.2722 39.6046 30.8978 39.1031 31.4377C38.6755 31.8981 38.1616 31.7148 37.5715 31.9309C36.7954 32.2153 36.4479 32.8363 35.6246 32.7616C33.6258 33.2289 34.6642 30.1897 33.6258 30.9186C32.8696 31.2003 32.9645 32.0023 32.6913 32.7616C32.3217 33.7889 32.5443 34.4779 32.1981 35.5133C31.9248 36.3305 31.9241 36.9588 31.2636 37.5121C30.4392 38.2025 29.5223 37.469 28.5379 37.9015C27.6449 38.2938 27.4682 39.0648 26.565 39.433C25.6123 39.8215 24.9507 39.4839 23.9432 39.6926C22.7231 39.9453 23.0087 42.001 19.4523 42.001C15.5585 42.001 16.6042 39.3379 14.624 38.7841C12.9879 38.3265 10.9987 39.2893 9.5101 38.4706C7.79682 37.2246 8.69139 35.8487 8.316 35.3555C8.15793 35.1479 7.95257 34.9661 6.8623 34.8104C7.45936 34.1355 8.70037 34.0238 9.38031 34.447C10.205 34.9602 9.56982 36.0004 10.2889 36.6535C11.4288 37.6888 12.9175 37.0968 14.0529 36.0564C14.9801 35.2067 15.4964 34.3272 14.8836 33.2289C14.3945 32.3524 12.7639 32.7683 12.0541 32.0588C16.6747 31.5655 17.765 27.7256 17.765 27.7256C17.765 27.7256 16.0244 30.2636 14.8836 29.5687C14.1053 29.0946 14.7147 28.0146 14.0529 27.3882C12.9151 26.3111 11.0686 28.9205 10.0552 27.7256C9.18772 26.7027 10.8597 25.5128 10.2889 24.2991C9.77 23.1959 7.84874 23.4924 7.84874 22.3522C8.316 19.0534 13.1644 21.0535 16.519 18.4845Z" fill="#0A0A0A"/>
+          <path d="M16.5192 18.4845C20.364 15.5401 19.5044 8.43845 25.5008 8.02291C33.2106 7.48864 31.6272 16.4316 35.9104 20.9756C37.773 22.9516 40.6868 20.2735 42.9971 24.2991C42.3654 23.8398 40.7438 23.3366 39.3109 24.998C38.854 23.6274 37.8572 24.8076 37.5457 25.3095C36.7884 26.5295 36.5229 28.4038 37.2082 29.3591C36.5333 30.7349 35.016 30.4493 34.6643 30.1378C33.7557 29.3331 33.7038 25.4393 33.4702 24.1154C33.4442 26.2613 32.9147 30.7245 31.0041 31.4098C28.6159 32.2664 27.4478 31.8251 27.0843 33.0971C26.7936 34.1147 27.5516 34.7498 27.9669 34.9402C27.6468 35.6497 26.5807 37.0117 24.8778 36.7833C22.7492 36.4977 21.6589 35.044 21.2436 34.7585C20.8283 34.4729 19.8937 34.3172 19.0371 34.6027C18.3179 34.8425 17.0805 35.667 17.194 36.7833C17.2785 37.6139 18.5179 37.6918 17.5055 38.1331C16.0456 38.7695 15.1173 37.588 15.2212 37.0169C14.728 37.1467 13.1704 36.965 13.7675 35.3555C14.0605 34.5658 14.6241 33.9538 14.3126 33.2788C13.892 32.3675 12.7641 32.7683 12.0542 32.0588C16.6749 31.5656 17.7651 27.7256 17.7651 27.7256C17.7651 27.7256 16.8654 29.0487 15.9615 29.5007C16.9739 28.4624 17.0642 24.6865 15.1173 24.7903C14.7539 24.9461 14.6241 25.2057 14.5462 25.8287C12.7032 25.6729 13.4076 23.6481 12.5993 22.7136C11.7687 21.7531 8.57572 20.4812 7.84888 22.3522C8.31613 19.0534 13.1645 21.0535 16.5192 18.4845Z" fill="#FAFAFA" stroke="#0A0A0A" stroke-linejoin="round"/>
+          <ellipse cx="23.451" cy="15.017" rx="1.78635" ry="3.18529" transform="rotate(7.04122 23.451 15.017)" fill="#0A0A0A"/>
+          <ellipse cx="1.78635" cy="3.18529" rx="1.78635" ry="3.18529" transform="matrix(-0.992458 0.122583 0.122583 0.992458 29.7302 11.6367)" fill="#0A0A0A"/>
+          <ellipse cx="25.9047" cy="20.9553" rx="1.31286" ry="2.3244" fill="#0A0A0A"/>
+        </svg>
+      </div>
+      <div class="header-text">
+        <h1>Prizrak-Box</h1>
+        <p>Импорт профиля на TV</p>
+      </div>
     </div>
 
-    <label for="content">Ссылка на подписку или YAML-конфигурация</label>
+    <div class="prefill-badge" id="prefill-badge">
+      <span class="pb-icon">🔗</span>
+      <span>Ссылка подставлена из параметра запроса</span>
+    </div>
+
+    <div class="field-label">Ссылка на подписку или YAML-конфигурация</div>
     <textarea
       id="content"
       placeholder="Вставьте ссылку (https://, clash://, sub://) или YAML-конфигурацию..."></textarea>
 
-    <button id="submit" onclick="send()">
-      <span id="btn-icon">📡</span>
-      <span id="btn-text">Отправить на TV</span>
-      <span class="spinner" id="spinner"></span>
-    </button>
+    <div class="btn-row">
+      <button id="submit" onclick="send()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2l0-9"/><path d="M16 3l-4 4l-4-4"/></svg>
+        <span id="btn-text">Отправить на TV</span>
+        <span class="spinner" id="spinner"></span>
+      </button>
+    </div>
 
     <div id="status"></div>
 
-    <div class="hint">
+    <div class="hint-block">
       <strong>Что поддерживается:</strong><br>
       • Ссылки на подписку (https://, clash://, sub://)<br>
       • Raw YAML конфигурация<br>
@@ -186,6 +352,23 @@
   </div>
 
   <script>
+    // Pre-fill from ?url= query parameter
+    (function prefillFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const url = params.get('url');
+      if (!url) return;
+
+      document.getElementById('content').value = url;
+      document.getElementById('content').placeholder = '';
+
+      const badge = document.getElementById('prefill-badge');
+      badge.classList.add('visible');
+      setTimeout(() => {
+        badge.style.opacity = '0';
+        setTimeout(() => badge.classList.remove('visible'), 500);
+      }, 2500);
+    })();
+
     async function send() {
       const content = document.getElementById('content').value.trim();
       if (!content) {
@@ -194,12 +377,10 @@
       }
 
       const btn = document.getElementById('submit');
-      const icon = document.getElementById('btn-icon');
       const text = document.getElementById('btn-text');
       const spinner = document.getElementById('spinner');
 
       btn.disabled = true;
-      icon.style.display = 'none';
       spinner.style.display = 'inline-block';
       text.textContent = 'Отправка...';
       document.getElementById('status').className = '';
@@ -222,7 +403,6 @@
         showStatus('error', '❌ Не удалось подключиться к TV. Проверьте Wi-Fi.');
       } finally {
         btn.disabled = false;
-        icon.style.display = 'inline';
         spinner.style.display = 'none';
         text.textContent = 'Отправить на TV';
       }
