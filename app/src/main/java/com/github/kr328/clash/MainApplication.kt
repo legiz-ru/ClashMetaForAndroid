@@ -46,7 +46,7 @@ class MainApplication : Application() {
 
     private fun setupShortcuts() {
         val icon = IconCompat.createWithResource(this, R.mipmap.ic_launcher)
-        val qrIcon = IconCompat.createWithResource(this, DesignR.drawable.ic_mdi_qrcode_scan)
+        val qrIcon = IconCompat.createWithResource(this, DesignR.drawable.ic_shortcut_scan_qr)
         val flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
                 Intent.FLAG_ACTIVITY_NO_ANIMATION
