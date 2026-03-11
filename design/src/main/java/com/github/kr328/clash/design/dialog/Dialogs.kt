@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -28,31 +29,39 @@ class AppBottomSheetDialog(
     private var insets: Insets = Insets.EMPTY
 
     /**
-     * When set, UP/DOWN D-pad keys that are not handled by the dialog content
-     * are redirected to this view rather than escaping to the parent window.
-     * Set to the proxy group RecyclerView to keep D-pad focus trapped in the dialog.
+     * When set, UP/DOWN D-pad keys that hit the boundary of the dialog content are consumed
+     * rather than escaping to the parent window. Should be set to the root view of the sheet
+     * content (not just the RecyclerView) so that D-pad UP from the first list item can still
+     * reach sibling buttons (e.g. sort / delay-test) above the RecyclerView.
      */
     var focusTrapView: View? = null
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val trap = focusTrapView
-        // When the trap view itself (not a child) has focus and d-pad UP/DOWN is pressed,
-        // first move focus to a child item so RecyclerView enters focus-navigation mode
-        // instead of scroll-only mode (which happens when RecyclerView itself is focused).
-        if (trap != null && trap.isFocused &&
-            event.action == KeyEvent.ACTION_DOWN &&
-            (event.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-                event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
+
+        if (trap != null && event.action == KeyEvent.ACTION_DOWN &&
+            (event.keyCode == KeyEvent.KEYCODE_DPAD_UP || event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
         ) {
-            trap.requestFocus()
+            // If a RecyclerView inside the trap has focus itself (not a child item), it is in
+            // "scroll-only mode" — D-pad would scroll the list instead of navigating items.
+            // Use directional requestFocus to break out of scroll-only mode and land on an item.
+            val focused = trap.findFocus()
+            if (focused is RecyclerView && focused.isFocused) {
+                val dir = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) View.FOCUS_DOWN else View.FOCUS_UP
+                if (focused.requestFocus(dir)) return true
+            }
+            // Handle the rare case where the trap container itself has focus.
+            if (trap.isFocused) {
+                val dir = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) View.FOCUS_DOWN else View.FOCUS_UP
+                if (trap.requestFocus(dir)) return true
+            }
         }
 
         val handled = super.dispatchKeyEvent(event)
 
-        // If the event wasn't handled (e.g. at a list boundary), consume it to keep
-        // focus inside this dialog. Only call requestFocus() when nothing inside the
-        // trap view is focused yet; otherwise just eat the key so focus stays on the
-        // current boundary item instead of jumping back to item 0.
+        // If the event wasn't handled (at a dialog boundary), eat it to keep focus inside.
+        // Only call requestFocus() when nothing inside the trap is focused yet; otherwise just
+        // consume the key so focus stays at the boundary instead of jumping to item 0.
         if (!handled && event.action == KeyEvent.ACTION_DOWN && trap != null) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
