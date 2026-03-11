@@ -27,6 +27,10 @@ import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R
 
 class ProfilesActivity : BaseActivity<ProfilesDesign>() {
+    companion object {
+        const val EXTRA_SCAN_QR_ON_START = "scan_qr_on_start"
+    }
+
     private val scanLauncher = registerForActivityResult(ScanQRCode()) { result ->
         lifecycleScope.launch {
             when (result) {
@@ -65,7 +69,14 @@ class ProfilesActivity : BaseActivity<ProfilesDesign>() {
             select<Unit> {
                 events.onReceive {
                     when (it) {
-                        Event.ActivityStart, Event.ProfileChanged -> {
+                        Event.ActivityStart -> {
+                            design.fetch()
+                            if (intent.getBooleanExtra(EXTRA_SCAN_QR_ON_START, false)) {
+                                intent.removeExtra(EXTRA_SCAN_QR_ON_START)
+                                scanLauncher.launch(null)
+                            }
+                        }
+                        Event.ProfileChanged -> {
                             design.fetch()
                         }
                         Event.ClashStart, Event.ClashStop -> {

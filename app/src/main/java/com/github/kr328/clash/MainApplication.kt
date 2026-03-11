@@ -46,9 +46,23 @@ class MainApplication : Application() {
 
     private fun setupShortcuts() {
         val icon = IconCompat.createWithResource(this, R.mipmap.ic_launcher)
+        val qrIcon = IconCompat.createWithResource(this, DesignR.drawable.ic_mdi_qrcode_scan)
         val flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
                 Intent.FLAG_ACTIVITY_NO_ANIMATION
+
+        val scanQr = ShortcutInfoCompat.Builder(this, "scan_qr")
+            .setShortLabel(getString(DesignR.string.shortcut_scan_qr_short))
+            .setLongLabel(getString(DesignR.string.shortcut_scan_qr_long))
+            .setIcon(qrIcon)
+            .setIntent(
+                Intent(Intent.ACTION_MAIN)
+                    .setClassName(this, ProfilesActivity::class.java.name)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra(ProfilesActivity.EXTRA_SCAN_QR_ON_START, true)
+            )
+            .setRank(0)
+            .build()
 
         val toggle = ShortcutInfoCompat.Builder(this, "toggle_clash")
             .setShortLabel(getString(DesignR.string.shortcut_toggle_short))
@@ -59,7 +73,7 @@ class MainApplication : Application() {
                     .setClassName(this, ExternalControlActivity::class.java.name)
                     .addFlags(flags)
             )
-            .setRank(0)
+            .setRank(1)
             .build()
 
         val start = ShortcutInfoCompat.Builder(this, "start_clash")
@@ -71,7 +85,7 @@ class MainApplication : Application() {
                     .setClassName(this, ExternalControlActivity::class.java.name)
                     .addFlags(flags)
             )
-            .setRank(1)
+            .setRank(2)
             .build()
 
         val stop = ShortcutInfoCompat.Builder(this, "stop_clash")
@@ -83,10 +97,10 @@ class MainApplication : Application() {
                     .setClassName(this, ExternalControlActivity::class.java.name)
                     .addFlags(flags)
             )
-            .setRank(2)
+            .setRank(3)
             .build()
 
-        ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+        ShortcutManagerCompat.setDynamicShortcuts(this, listOf(scanQr, toggle, start, stop))
     }
 
     private fun extractGeoFiles() {

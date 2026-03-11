@@ -421,6 +421,8 @@
     <string name="shortcut_start_long">Запустить сервис Clash</string>
     <string name="shortcut_stop_short">Остановить Clash</string>
     <string name="shortcut_stop_long">Остановить сервис Clash</string>
+    <string name="shortcut_scan_qr_short">Сканировать QR</string>
+    <string name="shortcut_scan_qr_long">Сканировать QR-код для добавления профиля</string>
 
     <!-- TV profile send dialog -->
     <string name="tv_send_profile_title">Передать профиль на TV\n%s</string>
