@@ -35,13 +35,31 @@ class AppBottomSheetDialog(
     var focusTrapView: View? = null
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val trap = focusTrapView
+        // When the trap view itself (not a child) has focus and d-pad UP/DOWN is pressed,
+        // first move focus to a child item so RecyclerView enters focus-navigation mode
+        // instead of scroll-only mode (which happens when RecyclerView itself is focused).
+        if (trap != null && trap.isFocused &&
+            event.action == KeyEvent.ACTION_DOWN &&
+            (event.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
+        ) {
+            trap.requestFocus()
+        }
+
         val handled = super.dispatchKeyEvent(event)
-        // If not handled and it's UP/DOWN navigation, redirect to the trap view
-        // instead of letting focus escape to the main activity window.
-        if (!handled && event.action == KeyEvent.ACTION_DOWN && focusTrapView != null) {
+
+        // If the event wasn't handled (e.g. at a list boundary), consume it to keep
+        // focus inside this dialog. Only call requestFocus() when nothing inside the
+        // trap view is focused yet; otherwise just eat the key so focus stays on the
+        // current boundary item instead of jumping back to item 0.
+        if (!handled && event.action == KeyEvent.ACTION_DOWN && trap != null) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    focusTrapView?.requestFocus()
+                    val currentFocus = trap.findFocus()
+                    if (currentFocus == null || currentFocus === trap) {
+                        trap.requestFocus()
+                    }
                     return true
                 }
             }
