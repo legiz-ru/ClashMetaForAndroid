@@ -1156,25 +1156,19 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
 
     /**
-     * Requests focus on the item at [position] in the proxy group RecyclerView after its
-     * layout pass completes (using addOnLayoutChangeListener so children are guaranteed to
-     * be positioned before requestFocus is called, avoiding the RecyclerView "scroll-only"
-     * mode that occurs when RecyclerView itself gets focus before children are laid out).
+     * Requests focus on the item at [position] in the proxy group RecyclerView.
+     * Uses rv.post{} so the request runs after the current layout pass completes
+     * AND after the dialog window has received system focus — ensuring D-pad events
+     * go to the dialog rather than the background activity.
      */
     private fun focusFirstProxyItem(position: Int = 0) {
         val rv = proxyGroupRecyclerView ?: return
-        rv.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
-            override fun onLayoutChange(
-                v: View, l: Int, t: Int, r: Int, b: Int,
-                ol: Int, ot: Int, or_: Int, ob: Int
-            ) {
-                rv.removeOnLayoutChangeListener(this)
-                if (!rv.isAttachedToWindow) return
-                val holder = rv.findViewHolderForAdapterPosition(position)
-                    ?: rv.findViewHolderForAdapterPosition(0)
-                holder?.itemView?.requestFocus() ?: rv.requestFocus()
-            }
-        })
+        rv.post {
+            if (!rv.isAttachedToWindow) return@post
+            val holder = rv.findViewHolderForAdapterPosition(position)
+                ?: rv.findViewHolderForAdapterPosition(0)
+            holder?.itemView?.requestFocus() ?: rv.requestFocus()
+        }
     }
 
     private fun requestProxySelection(group: String, name: String) {

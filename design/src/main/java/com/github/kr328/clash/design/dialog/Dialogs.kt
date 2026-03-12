@@ -36,6 +36,22 @@ class AppBottomSheetDialog(
      */
     var focusTrapView: View? = null
 
+    /**
+     * Called when the dialog window gains or loses system (input) focus.
+     * If nothing inside the dialog is focused when window focus arrives, grab focus now.
+     * This handles the timing gap between layout completion and the system granting
+     * window focus — without this, D-pad events can still reach the background activity.
+     */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) return
+        val trap = focusTrapView ?: return
+        when (val focused = trap.findFocus()) {
+            null -> trap.requestFocus()
+            is RecyclerView -> if (focused.isFocused) focused.requestFocus(View.FOCUS_DOWN)
+        }
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val trap = focusTrapView
 
