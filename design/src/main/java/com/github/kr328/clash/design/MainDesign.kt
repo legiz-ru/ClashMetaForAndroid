@@ -30,7 +30,6 @@ import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.databinding.DesignSheetAddProfileBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
-import com.github.kr328.clash.design.dialog.TvProxyGroupDialog
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
@@ -136,12 +135,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var latestUseDots: Boolean = true
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
-    // Dialog? to accommodate AppBottomSheetDialog (phone) or TvProxyGroupDialog (TV).
-    private var proxyGroupDialog: Dialog? = null
+    private var proxyGroupDialog: AppBottomSheetDialog? = null
     private var proxyGroupRecyclerView: RecyclerView? = null
-    // Root view of the proxy group sheet (includes topBar with sort/test buttons + RecyclerView).
-    // Used as focusTrapView so D-pad can reach topBar buttons from the RecyclerView.
-    private var proxyGroupSheetRoot: View? = null
 
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
@@ -160,7 +155,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 // Clear stale proxy groups so they don't flash when VPN restarts
                 latestProxyGroups = emptyMap()
                 proxyGroupRecyclerView = null
-                proxyGroupSheetRoot = null
                 proxyGroupDialog?.dismiss()
                 val container = binding.proxyGroupsContainer
                 container.removeAllViews()
@@ -467,10 +461,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            // Provide the sheet background for TV (TvProxyGroupDialog has a transparent window).
-            // On phone (AppBottomSheetDialog) the background comes from the sheet theme, so this
-            // is redundant but harmless.
-            background = context.getDrawable(R.drawable.bg_bottom_sheet)
 
             val topBar = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -614,11 +604,15 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         setCardBackgroundColor(0x00000000)
                         strokeWidth = 0
                     }
-                    // The card itself is the focusable/clickable RecyclerView item so that
-                    // D-pad navigation moves between cards (not between inner descendants).
-                    isFocusable = true
+                }
+
+                val row = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding((14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt())
                     isClickable = true
-                    foreground = context.getDrawable(R.drawable.bg_proxy_item_card_ripple)
+                    isFocusable = true
+                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                     setOnClickListener {
                         if (isSelectorGroup) {
                             requestProxySelection(groupName, proxy.name)
@@ -636,13 +630,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                             true
                         }
                     }
-                }
-
-                val row = LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding((14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt())
-                    // Not focusable/clickable — rowCard is the interactive unit.
                 }
 
                 val infoColumn = LinearLayout(context).apply {
@@ -757,7 +744,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
             proxyGroupRecyclerView = rv
             addView(rv)
-            proxyGroupSheetRoot = this
         }
     }
 
@@ -776,19 +762,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val lm = proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager
         val savedFirstPos = lm?.findFirstVisibleItemPosition() ?: 0
         val savedFirstOffset = lm?.findViewByPosition(savedFirstPos)?.top ?: 0
-        // On TV: save which item had focus so we can restore it after content swap.
-        // Must traverse up to the direct RecyclerView child (itemView) since findFocus()
-        // may return a deeper descendant (e.g. the inner LinearLayout).
-        val savedFocusPos = if (isTv) {
-            val rv = proxyGroupRecyclerView
-            var v: View? = rv?.findFocus()
-            while (v != null && v.parent !== rv) v = v.parent as? View
-            if (v != null && rv != null) rv.getChildAdapterPosition(v) else RecyclerView.NO_POSITION
-        } else RecyclerView.NO_POSITION
-
-        // On TV: clear dialogFocusTarget before replacing content so TvNavigationDrawer
-        // doesn't try to redirect focus to the not-yet-laid-out new RecyclerView.
-        if (isTv) tvDrawer?.dialogFocusTarget = null
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
 
@@ -800,10 +773,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
         }
 
+        // On TV: update the dialog focus trap after content replacement so UP/DOWN
+        // keys that hit the list boundary stay inside the dialog instead of jumping
+        // to the sidebar toggle button.
         if (isTv) {
-            tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            setDialogFocusTrap(dialog, proxyGroupSheetRoot)
-            focusFirstProxyItem(if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0)
+            dialog.focusTrapView = proxyGroupRecyclerView
+            proxyGroupRecyclerView?.post { proxyGroupRecyclerView?.requestFocus() }
         }
     }
 
@@ -812,34 +787,26 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         openedProxyGroupName = groupName
 
-        val dialog = proxyGroupDialog ?: run {
-            // On TV use TvProxyGroupDialog (extends Dialog directly) so the window reliably
-            // receives system D-pad focus. BottomSheetDialog on some TV platforms never
-            // captures input focus, causing D-pad events to fall through to the activity.
-            val d: Dialog = if (isTv) TvProxyGroupDialog(context)
-                            else AppBottomSheetDialog(context, forceExpanded = true)
-            d.setOnDismissListener {
+        val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context, forceExpanded = true).also {
+            proxyGroupDialog = it
+            it.setOnDismissListener {
                 openedProxyGroupName = null
-                if (isTv) {
-                    tvDrawer?.dialogFocusTarget = null
-                    proxyGroupSheetRoot = null
-                }
+                // On TV: clear the dialog focus target so the drawer redirect logic
+                // stops trying to return focus to the (now closed) dialog.
+                if (isTv) tvDrawer?.dialogFocusTarget = null
             }
-            proxyGroupDialog = d
-            d
         }
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
         if (!dialog.isShowing) dialog.show()
 
-        // On TV: register the dialog as the active focus target so the drawer redirect logic
-        // returns focus here when focus accidentally escapes to the sidebar.
-        // Use proxyGroupSheetRoot (contains topBar + RecyclerView) as focusTrapView so that
-        // D-pad UP from the first list item can reach the sort/test buttons in the topBar.
+        // On TV: register the dialog's RecyclerView as the active focus target so
+        // the drawer redirect logic (TvNavigationDrawer) returns focus here when
+        // focus accidentally escapes to the sidebar. Also trap UP/DOWN keys.
         if (isTv) {
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            setDialogFocusTrap(dialog, proxyGroupSheetRoot)
-            focusFirstProxyItem()
+            dialog.focusTrapView = proxyGroupRecyclerView
+            proxyGroupRecyclerView?.post { proxyGroupRecyclerView?.requestFocus() }
         }
 
         pendingUrlTestGroup = groupName
@@ -852,21 +819,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     ) {
         withContext(Dispatchers.Main) {
             val container = binding.proxyGroupsContainer
-            // On TV: before removing views, save which direct child card had focus so we can
-            // restore focus to the same card (not always the first) after rebuild.
-            var savedFocusedCardIndex = -1
-            if (isTv) {
-                val focused = container.findFocus()
-                if (focused != null) {
-                    for (i in 0 until container.childCount) {
-                        val child = container.getChildAt(i)
-                        if (child == focused || child.findFocus() != null) {
-                            savedFocusedCardIndex = i
-                            break
-                        }
-                    }
-                }
-            }
             container.removeAllViews()
             container.gravity = Gravity.TOP
 
@@ -898,9 +850,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     radius = 16 * dp
                     cardElevation = if (isDarkTheme) 0f else 2 * dp
                     setCardBackgroundColor(if (isDarkTheme) surfaceVariantColor else surfaceColor)
-                    // Don't let the card itself steal focus — headerRow is the focusable/clickable unit.
-                    isFocusable = false
-                    isClickable = false
                 }
 
                 val headerRow = LinearLayout(context).apply {
@@ -909,8 +858,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     setPadding((16 * dp).toInt(), (18 * dp).toInt(), (12 * dp).toInt(), (18 * dp).toInt())
                     isClickable = true
                     isFocusable = true
-                    // bg_proxy_group_card_ripple: rounded ripple + focus border matching card radius.
-                    background = context.getDrawable(R.drawable.bg_proxy_group_card_ripple)
+                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
                 }
 
                 val groupIcon = ImageView(context).apply {
@@ -969,19 +917,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
                 card.addView(headerRow)
                 container.addView(card)
-            }
-
-            // On TV: restore focus to the same card that was focused before the rebuild.
-            // Fall back to the first card if the index is out of range.
-            // On TV: restore focus to the same card that was focused before the rebuild.
-            // Fall back to the first card if the index is out of range.
-            if (savedFocusedCardIndex >= 0 && container.childCount > 0) {
-                container.post {
-                    val idx = savedFocusedCardIndex.coerceAtMost(container.childCount - 1)
-                    val target = findFirstFocusableIn(container.getChildAt(idx))
-                        ?: findFirstFocusableIn(container)
-                    target?.requestFocus()
-                }
             }
         }
     }
@@ -1146,44 +1081,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     fun requestSheet(dialog: Dialog, request: Request) {
         dialog.dismiss()
         requests.trySend(request)
-    }
-
-    /**
-     * Recursively finds the first focusable, visible, enabled view in the given view tree.
-     * Used to restore D-pad focus to the proxy group container after a data refresh.
-     */
-    private fun findFirstFocusableIn(v: View): View? {
-        if (v.isFocusable && v.isEnabled && v.visibility == View.VISIBLE) return v
-        if (v is ViewGroup) {
-            for (i in 0 until v.childCount) {
-                findFirstFocusableIn(v.getChildAt(i))?.let { return it }
-            }
-        }
-        return null
-    }
-
-    /**
-     * Requests focus on the item at [position] in the proxy group RecyclerView.
-     * Uses rv.post{} so the request runs after the current layout pass completes
-     * AND after the dialog window has received system focus — ensuring D-pad events
-     * go to the dialog rather than the background activity.
-     */
-    private fun focusFirstProxyItem(position: Int = 0) {
-        val rv = proxyGroupRecyclerView ?: return
-        rv.post {
-            if (!rv.isAttachedToWindow) return@post
-            val holder = rv.findViewHolderForAdapterPosition(position)
-                ?: rv.findViewHolderForAdapterPosition(0)
-            holder?.itemView?.requestFocus() ?: rv.requestFocus()
-        }
-    }
-
-    /** Sets focusTrapView on either AppBottomSheetDialog (phone) or TvProxyGroupDialog (TV). */
-    private fun setDialogFocusTrap(dialog: Dialog, trap: View?) {
-        when (dialog) {
-            is TvProxyGroupDialog -> dialog.focusTrapView = trap
-            is AppBottomSheetDialog -> dialog.focusTrapView = trap
-        }
     }
 
     private fun requestProxySelection(group: String, name: String) {
