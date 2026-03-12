@@ -30,6 +30,7 @@ import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.databinding.DesignSheetAddProfileBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
+import com.github.kr328.clash.design.dialog.TvProxyGroupDialog
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
@@ -135,7 +136,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var latestUseDots: Boolean = true
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
-    private var proxyGroupDialog: AppBottomSheetDialog? = null
+    // Dialog? to accommodate AppBottomSheetDialog (phone) or TvProxyGroupDialog (TV).
+    private var proxyGroupDialog: Dialog? = null
     private var proxyGroupRecyclerView: RecyclerView? = null
     // Root view of the proxy group sheet (includes topBar with sort/test buttons + RecyclerView).
     // Used as focusTrapView so D-pad can reach topBar buttons from the RecyclerView.
@@ -465,6 +467,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            // Provide the sheet background for TV (TvProxyGroupDialog has a transparent window).
+            // On phone (AppBottomSheetDialog) the background comes from the sheet theme, so this
+            // is redundant but harmless.
+            background = context.getDrawable(R.drawable.bg_bottom_sheet)
 
             val topBar = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -794,12 +800,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
         }
 
-        // On TV: restore focusTrap and re-register dialogFocusTarget after content swap.
-        // Use proxyGroupSheetRoot (contains topBar + RecyclerView) so UP from the first
-        // list item can naturally reach the sort/test buttons in the topBar.
         if (isTv) {
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            dialog.focusTrapView = proxyGroupSheetRoot
+            setDialogFocusTrap(dialog, proxyGroupSheetRoot)
             focusFirstProxyItem(if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0)
         }
     }
@@ -809,17 +812,21 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         openedProxyGroupName = groupName
 
-        val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context, forceExpanded = true).also {
-            proxyGroupDialog = it
-            it.setOnDismissListener {
+        val dialog = proxyGroupDialog ?: run {
+            // On TV use TvProxyGroupDialog (extends Dialog directly) so the window reliably
+            // receives system D-pad focus. BottomSheetDialog on some TV platforms never
+            // captures input focus, causing D-pad events to fall through to the activity.
+            val d: Dialog = if (isTv) TvProxyGroupDialog(context)
+                            else AppBottomSheetDialog(context, forceExpanded = true)
+            d.setOnDismissListener {
                 openedProxyGroupName = null
-                // On TV: clear the dialog focus target so the drawer redirect logic
-                // stops trying to return focus to the (now closed) dialog.
                 if (isTv) {
                     tvDrawer?.dialogFocusTarget = null
                     proxyGroupSheetRoot = null
                 }
             }
+            proxyGroupDialog = d
+            d
         }
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
@@ -831,7 +838,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         // D-pad UP from the first list item can reach the sort/test buttons in the topBar.
         if (isTv) {
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            dialog.focusTrapView = proxyGroupSheetRoot
+            setDialogFocusTrap(dialog, proxyGroupSheetRoot)
             focusFirstProxyItem()
         }
 
@@ -1168,6 +1175,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val holder = rv.findViewHolderForAdapterPosition(position)
                 ?: rv.findViewHolderForAdapterPosition(0)
             holder?.itemView?.requestFocus() ?: rv.requestFocus()
+        }
+    }
+
+    /** Sets focusTrapView on either AppBottomSheetDialog (phone) or TvProxyGroupDialog (TV). */
+    private fun setDialogFocusTrap(dialog: Dialog, trap: View?) {
+        when (dialog) {
+            is TvProxyGroupDialog -> dialog.focusTrapView = trap
+            is AppBottomSheetDialog -> dialog.focusTrapView = trap
         }
     }
 
