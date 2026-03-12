@@ -608,15 +608,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         setCardBackgroundColor(0x00000000)
                         strokeWidth = 0
                     }
-                }
-
-                val row = LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding((14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt())
-                    isClickable = true
+                    // The card itself is the focusable/clickable RecyclerView item so that
+                    // D-pad navigation moves between cards (not between inner descendants).
                     isFocusable = true
-                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                    isClickable = true
+                    foreground = context.getDrawable(R.drawable.bg_proxy_item_card_ripple)
                     setOnClickListener {
                         if (isSelectorGroup) {
                             requestProxySelection(groupName, proxy.name)
@@ -634,6 +630,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                             true
                         }
                     }
+                }
+
+                val row = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding((14 * dp).toInt(), (12 * dp).toInt(), (14 * dp).toInt(), (12 * dp).toInt())
+                    // Not focusable/clickable — rowCard is the interactive unit.
                 }
 
                 val infoColumn = LinearLayout(context).apply {
@@ -842,10 +845,21 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     ) {
         withContext(Dispatchers.Main) {
             val container = binding.proxyGroupsContainer
-            // On TV: before removing views, check if focus was inside the proxy group container.
-            // After rebuild we'll restore focus to the first card to prevent it from jumping to
-            // the profile card's sync button (first focusable in the activity content area).
-            val focusWasInContainer = isTv && container.findFocus() != null
+            // On TV: before removing views, save which direct child card had focus so we can
+            // restore focus to the same card (not always the first) after rebuild.
+            var savedFocusedCardIndex = -1
+            if (isTv) {
+                val focused = container.findFocus()
+                if (focused != null) {
+                    for (i in 0 until container.childCount) {
+                        val child = container.getChildAt(i)
+                        if (child == focused || child.findFocus() != null) {
+                            savedFocusedCardIndex = i
+                            break
+                        }
+                    }
+                }
+            }
             container.removeAllViews()
             container.gravity = Gravity.TOP
 
@@ -877,6 +891,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     radius = 16 * dp
                     cardElevation = if (isDarkTheme) 0f else 2 * dp
                     setCardBackgroundColor(if (isDarkTheme) surfaceVariantColor else surfaceColor)
+                    // Don't let the card itself steal focus — headerRow is the focusable/clickable unit.
+                    isFocusable = false
+                    isClickable = false
                 }
 
                 val headerRow = LinearLayout(context).apply {
@@ -885,7 +902,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     setPadding((16 * dp).toInt(), (18 * dp).toInt(), (12 * dp).toInt(), (18 * dp).toInt())
                     isClickable = true
                     isFocusable = true
-                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                    // bg_proxy_group_card_ripple: rounded ripple + focus border matching card radius.
+                    background = context.getDrawable(R.drawable.bg_proxy_group_card_ripple)
                 }
 
                 val groupIcon = ImageView(context).apply {
@@ -946,10 +964,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 container.addView(card)
             }
 
-            // On TV: restore focus to the first proxy group card if it was there before the rebuild.
-            if (focusWasInContainer && container.childCount > 0) {
+            // On TV: restore focus to the same card that was focused before the rebuild.
+            // Fall back to the first card if the index is out of range.
+            // On TV: restore focus to the same card that was focused before the rebuild.
+            // Fall back to the first card if the index is out of range.
+            if (savedFocusedCardIndex >= 0 && container.childCount > 0) {
                 container.post {
-                    findFirstFocusableIn(container)?.requestFocus()
+                    val idx = savedFocusedCardIndex.coerceAtMost(container.childCount - 1)
+                    val target = findFirstFocusableIn(container.getChildAt(idx))
+                        ?: findFirstFocusableIn(container)
+                    target?.requestFocus()
                 }
             }
         }
