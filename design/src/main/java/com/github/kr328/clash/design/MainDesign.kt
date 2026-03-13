@@ -141,6 +141,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     // TV only. Full-screen semi-transparent FrameLayout added directly to DecorView so
     // that D-pad events never leave the activity window — no window-focus-transfer issues.
     private var tvProxyGroupOverlay: FrameLayout? = null
+    // TV: the proxy group card that had focus when the overlay was opened — restored on close.
+    private var tvOpenedFromView: java.lang.ref.WeakReference<View>? = null
+    // TV: references to topBar buttons so focus can be restored after a content rebuild.
+    private var proxyGroupSortButton: View? = null
+    private var proxyGroupUrlTestButton: View? = null
     private var proxyGroupRecyclerView: RecyclerView? = null
     // Root view of the proxy group sheet (topBar + RecyclerView).
     // Used as focusTrapView so D-pad UP from the first list item can reach topBar buttons.
@@ -525,6 +530,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
             }
 
+            proxyGroupSortButton = sortButton
+            proxyGroupUrlTestButton = urlTestButton
             topBar.addView(sortButton)
             topBar.addView(titleView)
             topBar.addView(urlTestButton)
@@ -775,17 +782,24 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val savedFirstPos = lm?.findFirstVisibleItemPosition() ?: 0
         val savedFirstOffset = lm?.findViewByPosition(savedFirstPos)?.top ?: 0
 
-        // Save which item had focus so we can restore it after content swap.
-        val savedFocusPos = if (isTv) {
-            val rv = proxyGroupRecyclerView
-            var v: View? = rv?.findFocus()
-            while (v != null && v.parent !== rv) v = v.parent as? View
-            if (v != null && rv != null) rv.getChildAdapterPosition(v) else RecyclerView.NO_POSITION
-        } else RecyclerView.NO_POSITION
-
         if (isTv) {
             val overlay = tvProxyGroupOverlay ?: return
-            // Clear dialogFocusTarget while swapping content.
+
+            // Snapshot focus state BEFORE the rebuild so we can restore correctly.
+            val oldRv = proxyGroupRecyclerView
+            val focusBefore = overlay.findFocus()
+            // Which topBar button (if any) had focus?
+            val sortHadFocus    = focusBefore != null && focusBefore === proxyGroupSortButton
+            val urlTestHadFocus = focusBefore != null && focusBefore === proxyGroupUrlTestButton
+            // Which RecyclerView item had focus (only meaningful when neither button was focused)?
+            val savedFocusPos = if (!sortHadFocus && !urlTestHadFocus) {
+                var v: View? = oldRv?.findFocus()
+                while (v != null && v.parent !== oldRv) v = v.parent as? View
+                if (v != null && oldRv != null) oldRv.getChildAdapterPosition(v)
+                else RecyclerView.NO_POSITION
+            } else RecyclerView.NO_POSITION
+
+            // Rebuild content.
             tvDrawer?.dialogFocusTarget = null
             val newContent = buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots)
             newContent.isClickable = true
@@ -799,11 +813,17 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 (proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager)
                     ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
             }
-            // Immediately focus the RecyclerView container so the cursor doesn't
-            // disappear between removeAllViews() and the post-layout item focus.
-            proxyGroupRecyclerView?.requestFocus()
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            focusFirstProxyItem(if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0)
+
+            // Restore focus: prefer the button that had focus; fall back to the saved
+            // RecyclerView item (or item 0 if nothing was focused before).
+            when {
+                sortHadFocus    -> proxyGroupSortButton?.requestFocus()
+                urlTestHadFocus -> proxyGroupUrlTestButton?.requestFocus()
+                else -> focusFirstProxyItem(
+                    if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0
+                )
+            }
             return
         }
 
@@ -850,6 +870,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         // Remove any stale overlay first.
         tvProxyGroupOverlay?.let { decorView.removeView(it) }
 
+        // Remember which proxy-group card had focus so we can return to it on close.
+        tvOpenedFromView = java.lang.ref.WeakReference((context as? Activity)?.currentFocus)
+
         // Block all background views from receiving D-pad focus while the overlay is shown.
         // The overlay is added directly to DecorView and is NOT a descendant of
         // android.R.id.content, so blocking that frame only affects background views.
@@ -888,6 +911,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         tvDrawer?.dialogFocusTarget = null
         proxyGroupSheetRoot = null
         proxyGroupRecyclerView = null
+        proxyGroupSortButton = null
+        proxyGroupUrlTestButton = null
+        // Return focus to the proxy group card that was used to open the overlay.
+        val restored = tvOpenedFromView?.get()
+        tvOpenedFromView = null
+        if (restored?.isAttachedToWindow == true) restored.requestFocus()
     }
 
     suspend fun setProxyGroups(
@@ -1255,6 +1284,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             ) {
                 rv.removeOnLayoutChangeListener(this)
                 if (!rv.isAttachedToWindow) return
+                // Don't steal focus if a non-RV view in the overlay already has it
+                // (e.g. the user has navigated to the sort/urlTest button).
+                val overlayFocus = tvProxyGroupOverlay?.findFocus()
+                if (overlayFocus != null) {
+                    var p: android.view.ViewParent? = overlayFocus.parent
+                    while (p != null && p !== rv) p = p.parent
+                    if (p == null) return  // focus is outside this RecyclerView
+                }
                 val holder = rv.findViewHolderForAdapterPosition(position)
                     ?: rv.findViewHolderForAdapterPosition(0)
                 holder?.itemView?.requestFocus() ?: rv.requestFocus()
