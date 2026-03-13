@@ -75,6 +75,19 @@ class AppBottomSheetDialog(
         return handled
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) return
+        val trap = focusTrapView ?: return
+        // When the dialog window gains system input focus, ensure a child item is focused.
+        // Without this, on Android TV D-pad events fall through to the activity window
+        // even though the dialog is visible (FLAG_NOT_FOCUSABLE issue).
+        when (val focused = trap.findFocus()) {
+            null -> trap.requestFocus()
+            is RecyclerView -> if (focused.isFocused) focused.requestFocus(View.FOCUS_DOWN)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -83,6 +96,10 @@ class AppBottomSheetDialog(
         window!!.apply {
             isSystemBarsTranslucentCompat = true
             isAllowForceDarkCompat = false
+            // Explicitly ensure the window can receive key events on Android TV.
+            // Some TV builds set FLAG_NOT_FOCUSABLE on BottomSheetDialog windows,
+            // causing D-pad events to fall through to the underlying activity.
+            clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
 
         findViewById<ViewGroup>(com.google.android.material.R.id.container)?.apply {
