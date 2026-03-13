@@ -132,6 +132,21 @@ class AppBottomSheetDialog(
             }
         }
 
+        // Re-clear FLAG_NOT_FOCUSABLE on every sheet state change.
+        // The Material BottomSheetDialog re-sets this flag when the sheet reaches
+        // STATE_EXPANDED with edge-to-edge enabled, breaking D-pad input on Android TV.
+        behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+                // Also request content focus so D-pad lands inside the dialog.
+                if (newState == BottomSheetBehavior.STATE_EXPANDED) {
+                    val trap = focusTrapView ?: return
+                    if (trap.findFocus() == null) trap.requestFocus()
+                }
+            }
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {}
+        })
+
         setOnShowListener {
             if (forceExpanded) {
                 behavior.skipCollapsed = true

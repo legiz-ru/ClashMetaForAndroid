@@ -824,15 +824,17 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
-        if (!dialog.isShowing) dialog.show()
 
-        // On TV: register the dialog as the active focus target so the drawer redirect logic
-        // returns focus here when focus accidentally escapes to the sidebar.
-        // Use proxyGroupSheetRoot (contains topBar + RecyclerView) as focusTrapView so that
-        // D-pad UP from the first list item can reach the sort/test buttons in the topBar.
+        // On TV: set focusTrapView BEFORE show() so that the BottomSheetCallback and
+        // onWindowFocusChanged already see the correct trap when the window gains focus.
         if (isTv) {
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
             dialog.focusTrapView = proxyGroupSheetRoot
+        }
+
+        if (!dialog.isShowing) dialog.show()
+
+        if (isTv) {
             focusFirstProxyItem()
         }
 
