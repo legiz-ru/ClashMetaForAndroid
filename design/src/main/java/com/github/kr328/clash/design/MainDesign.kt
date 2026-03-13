@@ -799,6 +799,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 (proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager)
                     ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
             }
+            // Immediately focus the RecyclerView container so the cursor doesn't
+            // disappear between removeAllViews() and the post-layout item focus.
+            proxyGroupRecyclerView?.requestFocus()
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
             focusFirstProxyItem(if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0)
             return
@@ -847,6 +850,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         // Remove any stale overlay first.
         tvProxyGroupOverlay?.let { decorView.removeView(it) }
 
+        // Block all background views from receiving D-pad focus while the overlay is shown.
+        // The overlay is added directly to DecorView and is NOT a descendant of
+        // android.R.id.content, so blocking that frame only affects background views.
+        (context as? Activity)?.findViewById<ViewGroup>(android.R.id.content)
+            ?.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS)
+
         val overlay = FrameLayout(context).apply {
             setBackgroundColor(0x80000000.toInt())
             // Clicks on the dim background dismiss the sheet.
@@ -868,6 +877,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
 
     private fun closeTvProxyGroupOverlay() {
+        // Restore focus traversal on background views before removing the overlay,
+        // so that the view that receives focus after dismissal is found correctly.
+        (context as? Activity)?.findViewById<ViewGroup>(android.R.id.content)
+            ?.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS)
         val decorView = (context as? Activity)?.window?.decorView as? ViewGroup
         tvProxyGroupOverlay?.let { decorView?.removeView(it) }
         tvProxyGroupOverlay = null
