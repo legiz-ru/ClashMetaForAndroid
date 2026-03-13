@@ -1,5 +1,6 @@
 package com.github.kr328.clash.design
 
+import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.res.Configuration
@@ -30,8 +31,6 @@ import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.databinding.DesignSheetAddProfileBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
-import com.github.kr328.clash.design.dialog.FocusTrapDialog
-import com.github.kr328.clash.design.dialog.TvProxyGroupDialog
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
@@ -137,8 +136,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var latestUseDots: Boolean = true
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
-    // Dialog? covers both AppBottomSheetDialog (phone) and TvProxyGroupDialog (TV).
+    // Phone only. On TV the sheet is shown as an in-window overlay (tvProxyGroupOverlay).
     private var proxyGroupDialog: Dialog? = null
+    // TV only. Full-screen semi-transparent FrameLayout added directly to DecorView so
+    // that D-pad events never leave the activity window — no window-focus-transfer issues.
+    private var tvProxyGroupOverlay: FrameLayout? = null
     private var proxyGroupRecyclerView: RecyclerView? = null
     // Root view of the proxy group sheet (topBar + RecyclerView).
     // Used as focusTrapView so D-pad UP from the first list item can reach topBar buttons.
@@ -162,7 +164,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 latestProxyGroups = emptyMap()
                 proxyGroupRecyclerView = null
                 proxyGroupSheetRoot = null
-                proxyGroupDialog?.dismiss()
+                dismissProxyGroupSheet()
                 val container = binding.proxyGroupsContainer
                 container.removeAllViews()
                 // Add a centered spinner as placeholder (shown when container becomes visible on next start)
@@ -468,8 +470,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            // TvProxyGroupDialog has a transparent window; the content view must supply its own
-            // background with rounded top corners. AppBottomSheetDialog already has one via theme.
+            // TV uses an in-window overlay (no Dialog); supply bg_bottom_sheet directly.
+            // AppBottomSheetDialog (phone) already provides this via its theme.
             if (isTv) background = context.getDrawable(R.drawable.bg_bottom_sheet)
 
             val topBar = FrameLayout(context).apply {
@@ -622,7 +624,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     setOnClickListener {
                         if (isSelectorGroup) {
                             requestProxySelection(groupName, proxy.name)
-                            proxyGroupDialog?.dismiss()
+                            dismissProxyGroupSheet()
                         } else {
                             MaterialAlertDialogBuilder(context)
                                 .setMessage("Данная группа является автоматической, в ней запрещён ручной выбор")
@@ -763,12 +765,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
     private fun refreshOpenedProxyGroupSheet() {
         val groupName = openedProxyGroupName ?: return
-        val dialog = proxyGroupDialog ?: return
-
-        if (!dialog.isShowing) return
-
         val group = latestProxyGroups[groupName] ?: run {
-            dialog.dismiss()
+            dismissProxyGroupSheet()
             return
         }
 
@@ -777,9 +775,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val savedFirstPos = lm?.findFirstVisibleItemPosition() ?: 0
         val savedFirstOffset = lm?.findViewByPosition(savedFirstPos)?.top ?: 0
 
-        // On TV: save which item had focus so we can restore it after content swap.
-        // Traverse up to the direct RecyclerView child (itemView) since findFocus()
-        // may return a deeper descendant.
+        // Save which item had focus so we can restore it after content swap.
         val savedFocusPos = if (isTv) {
             val rv = proxyGroupRecyclerView
             var v: View? = rv?.findFocus()
@@ -787,68 +783,98 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             if (v != null && rv != null) rv.getChildAdapterPosition(v) else RecyclerView.NO_POSITION
         } else RecyclerView.NO_POSITION
 
-        // On TV: clear dialogFocusTarget before replacing content so TvNavigationDrawer
-        // doesn't try to redirect focus to the not-yet-laid-out new RecyclerView.
-        if (isTv) tvDrawer?.dialogFocusTarget = null
+        if (isTv) {
+            val overlay = tvProxyGroupOverlay ?: return
+            // Clear dialogFocusTarget while swapping content.
+            tvDrawer?.dialogFocusTarget = null
+            val newContent = buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots)
+            newContent.isClickable = true
+            overlay.removeAllViews()
+            overlay.addView(newContent, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM,
+            ))
+            if (savedFirstPos > 0 || savedFirstOffset < 0) {
+                (proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager)
+                    ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
+            }
+            tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
+            focusFirstProxyItem(if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0)
+            return
+        }
 
+        // Phone path.
+        val dialog = proxyGroupDialog ?: return
+        if (!dialog.isShowing) return
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
-
-        // Restore scroll position before the first layout pass so RecyclerView
-        // never renders at position 0 first. LinearLayoutManager stores the
-        // pending scroll and applies it during onLayoutChildren — no visible flash.
         if (savedFirstPos > 0 || savedFirstOffset < 0) {
             (proxyGroupRecyclerView?.layoutManager as? LinearLayoutManager)
                 ?.scrollToPositionWithOffset(savedFirstPos, savedFirstOffset)
-        }
-
-        // On TV: restore focusTrap and re-register dialogFocusTarget after content swap.
-        // Use proxyGroupSheetRoot (contains topBar + RecyclerView) so UP from the first
-        // list item can naturally reach the sort/test buttons in the topBar.
-        if (isTv) {
-            tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            (dialog as? FocusTrapDialog)?.focusTrapView = proxyGroupSheetRoot
-            focusFirstProxyItem(if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0)
         }
     }
 
     private fun openProxyGroupSheet(groupName: String) {
         val group = latestProxyGroups[groupName] ?: return
-
         openedProxyGroupName = groupName
 
-        val dialog = proxyGroupDialog ?: run {
-            // On TV: use TvProxyGroupDialog (plain Dialog) so the window reliably receives
-            // system D-pad focus. BottomSheetDialog on some TV platforms never captures
-            // input focus, causing D-pad events to fall through to the activity.
-            val d: Dialog = if (isTv) TvProxyGroupDialog(context)
-                            else AppBottomSheetDialog(context, forceExpanded = true)
-            d.setOnDismissListener {
-                openedProxyGroupName = null
-                if (isTv) {
-                    tvDrawer?.dialogFocusTarget = null
-                    proxyGroupSheetRoot = null
-                }
-            }
-            proxyGroupDialog = d
-            d
-        }
-
-        dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
-
-        // Set focusTrapView BEFORE show() so onWindowFocusChanged already sees the correct trap.
         if (isTv) {
+            val content = buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots)
+            openTvProxyGroupOverlay(content)
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            (dialog as? FocusTrapDialog)?.focusTrapView = proxyGroupSheetRoot
-        }
-
-        if (!dialog.isShowing) dialog.show()
-
-        if (isTv) {
             focusFirstProxyItem()
+        } else {
+            val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context, forceExpanded = true).also {
+                proxyGroupDialog = it
+                it.setOnDismissListener { openedProxyGroupName = null }
+            }
+            dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
+            if (!dialog.isShowing) dialog.show()
         }
 
         pendingUrlTestGroup = groupName
         requests.trySend(Request.UrlTest)
+    }
+
+    /** Unified dismiss: closes TV overlay or phone dialog. */
+    private fun dismissProxyGroupSheet() {
+        if (isTv) closeTvProxyGroupOverlay()
+        else proxyGroupDialog?.dismiss()
+    }
+
+    private fun openTvProxyGroupOverlay(content: View) {
+        val decorView = (context as? Activity)?.window?.decorView as? ViewGroup ?: return
+        // Remove any stale overlay first.
+        tvProxyGroupOverlay?.let { decorView.removeView(it) }
+
+        val overlay = FrameLayout(context).apply {
+            setBackgroundColor(0x80000000.toInt())
+            // Clicks on the dim background dismiss the sheet.
+            isClickable = true
+            setOnClickListener { closeTvProxyGroupOverlay() }
+        }
+        // Prevent the content area from propagating clicks to the dim background.
+        content.isClickable = true
+        overlay.addView(content, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM,
+        ))
+        decorView.addView(overlay, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT,
+        ))
+        tvProxyGroupOverlay = overlay
+    }
+
+    private fun closeTvProxyGroupOverlay() {
+        val decorView = (context as? Activity)?.window?.decorView as? ViewGroup
+        tvProxyGroupOverlay?.let { decorView?.removeView(it) }
+        tvProxyGroupOverlay = null
+        openedProxyGroupName = null
+        tvDrawer?.dialogFocusTarget = null
+        proxyGroupSheetRoot = null
+        proxyGroupRecyclerView = null
     }
 
     suspend fun setProxyGroups(
