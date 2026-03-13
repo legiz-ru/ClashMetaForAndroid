@@ -146,6 +146,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     // TV: references to topBar buttons so focus can be restored after a content rebuild.
     private var proxyGroupSortButton: View? = null
     private var proxyGroupUrlTestButton: View? = null
+    // In-place delay update support (avoids full view rebuild on every URL-test result).
+    // Main screen: group name → subtitle TextView (shows selected proxy + delay).
+    private val groupInfoViews = mutableMapOf<String, TextView>()
+    // Overlay: proxy name → lambda that re-reads latestProxyGroups and updates the delay view.
+    private val proxyDelayUpdaters = mutableMapOf<String, () -> Unit>()
+    // Last known group.now when the overlay was fully rebuilt; used to detect selection changes.
+    private var lastOpenedGroupNow: String? = null
     private var proxyGroupRecyclerView: RecyclerView? = null
     // Root view of the proxy group sheet (topBar + RecyclerView).
     // Used as focusTrapView so D-pad UP from the first list item can reach topBar buttons.
@@ -169,6 +176,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 latestProxyGroups = emptyMap()
                 proxyGroupRecyclerView = null
                 proxyGroupSheetRoot = null
+                groupInfoViews.clear()
                 dismissProxyGroupSheet()
                 val container = binding.proxyGroupsContainer
                 container.removeAllViews()
@@ -370,6 +378,37 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    /** Updates an existing delay view (dot or text) produced by [createDelayText] in-place. */
+    private fun updateDelayView(view: View, delay: Int, useDots: Boolean) {
+        if (useDots) {
+            when {
+                delay <= 0 -> view.visibility = View.GONE
+                else -> {
+                    view.visibility = View.VISIBLE
+                    view.background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(delayColor(delay))
+                    }
+                }
+            }
+        } else {
+            val tv = view as? TextView ?: return
+            when {
+                delay <= 0 -> tv.visibility = View.GONE
+                delay == 65535 -> {
+                    tv.visibility = View.VISIBLE
+                    tv.text = context.getString(R.string.timeout)
+                    tv.setTextColor(0xFFF44336.toInt())
+                }
+                else -> {
+                    tv.visibility = View.VISIBLE
+                    tv.text = context.getString(R.string.format_delay_ms, delay)
+                    tv.setTextColor(delayColor(delay))
+                }
+            }
+        }
+    }
+
     private fun resolveDelay(
         groupMap: Map<String, ProxyGroup>,
         groupName: String,
@@ -469,6 +508,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val onSecondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSecondaryContainer)
         val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
         val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+
+        // Each full rebuild replaces all delay updaters and records the current selection.
+        proxyDelayUpdaters.clear()
+        lastOpenedGroupNow = group.now
 
         val isSelectorGroup = group.type == com.github.kr328.clash.core.model.Proxy.Type.Selector
         val isSmartGroup = group.type == com.github.kr328.clash.core.model.Proxy.Type.Smart
@@ -737,7 +780,27 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     rightColumn.addView(shieldIcon)
                 }
 
-                rightColumn.addView(createDelayText(dp, proxyDelay, useDots))
+                val delayView = createDelayText(dp, proxyDelay, useDots)
+                // Register in-place updater: called when URL-test data changes without
+                // structural changes, so the view doesn't need to be recreated.
+                proxyDelayUpdaters[proxy.name] = {
+                    val updatedProxy = latestProxyGroups[groupName]?.proxies?.find { p -> p.name == proxy.name }
+                    val newDelay: Int = when {
+                        updatedProxy == null -> 0
+                        updatedProxy.type.group -> {
+                            val nested = latestProxyGroups[updatedProxy.name]
+                            if (nested != null) {
+                                if (updatedProxy.type == com.github.kr328.clash.core.model.Proxy.Type.LoadBalance)
+                                    nested.proxies.filter { it.delay in 1..65534 }.minOfOrNull { it.delay } ?: 0
+                                else
+                                    resolveDelay(latestProxyGroups, updatedProxy.name, nested.now)
+                            } else updatedProxy.delay
+                        }
+                        else -> updatedProxy.delay
+                    }
+                    updateDelayView(delayView, newDelay, latestUseDots)
+                }
+                rightColumn.addView(delayView)
                 row.addView(infoColumn)
                 row.addView(rightColumn)
                 rowCard.addView(row)
@@ -785,6 +848,21 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         if (isTv) {
             val overlay = tvProxyGroupOverlay ?: return
 
+            // In-place update: if proxy structure (names, order, selection) is unchanged,
+            // only refresh delay views — no removeAllViews(), no focus disruption.
+            val newSortedProxyNames = sortedProxies(group).map { it.name }
+            if (proxyDelayUpdaters.isNotEmpty() &&
+                proxyDelayUpdaters.keys.toList() == newSortedProxyNames &&
+                group.now == lastOpenedGroupNow
+            ) {
+                proxyDelayUpdaters.values.forEach { it() }
+                // Also update the main-screen subtitle for the opened group.
+                val (selectedInfoText, _) = resolveSelectedInfo(latestProxyGroups, groupName, group.now)
+                groupInfoViews[groupName]?.text = selectedInfoText
+                return
+            }
+
+            // Full rebuild — proxy structure or selection changed.
             // Snapshot focus state BEFORE the rebuild so we can restore correctly.
             val oldRv = proxyGroupRecyclerView
             val focusBefore = overlay.findFocus()
@@ -913,6 +991,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         proxyGroupRecyclerView = null
         proxyGroupSortButton = null
         proxyGroupUrlTestButton = null
+        proxyDelayUpdaters.clear()
+        lastOpenedGroupNow = null
         // Return focus to the proxy group card that was used to open the overlay.
         val restored = tvOpenedFromView?.get()
         tvOpenedFromView = null
@@ -925,6 +1005,27 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     ) {
         withContext(Dispatchers.Main) {
             val container = binding.proxyGroupsContainer
+
+            val visibleGroups = groups.filter { !it.second.hidden }
+            val groupMap = visibleGroups.toMap()
+
+            // In-place update: if the set and order of groups is unchanged, only update
+            // the subtitle text (selected proxy name + delay) without rebuilding any views.
+            // This eliminates the focus flicker caused by removeAllViews() + re-add.
+            val newGroupNames = visibleGroups.map { it.first }
+            if (groupInfoViews.isNotEmpty() && groupInfoViews.keys.toList() == newGroupNames) {
+                latestProxyGroups = groupMap
+                latestUseDots = useDots
+                for ((name, group) in visibleGroups) {
+                    val (selectedInfoText, _) = resolveSelectedInfo(groupMap, name, group.now)
+                    groupInfoViews[name]?.text = selectedInfoText
+                }
+                refreshOpenedProxyGroupSheet()
+                return@withContext
+            }
+
+            // Full rebuild — group structure changed.
+            groupInfoViews.clear()
 
             // On TV: before removing views, save which direct child card had focus so we can
             // restore focus to the same card (not always the first) after rebuild.
@@ -954,8 +1055,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
             val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
 
-            val visibleGroups = groups.filter { !it.second.hidden }
-            val groupMap = visibleGroups.toMap()
             latestProxyGroups = groupMap
             latestUseDots = useDots
             refreshOpenedProxyGroupSheet()
@@ -1025,6 +1124,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     isSingleLine = true
                     ellipsize = TextUtils.TruncateAt.END
                 }
+                groupInfoViews[name] = selectedInfo  // enables in-place subtitle update
 
                 nameColumn.addView(groupNameView)
                 nameColumn.addView(selectedInfo)
