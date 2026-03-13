@@ -30,6 +30,8 @@ import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.databinding.DesignMainBinding
 import com.github.kr328.clash.design.databinding.DesignSheetAddProfileBinding
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
+import com.github.kr328.clash.design.dialog.FocusTrapDialog
+import com.github.kr328.clash.design.dialog.TvProxyGroupDialog
 import com.github.kr328.clash.design.util.layoutInflater
 import com.github.kr328.clash.design.util.resolveThemedColor
 import com.github.kr328.clash.design.util.root
@@ -135,7 +137,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private var latestUseDots: Boolean = true
     private var openedProxyGroupName: String? = null
     private var openedProxyGroupSort: GroupSheetSort = GroupSheetSort.Default
-    private var proxyGroupDialog: AppBottomSheetDialog? = null
+    // Dialog? covers both AppBottomSheetDialog (phone) and TvProxyGroupDialog (TV).
+    private var proxyGroupDialog: Dialog? = null
     private var proxyGroupRecyclerView: RecyclerView? = null
     // Root view of the proxy group sheet (topBar + RecyclerView).
     // Used as focusTrapView so D-pad UP from the first list item can reach topBar buttons.
@@ -465,6 +468,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            // TvProxyGroupDialog has a transparent window; the content view must supply its own
+            // background with rounded top corners. AppBottomSheetDialog already has one via theme.
+            if (isTv) background = context.getDrawable(R.drawable.bg_bottom_sheet)
 
             val topBar = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -800,7 +806,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         // list item can naturally reach the sort/test buttons in the topBar.
         if (isTv) {
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            dialog.focusTrapView = proxyGroupSheetRoot
+            (dialog as? FocusTrapDialog)?.focusTrapView = proxyGroupSheetRoot
             focusFirstProxyItem(if (savedFocusPos != RecyclerView.NO_POSITION) savedFocusPos else 0)
         }
     }
@@ -810,26 +816,29 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         openedProxyGroupName = groupName
 
-        val dialog = proxyGroupDialog ?: AppBottomSheetDialog(context, forceExpanded = true).also {
-            proxyGroupDialog = it
-            it.setOnDismissListener {
+        val dialog = proxyGroupDialog ?: run {
+            // On TV: use TvProxyGroupDialog (plain Dialog) so the window reliably receives
+            // system D-pad focus. BottomSheetDialog on some TV platforms never captures
+            // input focus, causing D-pad events to fall through to the activity.
+            val d: Dialog = if (isTv) TvProxyGroupDialog(context)
+                            else AppBottomSheetDialog(context, forceExpanded = true)
+            d.setOnDismissListener {
                 openedProxyGroupName = null
-                // On TV: clear the dialog focus target so the drawer redirect logic
-                // stops trying to return focus to the (now closed) dialog.
                 if (isTv) {
                     tvDrawer?.dialogFocusTarget = null
                     proxyGroupSheetRoot = null
                 }
             }
+            proxyGroupDialog = d
+            d
         }
 
         dialog.setContentView(buildProxyGroupSheet(groupName, group, latestProxyGroups, latestUseDots))
 
-        // On TV: set focusTrapView BEFORE show() so that the BottomSheetCallback and
-        // onWindowFocusChanged already see the correct trap when the window gains focus.
+        // Set focusTrapView BEFORE show() so onWindowFocusChanged already sees the correct trap.
         if (isTv) {
             tvDrawer?.dialogFocusTarget = { proxyGroupRecyclerView?.takeIf { it.isAttachedToWindow } }
-            dialog.focusTrapView = proxyGroupSheetRoot
+            (dialog as? FocusTrapDialog)?.focusTrapView = proxyGroupSheetRoot
         }
 
         if (!dialog.isShowing) dialog.show()
