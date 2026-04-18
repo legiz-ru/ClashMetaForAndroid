@@ -837,6 +837,15 @@ object ProfileProcessor {
                 profileLock.withLock {
                     if (ImportedDao().exists(snapshot.uuid)) {
                         val importedDir = context.importedDir.resolve(snapshot.uuid.toString())
+
+                        // For Url profiles, preserve profile_links.json before wiping importedDir:
+                        // updateFlow() may have written fresh announce/headers to it concurrently
+                        // after processingDir was snapshotted, and we must not lose those updates.
+                        val savedProfileLinks = if (snapshot.type == Profile.Type.Url) {
+                            importedDir.resolve("profile_links.json")
+                                .takeIf { it.exists() }?.readText()
+                        } else null
+
                         importedDir.deleteRecursively()
                         context.processingDir.copyRecursively(importedDir)
 
@@ -864,6 +873,12 @@ object ProfileProcessor {
                                     )
                                 )
                             }
+                        }
+
+                        // Restore profile_links.json for Url profiles so that headers written
+                        // by a concurrent updateFlow() are not overwritten by the stale snapshot.
+                        if (savedProfileLinks != null) {
+                            importedDir.resolve("profile_links.json").writeText(savedProfileLinks)
                         }
 
                         context.sendProfileChanged(snapshot.uuid)
