@@ -1,12 +1,13 @@
 package com.github.kr328.clash
 
-import android.content.ComponentName
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.pm.ShortcutManagerCompat
 import com.github.kr328.clash.common.util.componentName
 import com.github.kr328.clash.core.bridge.Bridge
 import com.github.kr328.clash.design.AppSettingsDesign
 import com.github.kr328.clash.design.model.Behavior
+import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
 import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.update.UpdateChecker
@@ -109,8 +110,12 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
         } else {
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         }
+        if (hide) {
+            // Prevent launcher activity not found
+            ShortcutManagerCompat.removeAllDynamicShortcuts(this)
+        }
         packageManager.setComponentEnabledSetting(
-            ComponentName(this, mainActivityAlias),
+            mainActivityAlias,
             newState,
             PackageManager.DONT_KILL_APP
         )
