@@ -84,13 +84,13 @@ func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 			hidden := false
 			switch v := g.(type) {
 			case *outboundgroup.Selector:
-				hidden = v.Hidden
+				hidden = v.Hidden()
 			case *outboundgroup.URLTest:
-				hidden = v.Hidden
+				hidden = v.Hidden()
 			case *outboundgroup.Fallback:
-				hidden = v.Hidden
+				hidden = v.Hidden()
 			case *outboundgroup.LoadBalance:
-				hidden = v.Hidden
+				hidden = v.Hidden()
 			}
 			if hidden {
 				continue
@@ -102,7 +102,7 @@ func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 			// Smart does not implement outboundgroup.ProxyGroup (no Providers()),
 			// so handle it separately.
 			if sg, ok := p.Adapter().(*outboundgroup.Smart); ok {
-				if sg.Hidden {
+				if sg.Hidden() {
 					continue
 				}
 				result = append(result, p.Name())
@@ -205,7 +205,7 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 			})
 		}
 
-		icon := sg.Icon
+		icon := sg.Icon()
 		if icon != "" && config.CurrentProfileDir != "" {
 			hash := fmt.Sprintf("%x", md5.Sum([]byte(icon)))
 			cachedPath := P.Join(config.CurrentProfileDir, "icons", hash)
@@ -218,7 +218,7 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 			Type:    p.Type().String(),
 			Now:     bestNow,
 			Icon:    icon,
-			Hidden:  sg.Hidden,
+			Hidden:  sg.Hidden(),
 			Proxies: proxies,
 		}
 	}
@@ -260,17 +260,17 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 	hidden := false
 	switch v := g.(type) {
 	case *outboundgroup.Selector:
-		icon = v.Icon
-		hidden = v.Hidden
+		icon = v.Icon()
+		hidden = v.Hidden()
 	case *outboundgroup.URLTest:
-		icon = v.Icon
-		hidden = v.Hidden
+		icon = v.Icon()
+		hidden = v.Hidden()
 	case *outboundgroup.Fallback:
-		icon = v.Icon
-		hidden = v.Hidden
+		icon = v.Icon()
+		hidden = v.Hidden()
 	case *outboundgroup.LoadBalance:
-		icon = v.Icon
-		hidden = v.Hidden
+		icon = v.Icon()
+		hidden = v.Hidden()
 	}
 
 	// Check for cached icon file
