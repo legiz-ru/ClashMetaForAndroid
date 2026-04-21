@@ -75,7 +75,7 @@ class Picker(private val context: Context) {
                 val type = pending?.type ?: imported?.type
                 ?: throw FileNotFoundException("profile not found")
 
-                if (writable && type != Profile.Type.File)
+                if (writable && type == Profile.Type.Url)
                     throw IllegalArgumentException("invalid open mode")
 
                 val flags: Set<Flag> = if (type == Profile.Type.Url)
