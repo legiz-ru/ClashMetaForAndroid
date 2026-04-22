@@ -6,6 +6,7 @@ import com.github.kr328.clash.core.model.Proxy
 import com.github.kr328.clash.design.ProxyDesign
 import com.github.kr328.clash.design.model.ProxyState
 import com.github.kr328.clash.util.withClash
+import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -19,12 +20,14 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
         val states = List(names.size) { ProxyState("?") }
         val unorderedStates = names.indices.map { names[it] to states[it] }.toMap()
         val reloadLock = Semaphore(10)
+        val activeProfileLatencyDots = withProfile { queryActive()?.latencyDots ?: -1 }
 
         val design = ProxyDesign(
             this,
             mode,
             names,
-            uiStore
+            uiStore,
+            activeProfileLatencyDots,
         )
 
         setContentDesign(design)

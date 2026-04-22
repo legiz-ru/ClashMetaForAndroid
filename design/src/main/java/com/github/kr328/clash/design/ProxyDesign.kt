@@ -27,6 +27,7 @@ class ProxyDesign(
     overrideMode: TunnelState.Mode?,
     groupNames: List<String>,
     uiStore: UiStore,
+    private val profileLatencyDots: Int = -1,
 ) : Design<ProxyDesign.Request>(context) {
     sealed class Request {
         object ReloadAll : Request()
@@ -41,12 +42,18 @@ class ProxyDesign(
     private val binding = DesignProxyBinding
         .inflate(context.layoutInflater, context.root, false)
 
-    private var config = ProxyViewConfig(context, uiStore.proxyLine, uiStore.delayDisplayDots)
+    private fun effectiveDots(): Boolean = when (profileLatencyDots) {
+        0 -> false
+        1 -> true
+        else -> uiStore.delayDisplayDots
+    }
+
+    private var config = ProxyViewConfig(context, uiStore.proxyLine, effectiveDots())
 
     private val menu: ProxyMenu by lazy {
         ProxyMenu(context, binding.menuView, overrideMode, uiStore, requests) {
             config.proxyLine = uiStore.proxyLine
-            config.delayDisplayDots = uiStore.delayDisplayDots
+            config.delayDisplayDots = effectiveDots()
         }
     }
 

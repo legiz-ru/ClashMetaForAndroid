@@ -300,6 +300,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.profileUpdateInterval,
             hdrs.announce,
             allowTemplateSelection,
+            hdrs.latencyDots,
         )
     }
 

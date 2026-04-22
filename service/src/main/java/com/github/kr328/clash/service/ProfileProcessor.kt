@@ -936,6 +936,7 @@ object ProfileProcessor {
         val profileLogo: String = "",
         val profileUpdateInterval: Int = 0,
         val announce: String = "",
+        val latencyDots: Int = -1,
     )
 
     fun saveProfileHeaders(profileDir: File, headers: okhttp3.Headers) {
@@ -950,6 +951,9 @@ object ProfileProcessor {
                 if (hours != null && hours > 0) json.put("profile_update_interval", hours)
             }
             headers["announce"]?.let { if (it.isNotBlank()) json.put("announce", decodeHeaderValue(it)) }
+            headers["pxa-latency-dots"]?.trim()?.toIntOrNull()?.let {
+                if (it == 0 || it == 1) json.put("pxa_latency_dots", it)
+            }
             profileDir.resolve("profile_links.json").writeText(json.toString())
         } catch (_: Exception) {}
     }
@@ -966,6 +970,7 @@ object ProfileProcessor {
                     profileLogo = json.optString("profile_logo", ""),
                     profileUpdateInterval = json.optInt("profile_update_interval", 0),
                     announce = json.optString("announce", ""),
+                    latencyDots = if (json.has("pxa_latency_dots")) json.getInt("pxa_latency_dots") else -1,
                 )
             } else ProfileHeaders()
         } catch (_: Exception) { ProfileHeaders() }
