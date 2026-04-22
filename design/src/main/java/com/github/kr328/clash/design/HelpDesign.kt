@@ -81,15 +81,6 @@ class HelpDesign(
             }
 
             clickable(
-                title = R.string.mihomo_xhttp_core,
-                summary = R.string.mihomo_xhttp_core_url
-            ) {
-                clicked {
-                    openLink(Uri.parse(context.getString(R.string.mihomo_xhttp_core_url)))
-                }
-            }
-
-            clickable(
                 title = R.string.moshen_fork_core,
                 summary = R.string.moshen_fork_core_url
             ) {
