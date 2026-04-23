@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import com.google.android.material.card.MaterialCardView
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.Design
@@ -80,6 +81,9 @@ class TvImportActivity : BaseActivity<TvImportActivity.EmptyDesign>() {
 
         withContext(Dispatchers.Main) {
             qrImage().setImageBitmap(qrBitmap)
+            ipValueText().text = localIp
+            portValueText().text = port.toString()
+            ipPortCard().visibility = View.VISIBLE
             urlText().text = url
             instructionText().text =
                 getString(com.github.kr328.clash.design.R.string.tv_import_instruction)
@@ -160,4 +164,7 @@ class TvImportActivity : BaseActivity<TvImportActivity.EmptyDesign>() {
     private fun urlText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.url_text)
     private fun statusText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.status_text)
     private fun instructionText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.instruction_text)
+    private fun ipPortCard() = findViewById<MaterialCardView>(com.github.kr328.clash.design.R.id.ip_port_card)
+    private fun ipValueText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.ip_value_text)
+    private fun portValueText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.port_value_text)
 }

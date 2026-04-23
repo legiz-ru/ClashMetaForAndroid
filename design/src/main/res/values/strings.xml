@@ -390,6 +390,8 @@
     <string name="tv_import_instruction">Open the link in Prizrak-Box Android or a browser\non a device connected to the same Wi-Fi</string>
     <string name="tv_import_received">Profile received, importing…</string>
     <string name="tv_import_no_wifi">Device is not connected to Wi-Fi</string>
+    <string name="tv_import_ip_label">IP-адрес</string>
+    <string name="tv_import_port_label">Порт</string>
     <string name="manage_profiles">Profiles</string>
     <string name="new_profile_btn">New Profile</string>
     <string name="update_subscriptions">Update Subscriptions</string>

@@ -41,6 +41,71 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- IP / Port info card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/ip_port_card"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="invisible">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tv_import_ip_label"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:alpha="0.6"
+                        android:layout_marginEnd="24dp" />
+
+                    <TextView
+                        android:id="@+id/ip_value_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:textIsSelectable="true" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tv_import_port_label"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:alpha="0.6"
+                        android:layout_marginEnd="24dp" />
+
+                    <TextView
+                        android:id="@+id/port_value_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:textIsSelectable="true" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- URL text -->
         <TextView
             android:id="@+id/url_text"
