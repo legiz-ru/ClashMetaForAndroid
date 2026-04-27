@@ -52,6 +52,7 @@ class SettingsDesign(context: Context) : Design<SettingsDesign.Request>(context)
 
     fun setClashRunning(running: Boolean) {
         tvDrawer?.isClashRunning = running
+        binding.clashRunning = running
     }
 
     init {

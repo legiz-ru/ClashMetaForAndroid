@@ -5,8 +5,12 @@
         <variable
             name="self"
             type="com.github.kr328.clash.design.SettingsDesign" />
+        <variable
+            name="clashRunning"
+            type="boolean" />
 
         <import type="com.github.kr328.clash.design.SettingsDesign.Request" />
+        <import type="android.view.View" />
     </data>
 
     <LinearLayout
@@ -62,6 +66,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:onClick="@{() -> self.request(Request.StartProviders)}"
+                    android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
                     app:icon="@drawable/ic_baseline_swap_vertical_circle"
                     app:text="@string/providers" />
 
