@@ -14,12 +14,13 @@ import com.github.kr328.clash.design.model.ConnectionGroup
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(context) {
     sealed class Request {
         data class OpenApp(val group: ConnectionGroup) : Request()
-        data class KillAll : Request()
+        class KillAll : Request()
         data class CloseConnection(val id: String) : Request()
     }
 
@@ -63,7 +64,7 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
         if (!isCachingClosed) {
             closedConnections = emptyList()
             closedIds.clear()
-            refreshClosed()
+            launch { refreshClosed() }
         }
     }
 

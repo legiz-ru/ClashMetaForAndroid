@@ -26,7 +26,7 @@ class ProxyDesign(
     context: Context,
     overrideMode: TunnelState.Mode?,
     groupNames: List<String>,
-    uiStore: UiStore,
+    private val uiStore: UiStore,
     private val profileLatencyDots: Int = -1,
 ) : Design<ProxyDesign.Request>(context) {
     sealed class Request {
