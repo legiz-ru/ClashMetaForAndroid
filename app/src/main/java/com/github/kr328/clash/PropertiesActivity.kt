@@ -1,6 +1,7 @@
 package com.github.kr328.clash
 
 import androidx.activity.result.contract.ActivityResultContracts
+import com.github.kr328.clash.util.GetContentCompat
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
@@ -158,7 +159,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
             // For Custom template, let the user pick a YAML file to use as the template.
             if (selectedTemplate == TemplateManager.Template.Custom) {
                 val uri = this@PropertiesActivity.startActivityForResult(
-                    ActivityResultContracts.GetContent(), "*/*"
+                    GetContentCompat(), "*/*"
                 )
                 if (uri == null) return // User cancelled the file picker
                 val content = withContext(Dispatchers.IO) {

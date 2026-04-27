@@ -2,6 +2,7 @@ package com.github.kr328.clash
 
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContracts
+import com.github.kr328.clash.util.GetContentCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import com.github.kr328.clash.common.util.componentName
 import com.github.kr328.clash.core.bridge.Bridge
@@ -49,7 +50,7 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
                         }
                         AppSettingsDesign.Request.SelectCustomTemplate -> {
                             val uri = startActivityForResult(
-                                ActivityResultContracts.GetContent(), "*/*"
+                                GetContentCompat(), "*/*"
                             )
                             if (uri != null) {
                                 val content = withContext(Dispatchers.IO) {

@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
+import com.github.kr328.clash.util.GetContentCompat
 import androidx.core.content.ContextCompat
 import com.github.kr328.clash.common.util.grantPermissions
 import com.github.kr328.clash.common.util.ticker
@@ -82,7 +83,7 @@ class FilesActivity : BaseActivity<FilesDesign>() {
                             }
                             is FilesDesign.Request.ImportFile -> {
                                 val uri: Uri? = startActivityForResult(
-                                    ActivityResultContracts.GetContent(),
+                                    GetContentCompat(),
                                     "*/*"
                                 )
 

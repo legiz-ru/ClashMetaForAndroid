@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import com.github.kr328.clash.util.GetContentCompat
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.design.MetaFeatureSettingsDesign
 import com.github.kr328.clash.util.clashDir
@@ -55,25 +56,25 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
                         }
                         MetaFeatureSettingsDesign.Request.ImportGeoIp -> {
                             val uri = startActivityForResult(
-                                ActivityResultContracts.GetContent(),
+                                GetContentCompat(),
                                 "*/*")
                             importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportGeoIp)
                         }
                         MetaFeatureSettingsDesign.Request.ImportGeoSite -> {
                             val uri = startActivityForResult(
-                                ActivityResultContracts.GetContent(),
+                                GetContentCompat(),
                                 "*/*")
                             importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportGeoSite)
                         }
                         MetaFeatureSettingsDesign.Request.ImportCountry -> {
                             val uri = startActivityForResult(
-                                ActivityResultContracts.GetContent(),
+                                GetContentCompat(),
                                 "*/*")
                             importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportCountry)
                         }
                         MetaFeatureSettingsDesign.Request.ImportASN -> {
                             val uri = startActivityForResult(
-                                ActivityResultContracts.GetContent(),
+                                GetContentCompat(),
                                 "*/*")
                             importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportASN)
                         }
