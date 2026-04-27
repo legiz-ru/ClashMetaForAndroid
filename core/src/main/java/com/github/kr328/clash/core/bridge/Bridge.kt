@@ -50,6 +50,9 @@ object Bridge {
     external fun nativeQueryConfiguration(): String
     external fun nativeSubscribeLogcat(callback: LogcatInterface)
     external fun nativeCoreVersion(): String
+    external fun nativeQueryConnections(): String
+    external fun nativeCloseConnection(id: String): Boolean
+    external fun nativeCloseAllConnections()
 
     private external fun nativeInit(home: String, versionName: String, sdkVersion: Int)
 

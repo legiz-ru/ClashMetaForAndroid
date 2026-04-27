@@ -40,6 +40,8 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(MetaFeatureSettingsActivity::class.intent)
                         SettingsDesign.Request.StartProviders ->
                             startActivity(ProvidersActivity::class.intent)
+                        SettingsDesign.Request.StartConnections ->
+                            startActivity(ConnectionsActivity::class.intent)
                         SettingsDesign.Request.StartLogs -> {
                             if (LogcatService.running) {
                                 startActivity(LogcatActivity::class.intent)

@@ -76,6 +76,18 @@ class ClashManager(private val context: Context) : IClashManager,
         return Clash.updateProvider(type, name).await()
     }
 
+    override fun queryConnections(): String {
+        return com.github.kr328.clash.core.bridge.Bridge.nativeQueryConnections()
+    }
+
+    override fun closeConnection(id: String): Boolean {
+        return Clash.closeConnection(id)
+    }
+
+    override fun closeAllConnections() {
+        com.github.kr328.clash.core.bridge.Bridge.nativeCloseAllConnections()
+    }
+
     override fun setLogObserver(observer: ILogObserver?) {
         synchronized(this) {
             logReceiver?.apply {

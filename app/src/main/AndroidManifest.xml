@@ -132,6 +132,16 @@
             android:exported="false"
             android:label="@string/providers" />
         <activity
+            android:name=".ConnectionsActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/connections" />
+        <activity
+            android:name=".AppConnectionsActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/connections" />
+        <activity
             android:name=".LogsActivity"
             android:configChanges="uiMode"
             android:exported="false"

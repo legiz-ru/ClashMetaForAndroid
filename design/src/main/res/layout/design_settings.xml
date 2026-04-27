@@ -73,6 +73,14 @@
                 <com.github.kr328.clash.design.view.ActionLabel
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:onClick="@{() -> self.request(Request.StartConnections)}"
+                    android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
+                    app:icon="@drawable/ic_baseline_view_list"
+                    app:text="@string/connections" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:onClick="@{() -> self.request(Request.StartLogs)}"
                     app:icon="@drawable/ic_baseline_assignment"
                     app:text="@string/logs" />

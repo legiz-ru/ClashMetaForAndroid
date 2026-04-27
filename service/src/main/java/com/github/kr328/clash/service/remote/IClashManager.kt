@@ -22,5 +22,9 @@ interface IClashManager {
     fun patchOverride(slot: Clash.OverrideSlot, configuration: ConfigurationOverride)
     fun clearOverride(slot: Clash.OverrideSlot)
 
+    fun queryConnections(): String
+    fun closeConnection(id: String): Boolean
+    fun closeAllConnections()
+
     fun setLogObserver(observer: ILogObserver?)
 }

@@ -537,8 +537,33 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
 JNIEXPORT jstring JNICALL
 Java_com_github_kr328_clash_core_bridge_Bridge_nativeCoreVersion(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
-    
+
     char* Version = make_String(GIT_VERSION);
 
     return new_string(Version);
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryConnections(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+
+    scoped_string response = queryConnections();
+
+    return new_string(response);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeCloseConnection(JNIEnv *env, jobject thiz,
+                                                                     jstring id) {
+    TRACE_METHOD();
+
+    scoped_string _id = get_string(id);
+
+    return (jboolean) closeConnection(_id);
+}
+
+JNIEXPORT void JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeCloseAllConnections(JNIEnv *env, jobject thiz) {
+    TRACE_METHOD();
+    closeAllConnections();
 }
