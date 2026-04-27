@@ -6,16 +6,20 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.ImageView
+import android.widget.TextView
 import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.core.model.ConnectionSnapshot
 import com.github.kr328.clash.design.adapter.ConnectionGroupAdapter
 import com.github.kr328.clash.design.databinding.DesignConnectionsBinding
 import com.github.kr328.clash.design.model.ConnectionGroup
 import com.github.kr328.clash.design.util.*
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 
 class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(context) {
     sealed class Request {
@@ -69,7 +73,23 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     }
 
     fun requestKillAll() {
-        requests.trySend(Request.KillAll())
+        launch {
+            if (confirmKillAll()) {
+                requests.trySend(Request.KillAll())
+            }
+        }
+    }
+
+    private suspend fun confirmKillAll(): Boolean = withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine { cont ->
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.connections_kill_all_confirm_title)
+                .setMessage(R.string.connections_kill_all_confirm_msg)
+                .setPositiveButton(R.string.yes) { _, _ -> cont.resume(true) }
+                .setNegativeButton(R.string.no) { _, _ -> cont.resume(false) }
+                .setOnCancelListener { if (cont.isActive) cont.resume(false) }
+                .show()
+        }
     }
 
     suspend fun updateSnapshot(snapshot: ConnectionSnapshot) {
@@ -161,8 +181,20 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     init {
         binding.self = this
         binding.activityBarLayout.applyFrom(context)
-        binding.mainList.recyclerList.bindAppBarElevation(binding.activityBarLayout)
-        binding.mainList.recyclerList.applyLinearAdapter(context, activeAdapter)
+
+        // Hide title — it is shown only in Settings
+        binding.activityBarLayout.findViewById<TextView>(R.id.activity_bar_title_view)?.visibility = View.GONE
+
+        // Set dynamic paddingTop on the list to match the toolbar height
+        binding.activityBarLayout.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val top = binding.activityBarLayout.height
+            if (binding.recyclerList.paddingTop != top) {
+                binding.recyclerList.setPadding(0, top, 0, binding.recyclerList.paddingBottom)
+            }
+        }
+
+        binding.recyclerList.bindAppBarElevation(binding.activityBarLayout)
+        binding.recyclerList.applyLinearAdapter(context, activeAdapter)
 
         val tabActive = binding.tabLayout.newTab().setText(context.getString(R.string.connections_active))
         val tabClosed = binding.tabLayout.newTab().setText(context.getString(R.string.connections_closed))
@@ -172,7 +204,7 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 showingClosed = tab.position == 1
-                binding.mainList.recyclerList.adapter =
+                binding.recyclerList.adapter =
                     if (showingClosed) closedAdapter else activeAdapter
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
@@ -184,6 +216,9 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 currentFilter = s?.toString() ?: ""
+                launch {
+                    if (showingClosed) refreshClosed() else refreshActive(lastSnapshot.connections)
+                }
             }
         })
     }

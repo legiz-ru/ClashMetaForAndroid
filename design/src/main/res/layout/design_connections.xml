@@ -14,10 +14,12 @@
         android:paddingStart="@{self.surface.insets.start}"
         android:paddingEnd="@{self.surface.insets.end}">
 
-        <include
-            android:id="@+id/main_list"
-            layout="@layout/common_recycler_list"
-            app:insets="@{self.surface.insets}" />
+        <com.github.kr328.clash.design.view.AppRecyclerView
+            android:id="@+id/recycler_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="@{self.surface.insets.bottom}" />
 
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"
@@ -30,7 +32,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Top row: back + title + speed + pause + kill -->
+                <!-- Top row: back + speed + pause + kill -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -100,9 +102,12 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        app:boxBackgroundMode="outline"
                         app:startIconDrawable="@drawable/ic_baseline_search"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense">
+                        app:boxCornerRadiusTopStart="50dp"
+                        app:boxCornerRadiusTopEnd="50dp"
+                        app:boxCornerRadiusBottomStart="50dp"
+                        app:boxCornerRadiusBottomEnd="50dp"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/search_input"

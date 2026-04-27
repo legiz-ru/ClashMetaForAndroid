@@ -515,4 +515,16 @@
     <string name="conn_special_rules">Special rules</string>
     <string name="conn_dscp">DSCP</string>
     <string name="conn_duration">Duration</string>
+
+    <string name="connections_kill_all_confirm_title">Close all connections?</string>
+    <string name="connections_kill_all_confirm_msg">All active connections will be terminated.</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="copy_process_name">Copy process name</string>
+    <string name="open_app">Open app</string>
+    <string name="open_in_store">Open in store</string>
+    <string name="copy_address">Copy address</string>
+    <string name="open_ip_info">Look up on ipinfo.io</string>
+    <string name="open_in_browser">Open in browser</string>
+    <string name="copy_host">Copy host</string>
 </resources>

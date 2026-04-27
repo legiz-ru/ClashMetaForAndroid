@@ -479,4 +479,16 @@
     <string name="conn_special_rules">Спец. правила</string>
     <string name="conn_dscp">DSCP</string>
     <string name="conn_duration">Длительность</string>
+
+    <string name="connections_kill_all_confirm_title">Закрыть все соединения?</string>
+    <string name="connections_kill_all_confirm_msg">Все активные соединения будут разорваны.</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="copy_process_name">Скопировать имя процесса</string>
+    <string name="open_app">Открыть приложение</string>
+    <string name="open_in_store">Открыть в магазине</string>
+    <string name="copy_address">Скопировать адрес</string>
+    <string name="open_ip_info">Искать на ipinfo.io</string>
+    <string name="open_in_browser">Открыть в браузере</string>
+    <string name="copy_host">Скопировать хост</string>
 </resources>

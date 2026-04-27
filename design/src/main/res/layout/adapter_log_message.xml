@@ -41,10 +41,10 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/message_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/item_text_margin"
-            android:text="@{message.message}"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
     </LinearLayout>
 </layout>

@@ -1,11 +1,17 @@
 package com.github.kr328.clash.design.util
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.getSystemService
 import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.time.Duration
 import java.time.Instant
 
@@ -68,6 +74,22 @@ fun showConnectionDetailSheet(context: Context, connection: Connection) {
         val procText = if (meta.uid > 0) "${meta.process} (uid:${meta.uid})" else meta.process
         row(R.id.row_process,      context.getString(R.string.conn_process),      procText)
         row(R.id.row_process_path, context.getString(R.string.conn_process_path), meta.processPath)
+
+        // Process row click: copy / open app / open in store
+        val processRow = sheetView.findViewById<View>(R.id.row_process)
+        if (processRow.visibility == View.VISIBLE && meta.process.isNotEmpty()) {
+            processRow.isClickable = true
+            processRow.isFocusable = true
+            processRow.setBackgroundResource(android.R.attr.selectableItemBackground.let {
+                val ta = context.obtainStyledAttributes(intArrayOf(it))
+                val res = ta.getResourceId(0, 0)
+                ta.recycle()
+                res
+            })
+            processRow.setOnClickListener {
+                showProcessMenu(context, meta.process)
+            }
+        }
     }
 
     val hasInbound = meta.inboundIP.isNotEmpty() || meta.inboundPort.isNotEmpty() ||
@@ -89,4 +111,41 @@ fun showConnectionDetailSheet(context: Context, connection: Connection) {
     row(R.id.row_dscp,          context.getString(R.string.conn_dscp),          if (meta.dscp > 0) meta.dscp.toString() else "")
 
     dialog.show()
+}
+
+private fun showProcessMenu(context: Context, packageName: String) {
+    val items = arrayOf(
+        context.getString(R.string.copy_process_name),
+        context.getString(R.string.open_app),
+        context.getString(R.string.open_in_store),
+    )
+    MaterialAlertDialogBuilder(context)
+        .setItems(items) { _, which ->
+            when (which) {
+                0 -> copyToClipboard(context, packageName)
+                1 -> openApp(context, packageName)
+                2 -> openInStore(context, packageName)
+            }
+        }
+        .show()
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    context.getSystemService<ClipboardManager>()
+        ?.setPrimaryClip(ClipData.newPlainText("process", text))
+}
+
+private fun openApp(context: Context, packageName: String) {
+    val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+    if (intent != null) {
+        context.startActivity(intent)
+    }
+}
+
+private fun openInStore(context: Context, packageName: String) {
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
+    }.onFailure {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+    }
 }
