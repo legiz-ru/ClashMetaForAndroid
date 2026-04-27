@@ -5,6 +5,7 @@ import java.nio.file.StandardCopyOption
 plugins {
     kotlin("android")
     kotlin("kapt")
+    kotlin("plugin.serialization")
     id("com.android.application")
 }
 
@@ -17,6 +18,7 @@ dependencies {
     implementation(project(":common"))
 
     implementation(libs.kotlin.coroutine)
+    implementation(libs.kotlin.serialization.json)
     implementation(libs.androidx.core)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.fragment)
