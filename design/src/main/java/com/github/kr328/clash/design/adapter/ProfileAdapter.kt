@@ -24,6 +24,10 @@ class ProfileAdapter(
     private val onSupportClicked: ((Profile) -> Unit)? = null,
     private val onWebPageClicked: ((Profile) -> Unit)? = null,
 ) : RecyclerView.Adapter<ProfileAdapter.Holder>() {
+    companion object {
+        const val PAYLOAD_ACTIVE = "active"
+    }
+
     class Holder(val binding: AdapterProfileBinding) : RecyclerView.ViewHolder(binding.root)
 
     private val currentTime = ObservableCurrentTime()
@@ -97,6 +101,26 @@ class ProfileAdapter(
                 card.strokeWidth = 0
             }
         }
+    }
+
+    override fun onBindViewHolder(holder: Holder, position: Int, payloads: List<Any>) {
+        if (payloads.contains(PAYLOAD_ACTIVE)) {
+            val current = profiles[position]
+            val binding = holder.binding
+            binding.profile = current
+            val card = binding.rootView
+            if (card is MaterialCardView) {
+                val dp = context.resources.displayMetrics.density
+                if (current.active) {
+                    card.strokeWidth = (2 * dp).toInt()
+                    card.strokeColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+                } else {
+                    card.strokeWidth = 0
+                }
+            }
+            return
+        }
+        super.onBindViewHolder(holder, position, payloads)
     }
 
     override fun getItemCount(): Int {

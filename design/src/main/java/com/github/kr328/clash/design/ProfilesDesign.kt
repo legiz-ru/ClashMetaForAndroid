@@ -108,7 +108,43 @@ class ProfilesDesign(context: Context) : Design<ProfilesDesign.Request>(context)
 
     suspend fun patchProfiles(profiles: List<Profile>) {
         adapter.apply {
-            patchDataSet(this::profiles, profiles, id = { it.uuid })
+            val oldProfiles = this.profiles
+
+            data class Diff(
+                val sameOrder: Boolean,
+                val activeOnlyChanged: List<Int>,
+                val fullyChanged: List<Int>
+            )
+
+            val diff = withContext(Dispatchers.Default) {
+                if (oldProfiles.size == profiles.size &&
+                    oldProfiles.indices.all { oldProfiles[it].uuid == profiles[it].uuid }
+                ) {
+                    val activeOnly = mutableListOf<Int>()
+                    val full = mutableListOf<Int>()
+                    oldProfiles.indices.forEach { i ->
+                        val old = oldProfiles[i]
+                        val new = profiles[i]
+                        if (old != new) {
+                            if (old.copy(active = new.active) == new) activeOnly.add(i)
+                            else full.add(i)
+                        }
+                    }
+                    Diff(true, activeOnly, full)
+                } else {
+                    Diff(false, emptyList(), emptyList())
+                }
+            }
+
+            if (diff.sameOrder) {
+                withContext(Dispatchers.Main) {
+                    this@apply.profiles = profiles
+                    diff.activeOnlyChanged.forEach { notifyItemChanged(it, ProfileAdapter.PAYLOAD_ACTIVE) }
+                    diff.fullyChanged.forEach { notifyItemChanged(it) }
+                }
+            } else {
+                patchDataSet(this::profiles, profiles, id = { it.uuid })
+            }
         }
 
         val updatable = withContext(Dispatchers.Default) {
