@@ -1196,7 +1196,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
 
                 val radioButtons = mutableListOf<RadioButton>()
-                var dialogRef: android.app.AlertDialog? = null
+                var dialogRef: androidx.appcompat.app.AlertDialog? = null
 
                 val container = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
