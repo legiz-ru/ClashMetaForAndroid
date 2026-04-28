@@ -502,4 +502,11 @@
     <string name="add_proxy_links_hint">vless://…\ntrojan://…</string>
     <string name="proxy_link_edit">Редактировать ссылку</string>
     <string name="proxy_link_edit_hint">vless://, trojan://, и др.</string>
+
+    <!-- Profile card shortcut icons -->
+    <string name="mode_selector_title">Режим подключения</string>
+    <string name="mode_rule_label">Правила</string>
+    <string name="mode_rule_desc">Использовать правила профиля. Рекомендуется</string>
+    <string name="mode_global_label">Глобальный</string>
+    <string name="mode_global_desc">Пустить весь трафик через выбранный сервер</string>
 </resources>

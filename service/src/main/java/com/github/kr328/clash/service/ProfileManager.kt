@@ -301,6 +301,9 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.announce,
             allowTemplateSelection,
             hdrs.latencyDots,
+            hdrs.globalModeMp,
+            hdrs.connsViewMp,
+            hdrs.rpMp,
         )
     }
 

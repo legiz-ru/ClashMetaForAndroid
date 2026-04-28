@@ -17,6 +17,7 @@ import com.github.kr328.clash.design.MainDesign
 import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
+import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.util.withClash
 import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.withProfile
@@ -182,6 +183,25 @@ class MainActivity : BaseActivity<MainDesign>() {
                                     healthCheck(groupName)
                                 }
                                 design.fetchProxyGroups()
+                            }
+                        }
+                        MainDesign.Request.OpenConnections ->
+                            startActivity(ConnectionsActivity::class.intent)
+                        MainDesign.Request.OpenModeSelector -> {
+                            launch {
+                                val currentMode = withClash {
+                                    queryOverride(Clash.OverrideSlot.Session).mode
+                                        ?: queryTunnelState().mode
+                                }
+                                val newMode = design.showModeDialog(currentMode) ?: return@launch
+                                if (newMode != currentMode) {
+                                    withClash {
+                                        val o = queryOverride(Clash.OverrideSlot.Session)
+                                        o.mode = newMode
+                                        patchOverride(Clash.OverrideSlot.Session, o)
+                                    }
+                                    design.setMode(newMode)
+                                }
                             }
                         }
                     }

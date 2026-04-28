@@ -937,6 +937,9 @@ object ProfileProcessor {
         val profileUpdateInterval: Int = 0,
         val announce: String = "",
         val latencyDots: Int = -1,
+        val globalModeMp: Boolean = false,
+        val connsViewMp: Boolean = false,
+        val rpMp: Boolean = false,
     )
 
     fun saveProfileHeaders(profileDir: File, headers: okhttp3.Headers) {
@@ -954,6 +957,9 @@ object ProfileProcessor {
             headers["pxa-latency-dots"]?.trim()?.toIntOrNull()?.let {
                 if (it == 0 || it == 1) json.put("pxa_latency_dots", it)
             }
+            if (headers["pxa-global-mode-mp"]?.trim() == "1") json.put("pxa_global_mode_mp", true)
+            if (headers["pxa-conns-view-mp"]?.trim() == "1") json.put("pxa_conns_view_mp", true)
+            if (headers["pxa-rp-mp"]?.trim() == "1") json.put("pxa_rp_mp", true)
             profileDir.resolve("profile_links.json").writeText(json.toString())
         } catch (_: Exception) {}
     }
@@ -971,6 +977,9 @@ object ProfileProcessor {
                     profileUpdateInterval = json.optInt("profile_update_interval", 0),
                     announce = json.optString("announce", ""),
                     latencyDots = if (json.has("pxa_latency_dots")) json.getInt("pxa_latency_dots") else -1,
+                    globalModeMp = json.optBoolean("pxa_global_mode_mp", false),
+                    connsViewMp = json.optBoolean("pxa_conns_view_mp", false),
+                    rpMp = json.optBoolean("pxa_rp_mp", false),
                 )
             } else ProfileHeaders()
         } catch (_: Exception) { ProfileHeaders() }

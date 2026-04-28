@@ -59,6 +59,15 @@
         <variable
             name="profileTitleOverride"
             type="String" />
+        <variable
+            name="profileGlobalModeMp"
+            type="boolean" />
+        <variable
+            name="profileConnsViewMp"
+            type="boolean" />
+        <variable
+            name="profileRpMp"
+            type="boolean" />
 
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
@@ -379,10 +388,56 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
-                                android:gravity="end|center_vertical"
+                                android:gravity="center_vertical"
                                 android:orientation="horizontal"
-                                android:visibility="@{TextUtils.isEmpty(profileSupportUrl) &amp;&amp; TextUtils.isEmpty(profileWebPageUrl) ? View.GONE : View.VISIBLE}">
+                                android:visibility="@{(!TextUtils.isEmpty(profileSupportUrl) || !TextUtils.isEmpty(profileWebPageUrl) || (clashRunning &amp;&amp; (profileGlobalModeMp || profileConnsViewMp || profileRpMp))) ? View.VISIBLE : View.GONE}">
 
+                                <!-- Left: shortcut icons visible only when Clash is running -->
+                                <ImageView
+                                    android:id="@+id/btn_mode_selector"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:background="@drawable/bg_toolbar_button_focus"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_mdi_earth"
+                                    android:visibility="@{clashRunning &amp;&amp; profileGlobalModeMp ? View.VISIBLE : View.GONE}"
+                                    app:tint="?attr/colorPrimary" />
+
+                                <ImageView
+                                    android:id="@+id/btn_open_connections"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="4dp"
+                                    android:background="@drawable/bg_toolbar_button_focus"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_mdi_swap_horizontal"
+                                    android:visibility="@{clashRunning &amp;&amp; profileConnsViewMp ? View.VISIBLE : View.GONE}"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                                <ImageView
+                                    android:id="@+id/btn_open_providers"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="4dp"
+                                    android:background="@drawable/bg_toolbar_button_focus"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:padding="4dp"
+                                    android:src="@drawable/ic_mdi_database"
+                                    android:visibility="@{clashRunning &amp;&amp; profileRpMp ? View.VISIBLE : View.GONE}"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                                <!-- Spacer pushes right-side icons to the end -->
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="1dp"
+                                    android:layout_weight="1" />
+
+                                <!-- Right: subscription URL icons -->
                                 <ImageView
                                     android:id="@+id/profile_support_icon"
                                     android:layout_width="32dp"

@@ -35,6 +35,9 @@ data class Profile(
     val announce: String = "",
     val allowTemplateSelection: Boolean = true,
     val latencyDots: Int = -1,
+    val globalModeMp: Boolean = false,
+    val connsViewMp: Boolean = false,
+    val rpMp: Boolean = false,
 ) : Parcelable {
     enum class Type {
         File, Url, External,

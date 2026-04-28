@@ -538,4 +538,11 @@
     <string name="add_proxy_links_hint">vless://…\ntrojan://…</string>
     <string name="proxy_link_edit">Edit Link</string>
     <string name="proxy_link_edit_hint">vless://, trojan://, etc.</string>
+
+    <!-- Profile card shortcut icons -->
+    <string name="mode_selector_title">Connection Mode</string>
+    <string name="mode_rule_label">Rules</string>
+    <string name="mode_rule_desc">Use profile rules. Recommended for daily use</string>
+    <string name="mode_global_label">Global</string>
+    <string name="mode_global_desc">Route all traffic through selected server</string>
 </resources>

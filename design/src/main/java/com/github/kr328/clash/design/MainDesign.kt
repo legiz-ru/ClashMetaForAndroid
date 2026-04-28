@@ -44,8 +44,11 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.databinding.OnRebindCallback
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.net.URL
+import kotlin.coroutines.resume
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -72,6 +75,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         CheckUpdate,
         SelectProxy,
         UrlTest,
+        OpenConnections,
+        OpenModeSelector,
     }
 
     private val binding = DesignMainBinding
@@ -251,6 +256,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileAnnounce = profile.announce.replace("\\n", "\n")
                 binding.profileLogoUrl = profile.profileLogo
                 binding.profileTitleOverride = profile.profileTitle
+                binding.profileGlobalModeMp = profile.globalModeMp
+                binding.profileConnsViewMp = profile.connsViewMp
+                binding.profileRpMp = profile.rpMp
+
+                // Wire click listeners for shortcut icons
+                binding.btnModeSelector?.setOnClickListener { requests.trySend(Request.OpenModeSelector) }
+                binding.btnOpenConnections?.setOnClickListener { requests.trySend(Request.OpenConnections) }
+                binding.btnOpenProviders?.setOnClickListener { requests.trySend(Request.OpenProviders) }
 
                 // Wire click listeners for support/webpage icons
                 binding.profileSupportIcon?.setOnClickListener {
@@ -294,6 +307,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileAnnounce = null
                 binding.profileLogoUrl = null
                 binding.profileTitleOverride = null
+                binding.profileGlobalModeMp = false
+                binding.profileConnsViewMp = false
+                binding.profileRpMp = false
                 // Reset logo and title to defaults
                 binding.appLogo.setImageResource(R.drawable.ic_clash)
                 binding.appLogo.imageTintList = null
@@ -1156,6 +1172,33 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         ?: findFirstFocusableIn(container)
                     target?.requestFocus()
                 }
+            }
+        }
+    }
+
+    suspend fun showModeDialog(currentMode: TunnelState.Mode): TunnelState.Mode? {
+        return withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { cont ->
+                val modes = arrayOf(TunnelState.Mode.Rule, TunnelState.Mode.Global)
+                val labels = arrayOf(
+                    context.getString(R.string.mode_rule_label) + "\n" + context.getString(R.string.mode_rule_desc),
+                    context.getString(R.string.mode_global_label) + "\n" + context.getString(R.string.mode_global_desc),
+                )
+                val currentIndex = modes.indexOfFirst { it == currentMode }.coerceAtLeast(0)
+
+                val dialog = MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.mode_selector_title)
+                    .setSingleChoiceItems(labels, currentIndex) { dlg, which ->
+                        dlg.dismiss()
+                        if (!cont.isCompleted) cont.resume(modes[which])
+                    }
+                    .setNegativeButton(R.string.cancel) { _, _ ->
+                        if (!cont.isCompleted) cont.resume(null)
+                    }
+                    .setOnDismissListener { if (!cont.isCompleted) cont.resume(null) }
+                    .show()
+
+                cont.invokeOnCancellation { dialog.dismiss() }
             }
         }
     }
