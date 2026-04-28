@@ -1,6 +1,7 @@
 package com.github.kr328.clash
 
 import com.github.kr328.clash.common.util.intent
+import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.core.model.ConnectionSnapshot
 import com.github.kr328.clash.design.ConnectionsDesign
 import com.github.kr328.clash.design.model.ConnectionGroup
@@ -9,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 private val ConnectionsJson = Json { coerceInputValues = true; ignoreUnknownKeys = true }
@@ -47,7 +49,7 @@ class ConnectionsActivity : BaseActivity<ConnectionsDesign>() {
                 design.requests.onReceive {
                     when (it) {
                         is ConnectionsDesign.Request.OpenApp -> {
-                            openAppConnections(it.group)
+                            openAppConnections(it.group, it.showClosed)
                         }
                         is ConnectionsDesign.Request.KillAll -> {
                             launch {
@@ -67,10 +69,17 @@ class ConnectionsActivity : BaseActivity<ConnectionsDesign>() {
         poller.cancel()
     }
 
-    private fun openAppConnections(group: ConnectionGroup) {
+    private fun openAppConnections(group: ConnectionGroup, showClosed: Boolean) {
         val intent = AppConnectionsActivity::class.intent
         intent.putExtra(EXTRA_PACKAGE, group.packageName)
         intent.putExtra(AppConnectionsActivity.EXTRA_APP_NAME, group.appName)
+        if (showClosed) {
+            val closedJson = ConnectionsJson.encodeToString(
+                ListSerializer(Connection.serializer()),
+                group.connections
+            )
+            intent.putExtra(AppConnectionsActivity.EXTRA_CLOSED_JSON, closedJson)
+        }
         startActivity(intent)
     }
 }

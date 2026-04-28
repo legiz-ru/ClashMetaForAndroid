@@ -111,7 +111,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                         MainDesign.Request.OpenProviders ->
                             startActivity(ProvidersActivity::class.intent)
                         MainDesign.Request.OpenSettings -> {
-                            startActivity(SettingsActivity::class.intent)
+                            startActivity(SettingsActivity::class.intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION))
                             overridePendingTransition(0, 0)
                         }
                         MainDesign.Request.ManageProfiles ->

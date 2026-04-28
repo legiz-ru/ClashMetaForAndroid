@@ -24,7 +24,7 @@ import kotlin.coroutines.resume
 
 class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(context) {
     sealed class Request {
-        data class OpenApp(val group: ConnectionGroup) : Request()
+        data class OpenApp(val group: ConnectionGroup, val showClosed: Boolean) : Request()
         class KillAll : Request()
         data class CloseConnection(val id: String) : Request()
     }
@@ -37,8 +37,8 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     private val pm: PackageManager = context.packageManager
     private val appPackage = context.packageName
 
-    private val activeAdapter = ConnectionGroupAdapter(context) { requests.trySend(Request.OpenApp(it)) }
-    private val closedAdapter = ConnectionGroupAdapter(context) { requests.trySend(Request.OpenApp(it)) }
+    private val activeAdapter = ConnectionGroupAdapter(context) { requests.trySend(Request.OpenApp(it, false)) }
+    private val closedAdapter = ConnectionGroupAdapter(context) { requests.trySend(Request.OpenApp(it, true)) }
 
     private var isPaused = false
     private var isCachingClosed = false

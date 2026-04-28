@@ -7,14 +7,18 @@ import android.content.Intent
 import android.net.Uri
 import android.util.TypedValue
 import android.view.View
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.getSystemService
 import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.serialization.json.Json
 import java.time.Duration
 import java.time.Instant
+
+private val PrettyJson = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
 // ─── Shared pop-up menus ──────────────────────────────────────────────────────
 
@@ -98,6 +102,13 @@ fun showConnectionDetailSheet(context: Context, connection: Connection) {
             val port = meta.destinationPort
             if (port.isNotEmpty()) "$it:$port" else it
         }
+
+    sheetView.findViewById<ImageView>(R.id.btn_copy_json)?.setOnClickListener {
+        val json = runCatching { PrettyJson.encodeToString(Connection.serializer(), connection) }
+            .getOrElse { connection.toString() }
+        context.getSystemService<ClipboardManager>()
+            ?.setPrimaryClip(ClipData.newPlainText("connection_json", json))
+    }
 
     fun row(id: Int, label: String, value: String) {
         val rowView = sheetView.findViewById<View>(id)

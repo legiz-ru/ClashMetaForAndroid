@@ -1,6 +1,7 @@
 plugins {
     kotlin("android")
     kotlin("kapt")
+    kotlin("plugin.serialization")
     id("com.android.library")
 }
 
@@ -10,6 +11,7 @@ dependencies {
     implementation(project(":service"))
 
     implementation(libs.kotlin.coroutine)
+    implementation(libs.kotlin.serialization.json)
     implementation(libs.androidx.core)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity)

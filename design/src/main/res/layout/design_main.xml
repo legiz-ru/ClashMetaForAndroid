@@ -63,6 +63,9 @@
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
         <import type="com.github.kr328.clash.design.MainDesign.Request" />
+        <variable
+            name="isLoading"
+            type="boolean" />
     </data>
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -122,6 +125,18 @@
                             android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
                     </LinearLayout>
 
+                    <!-- Loading spinner shown until first data fetch completes -->
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/loading_indicator"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="64dp"
+                        android:layout_marginBottom="64dp"
+                        android:indeterminate="true"
+                        android:visibility="@{isLoading ? View.VISIBLE : View.GONE}"
+                        app:indicatorSize="48dp" />
+
                     <!-- ========== ONBOARDING STATE (no profiles) ========== -->
                     <LinearLayout
                         android:id="@+id/onboarding_layout"
@@ -129,7 +144,7 @@
                         android:layout_height="match_parent"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:visibility="@{!hasProfiles &amp;&amp; !clashRunning ? View.VISIBLE : View.GONE}">
+                        android:visibility="@{!hasProfiles &amp;&amp; !clashRunning &amp;&amp; !isLoading ? View.VISIBLE : View.GONE}">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -184,7 +199,7 @@
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="@drawable/bg_card_focus_ripple"
-                        android:visibility="@{hasProfiles ? View.VISIBLE : View.GONE}"
+                        android:visibility="@{hasProfiles &amp;&amp; !isLoading ? View.VISIBLE : View.GONE}"
                         app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"

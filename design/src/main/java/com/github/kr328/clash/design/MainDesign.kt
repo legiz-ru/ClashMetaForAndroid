@@ -203,6 +203,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     suspend fun setHasProfiles(has: Boolean) {
         withContext(Dispatchers.Main) {
             binding.hasProfiles = has
+            binding.isLoading = false
         }
     }
 
@@ -1264,6 +1265,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
         }
 
+        binding.isLoading = true
         binding.hasProfiles = false
         binding.hasTrafficInfo = false
         binding.hasExpireInfo = false
