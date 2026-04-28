@@ -267,6 +267,7 @@
     <string name="compatible">Совместимо</string>
     <string name="format_update_provider_failure">Обновление %1$s: %2$s</string>
     <string name="update_all">Обновить всё</string>
+    <string name="view_provider_content">Просмотр правил</string>
 
     <string name="close">Закрыть</string>
     <string name="keyword">Ключевое слово</string>

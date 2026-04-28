@@ -14,6 +14,7 @@ class ProviderAdapter(
     private val context: Context,
     providers: List<Provider>,
     private val requestUpdate: (Int, Provider) -> Unit,
+    private val requestViewContent: (Int, Provider) -> Unit,
 ) : RecyclerView.Adapter<ProviderAdapter.Holder>() {
     class Holder(val binding: AdapterProviderBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -59,12 +60,22 @@ class ProviderAdapter(
             holder.binding.endView.visibility = View.GONE
             holder.binding.elapsedView.visibility = View.GONE
             holder.binding.divider.visibility = View.GONE
+            holder.binding.viewBtn.visibility = View.GONE
         } else {
             holder.binding.endView.visibility = View.VISIBLE
             holder.binding.elapsedView.visibility = View.VISIBLE
+            holder.binding.divider.visibility = View.VISIBLE
             holder.binding.update = View.OnClickListener {
                 state.updating = true
                 requestUpdate(position, state.provider)
+            }
+            if (state.provider.type == Provider.Type.Rule) {
+                holder.binding.viewBtn.visibility = View.VISIBLE
+                holder.binding.viewContent = View.OnClickListener {
+                    requestViewContent(position, state.provider)
+                }
+            } else {
+                holder.binding.viewBtn.visibility = View.GONE
             }
         }
     }

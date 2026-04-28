@@ -59,6 +59,18 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
                                 }
                             }
                         }
+                        is ProvidersDesign.Request.ViewContent -> {
+                            launch {
+                                try {
+                                    val rules = withClash {
+                                        queryRuleProviderContent(it.provider.name)
+                                    }
+                                    design.showRuleContent(it.provider, rules)
+                                } catch (e: Exception) {
+                                    design.showExceptionToast(e)
+                                }
+                            }
+                        }
                     }
                 }
                 if (activityStarted) {

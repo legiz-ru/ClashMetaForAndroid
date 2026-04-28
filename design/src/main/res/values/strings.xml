@@ -296,6 +296,7 @@
     <string name="compatible">Compatible</string>
     <string name="format_update_provider_failure">Update %1$s: %2$s</string>
     <string name="update_all">Update All</string>
+    <string name="view_provider_content">View content</string>
 
     <string name="close">Close</string>
     <string name="keyword">Keyword</string>

@@ -42,6 +42,10 @@ class ClashManager(private val context: Context) : IClashManager,
         return ProviderList(Clash.queryProviders())
     }
 
+    override fun queryRuleProviderContent(name: String): List<String> {
+        return Clash.queryRuleProviderContent(name)
+    }
+
     override fun queryOverride(slot: Clash.OverrideSlot): ConfigurationOverride {
         return Clash.queryOverride(slot)
     }

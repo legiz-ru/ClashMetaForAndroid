@@ -2,10 +2,14 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.core.model.Provider
 import com.github.kr328.clash.design.adapter.ProviderAdapter
+import com.github.kr328.clash.design.adapter.RuleEntryAdapter
 import com.github.kr328.clash.design.databinding.DesignProvidersBinding
 import com.github.kr328.clash.design.util.*
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -15,6 +19,7 @@ class ProvidersDesign(
 ) : Design<ProvidersDesign.Request>(context) {
     sealed class Request {
         data class Update(val index: Int, val provider: Provider) : Request()
+        data class ViewContent(val index: Int, val provider: Provider) : Request()
     }
 
     private val binding = DesignProvidersBinding
@@ -23,9 +28,16 @@ class ProvidersDesign(
     override val root: View
         get() = binding.root
 
-    private val adapter = ProviderAdapter(context, providers) { index, provider ->
-        requests.trySend(Request.Update(index, provider))
-    }
+    private val adapter = ProviderAdapter(
+        context,
+        providers,
+        requestUpdate = { index, provider ->
+            requests.trySend(Request.Update(index, provider))
+        },
+        requestViewContent = { index, provider ->
+            requests.trySend(Request.ViewContent(index, provider))
+        },
+    )
 
     fun updateElapsed() {
         adapter.updateElapsed()
@@ -40,6 +52,23 @@ class ProvidersDesign(
     suspend fun notifyChanged(index: Int) {
         withContext(Dispatchers.Main) {
             adapter.notifyChanged(index)
+        }
+    }
+
+    suspend fun showRuleContent(provider: Provider, rules: List<String>) {
+        withContext(Dispatchers.Main) {
+            val recycler = RecyclerView(context).apply {
+                layoutManager = LinearLayoutManager(context)
+                adapter = RuleEntryAdapter(rules)
+            }
+
+            val title = "${provider.name} (${rules.size})"
+
+            MaterialAlertDialogBuilder(context)
+                .setTitle(title)
+                .setView(recycler)
+                .setPositiveButton(R.string.close) { _, _ -> }
+                .show()
         }
     }
 

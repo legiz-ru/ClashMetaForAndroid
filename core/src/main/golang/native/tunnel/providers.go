@@ -65,6 +65,28 @@ func QueryProviders() []*Provider {
 	return result
 }
 
+type RuleEntry struct {
+	Type    string `json:"type"`
+	Payload string `json:"payload"`
+}
+
+func QueryRuleProviderContent(name string) []RuleEntry {
+	p := tunnel.RuleProviders()[name]
+	if p == nil {
+		return nil
+	}
+
+	rules := p.Rules()
+	result := make([]RuleEntry, 0, len(rules))
+	for _, rule := range rules {
+		result = append(result, RuleEntry{
+			Type:    rule.RuleType().String(),
+			Payload: rule.Payload(),
+		})
+	}
+	return result
+}
+
 func UpdateProvider(t string, name string) error {
 	err := ErrInvalidType
 
