@@ -530,4 +530,12 @@
     <string name="connections_cache_enabled">Closed connections logging on</string>
     <string name="connections_cache_disabled">Closed connections logging off</string>
     <string name="copy_json">Copy JSON</string>
+
+    <!-- Proxy Link Editor -->
+    <string name="proxy_links">Proxy Links</string>
+    <string name="add_proxy_links">Add Links</string>
+    <string name="add_proxy_links_desc">Paste proxy links, one per line</string>
+    <string name="add_proxy_links_hint">vless://…\ntrojan://…</string>
+    <string name="proxy_link_edit">Edit Link</string>
+    <string name="proxy_link_edit_hint">vless://, trojan://, etc.</string>
 </resources>

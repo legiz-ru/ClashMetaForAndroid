@@ -68,16 +68,43 @@
                     app:text="@{profile.name}"
                     app:title="@string/name" />
 
+                <!-- URL field for non-Converted profiles -->
                 <com.github.kr328.clash.design.view.ActionTextField
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginVertical="@dimen/properties_element_margin_vertical"
                     android:onClick="@{() -> self.inputUrl()}"
+                    android:visibility="@{profile.type == Type.Converted ? View.GONE : View.VISIBLE}"
                     app:enabled="@{profile.type != Type.File}"
                     app:icon="@drawable/ic_outline_inbox"
                     app:placeholder="@string/accept_http_content"
                     app:text="@{profile.source}"
                     app:title="@string/url" />
+
+                <!-- Proxy link list for Converted profiles -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="@{profile.type == Type.Converted ? View.VISIBLE : View.GONE}"
+                    android:layout_marginVertical="@dimen/properties_element_margin_vertical">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/proxy_links_recycler"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false" />
+
+                    <com.github.kr328.clash.design.view.ActionLabel
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:onClick="@{() -> self.addProxyLinks()}"
+                        app:icon="@drawable/ic_baseline_add"
+                        app:subtext="@string/add_proxy_links_desc"
+                        app:text="@string/add_proxy_links" />
+
+                </LinearLayout>
 
                 <com.github.kr328.clash.design.view.ActionTextField
                     android:layout_width="match_parent"

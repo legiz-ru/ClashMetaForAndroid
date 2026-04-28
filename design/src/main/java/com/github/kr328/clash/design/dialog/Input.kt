@@ -1,6 +1,7 @@
 package com.github.kr328.clash.design.dialog
 
 import android.content.Context
+import android.text.InputType
 import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.doOnTextChanged
 import com.github.kr328.clash.design.R
@@ -89,6 +90,44 @@ suspend fun Context.requestModelTextInput(
 
                 requestTextInput()
             }
+        }
+
+        dialog.show()
+    }
+}
+
+suspend fun Context.requestMultilineTextInput(
+    initial: String,
+    title: CharSequence,
+    hint: CharSequence? = null,
+): String {
+    return suspendCancellableCoroutine { cont ->
+        val binding = DialogTextFieldBinding
+            .inflate(layoutInflater, this.root, false)
+
+        binding.textField.inputType =
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        binding.textField.minLines = 4
+        binding.textField.maxLines = 10
+        binding.textLayout.isErrorEnabled = false
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setView(binding.root)
+            .setCancelable(true)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                cont.resume(binding.textField.text?.toString() ?: initial)
+            }
+            .setNegativeButton(R.string.cancel) { _, _ -> }
+            .setOnDismissListener { if (!cont.isCompleted) cont.resume(initial) }
+            .create()
+
+        cont.invokeOnCancellation { dialog.dismiss() }
+
+        dialog.setOnShowListener {
+            if (hint != null) binding.textLayout.hint = hint
+            binding.textField.setText(initial)
+            binding.textField.setSelection(initial.length)
         }
 
         dialog.show()

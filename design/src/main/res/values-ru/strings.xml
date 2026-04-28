@@ -494,4 +494,12 @@
     <string name="connections_cache_enabled">Логирование закрытых соединений включено</string>
     <string name="connections_cache_disabled">Логирование закрытых соединений выключено</string>
     <string name="copy_json">Скопировать JSON</string>
+
+    <!-- Proxy Link Editor -->
+    <string name="proxy_links">Ссылки прокси</string>
+    <string name="add_proxy_links">Добавить ссылки</string>
+    <string name="add_proxy_links_desc">Вставьте ссылки прокси, по одной на строку</string>
+    <string name="add_proxy_links_hint">vless://…\ntrojan://…</string>
+    <string name="proxy_link_edit">Редактировать ссылку</string>
+    <string name="proxy_link_edit_hint">vless://, trojan://, и др.</string>
 </resources>
