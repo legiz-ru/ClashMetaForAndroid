@@ -403,7 +403,7 @@
                                     android:padding="4dp"
                                     android:src="@drawable/ic_mdi_earth"
                                     android:visibility="@{clashRunning &amp;&amp; profileGlobalModeMp ? View.VISIBLE : View.GONE}"
-                                    app:tint="?attr/colorPrimary" />
+                                    app:tint="?attr/colorOnSurfaceVariant" />
 
                                 <ImageView
                                     android:id="@+id/btn_open_connections"
@@ -414,7 +414,7 @@
                                     android:clickable="true"
                                     android:focusable="true"
                                     android:padding="4dp"
-                                    android:src="@drawable/ic_mdi_swap_horizontal"
+                                    android:src="@drawable/ic_mdi_transit_connection_variant"
                                     android:visibility="@{clashRunning &amp;&amp; profileConnsViewMp ? View.VISIBLE : View.GONE}"
                                     app:tint="?attr/colorOnSurfaceVariant" />
 

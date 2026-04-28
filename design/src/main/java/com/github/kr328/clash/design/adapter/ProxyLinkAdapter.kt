@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.design.R
+import java.net.URLDecoder
 
 class ProxyLinkAdapter(
     private val onEdit: (index: Int, url: String) -> Unit,
@@ -47,7 +48,13 @@ class ProxyLinkAdapter(
 
     private fun extractAlias(url: String): String {
         val afterHash = url.substringAfterLast("#", "").trim()
-        if (afterHash.isNotBlank()) return afterHash
+        if (afterHash.isNotBlank()) {
+            return try {
+                URLDecoder.decode(afterHash, "UTF-8")
+            } catch (_: Exception) {
+                afterHash
+            }
+        }
         return try {
             url.substringAfter("://").substringBefore("?").substringBefore("/").ifBlank { url }
         } catch (_: Exception) { url }

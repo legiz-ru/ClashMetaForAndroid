@@ -503,6 +503,8 @@
     <string name="proxy_link_edit">Редактировать ссылку</string>
     <string name="proxy_link_edit_hint">vless://, trojan://, и др.</string>
 
+    <string name="paste_links">Вставить ссылки</string>
+
     <!-- Profile card shortcut icons -->
     <string name="mode_selector_title">Режим подключения</string>
     <string name="mode_rule_label">Правила</string>

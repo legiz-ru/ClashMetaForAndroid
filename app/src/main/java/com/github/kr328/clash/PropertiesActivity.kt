@@ -13,6 +13,8 @@ import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.util.withProfile
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.github.g00fy2.quickie.QRResult
+import io.github.g00fy2.quickie.ScanQRCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
@@ -26,6 +28,16 @@ import kotlin.coroutines.resume
 class PropertiesActivity : BaseActivity<PropertiesDesign>() {
     private var canceled: Boolean = false
     private lateinit var original: Profile
+
+    private val qrScanLauncher = registerForActivityResult(ScanQRCode()) { result ->
+        when (result) {
+            is QRResult.QRSuccess -> {
+                val text = result.content.rawValue?.trim() ?: return@registerForActivityResult
+                if (text.isNotEmpty()) design?.appendProxyLinksFromText(text)
+            }
+            else -> Unit
+        }
+    }
 
     override suspend fun main() {
         setResult(RESULT_CANCELED)
@@ -74,6 +86,9 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                         }
                         PropertiesDesign.Request.SelectTemplate -> {
                             design.selectAndApplyTemplate()
+                        }
+                        PropertiesDesign.Request.ScanQrForLinks -> {
+                            qrScanLauncher.launch(null)
                         }
                     }
                 }

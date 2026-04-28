@@ -25,6 +25,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
         object Commit : Request()
         object BrowseFiles : Request()
         object SelectTemplate : Request()
+        object ScanQrForLinks : Request()
     }
 
     private val binding = DesignPropertiesBinding
@@ -164,17 +165,43 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     fun addProxyLinks() {
         launch {
-            val text = context.requestMultilineTextInput(
-                initial = "",
-                title = context.getText(R.string.add_proxy_links),
-                hint = context.getText(R.string.add_proxy_links_hint),
-            )
-            val newLinks = text.lines().map { it.trim() }.filter { it.isNotBlank() }
-            if (newLinks.isNotEmpty()) {
-                val combined = proxyLinkAdapter.links + newLinks
-                profile = profile.copy(source = combined.joinToString("\n"))
+            val choice = withContext(Dispatchers.Main) {
+                suspendCancellableCoroutine { cont ->
+                    val options = arrayOf(
+                        context.getString(R.string.paste_links),
+                        context.getString(R.string.scan_qr_code),
+                    )
+                    val dlg = MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.add_proxy_links)
+                        .setItems(options) { _, which -> if (!cont.isCompleted) cont.resume(which) }
+                        .setNegativeButton(R.string.cancel) { _, _ -> if (!cont.isCompleted) cont.resume(-1) }
+                        .setOnDismissListener { if (!cont.isCompleted) cont.resume(-1) }
+                        .show()
+                    cont.invokeOnCancellation { dlg.dismiss() }
+                }
+            }
+            when (choice) {
+                0 -> pasteProxyLinks()
+                1 -> requests.trySend(Request.ScanQrForLinks)
             }
         }
+    }
+
+    fun appendProxyLinksFromText(text: String) {
+        val newLinks = text.lines().map { it.trim() }.filter { it.isNotBlank() }
+        if (newLinks.isNotEmpty()) {
+            val combined = proxyLinkAdapter.links + newLinks
+            profile = profile.copy(source = combined.joinToString("\n"))
+        }
+    }
+
+    private suspend fun pasteProxyLinks() {
+        val text = context.requestMultilineTextInput(
+            initial = "",
+            title = context.getText(R.string.add_proxy_links),
+            hint = context.getText(R.string.add_proxy_links_hint),
+        )
+        appendProxyLinksFromText(text)
     }
 
     private suspend fun editProxyLink(index: Int, url: String) {
