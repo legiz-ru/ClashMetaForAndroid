@@ -107,6 +107,8 @@
                         app:boxCornerRadiusTopEnd="50dp"
                         app:boxCornerRadiusBottomStart="50dp"
                         app:boxCornerRadiusBottomEnd="50dp"
+                        app:boxStrokeWidth="0dp"
+                        app:boxStrokeWidthFocused="0dp"
                         style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense">
 
                         <com.google.android.material.textfield.TextInputEditText

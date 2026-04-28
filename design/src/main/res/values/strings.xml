@@ -527,4 +527,6 @@
     <string name="open_ip_info">Look up on ipinfo.io</string>
     <string name="open_in_browser">Open in browser</string>
     <string name="copy_host">Copy host</string>
+    <string name="connections_cache_enabled">Closed connections logging on</string>
+    <string name="connections_cache_disabled">Closed connections logging off</string>
 </resources>

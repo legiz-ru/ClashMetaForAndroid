@@ -12,6 +12,7 @@ import com.github.kr328.clash.core.model.ConnectionSnapshot
 import com.github.kr328.clash.design.adapter.ConnectionGroupAdapter
 import com.github.kr328.clash.design.databinding.DesignConnectionsBinding
 import com.github.kr328.clash.design.model.ConnectionGroup
+import com.github.kr328.clash.design.ui.ToastDuration
 import com.github.kr328.clash.design.util.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
@@ -70,6 +71,9 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
             closedIds.clear()
             launch { refreshClosed() }
         }
+        val msgRes = if (isCachingClosed) R.string.connections_cache_enabled
+                     else R.string.connections_cache_disabled
+        launch { showToast(msgRes, ToastDuration.Short) }
     }
 
     fun requestKillAll() {

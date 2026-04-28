@@ -491,4 +491,6 @@
     <string name="open_ip_info">Искать на ipinfo.io</string>
     <string name="open_in_browser">Открыть в браузере</string>
     <string name="copy_host">Скопировать хост</string>
+    <string name="connections_cache_enabled">Логирование закрытых соединений включено</string>
+    <string name="connections_cache_disabled">Логирование закрытых соединений выключено</string>
 </resources>

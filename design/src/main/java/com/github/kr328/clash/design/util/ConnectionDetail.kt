@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.TypedValue
 import android.view.View
 import android.widget.TextView
 import androidx.core.content.getSystemService
@@ -14,6 +15,76 @@ import com.github.kr328.clash.design.dialog.AppBottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.time.Duration
 import java.time.Instant
+
+// ─── Shared pop-up menus ──────────────────────────────────────────────────────
+
+fun showIpMenu(context: Context, ip: String) {
+    MaterialAlertDialogBuilder(context)
+        .setItems(arrayOf(
+            context.getString(R.string.copy_address),
+            context.getString(R.string.open_ip_info),
+        )) { _, which ->
+            when (which) {
+                0 -> copyToClipboard(context, ip)
+                1 -> context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://ipinfo.io/$ip"))
+                )
+            }
+        }
+        .show()
+}
+
+fun showHostMenu(context: Context, host: String) {
+    MaterialAlertDialogBuilder(context)
+        .setItems(arrayOf(
+            context.getString(R.string.copy_host),
+            context.getString(R.string.open_in_browser),
+        )) { _, which ->
+            when (which) {
+                0 -> copyToClipboard(context, host)
+                1 -> context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://$host"))
+                )
+            }
+        }
+        .show()
+}
+
+fun showProcessMenu(context: Context, packageName: String) {
+    MaterialAlertDialogBuilder(context)
+        .setItems(arrayOf(
+            context.getString(R.string.copy_process_name),
+            context.getString(R.string.open_app),
+            context.getString(R.string.open_in_store),
+        )) { _, which ->
+            when (which) {
+                0 -> copyToClipboard(context, packageName)
+                1 -> openApp(context, packageName)
+                2 -> openInStore(context, packageName)
+            }
+        }
+        .show()
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    context.getSystemService<ClipboardManager>()
+        ?.setPrimaryClip(ClipData.newPlainText("value", text))
+}
+
+private fun openApp(context: Context, packageName: String) {
+    val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+    if (intent != null) context.startActivity(intent)
+}
+
+private fun openInStore(context: Context, packageName: String) {
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
+    }.onFailure {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+    }
+}
+
+// ─── Detail sheet ─────────────────────────────────────────────────────────────
 
 fun showConnectionDetailSheet(context: Context, connection: Connection) {
     val dialog = AppBottomSheetDialog(context)
@@ -29,11 +100,28 @@ fun showConnectionDetailSheet(context: Context, connection: Connection) {
         }
 
     fun row(id: Int, label: String, value: String) {
-        val row = sheetView.findViewById<View>(id)
-        if (value.isEmpty()) { row.visibility = View.GONE; return }
-        row.visibility = View.VISIBLE
-        row.findViewById<TextView>(R.id.detail_label).text = label
-        row.findViewById<TextView>(R.id.detail_value).text = value
+        val rowView = sheetView.findViewById<View>(id)
+        if (value.isEmpty()) { rowView.visibility = View.GONE; return }
+        rowView.visibility = View.VISIBLE
+        rowView.findViewById<TextView>(R.id.detail_label).text = label
+        rowView.findViewById<TextView>(R.id.detail_value).text = value
+    }
+
+    // Make an entire row (and its value child) trigger the same action on tap.
+    // Necessary because detail_value has textIsSelectable=true which otherwise
+    // consumes touches before they reach the parent row view.
+    val selectableBg: Int = TypedValue().let { tv ->
+        context.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true)
+        tv.resourceId
+    }
+    fun makeClickable(rowId: Int, action: () -> Unit) {
+        val rowView = sheetView.findViewById<View>(rowId)
+        if (rowView == null || rowView.visibility != View.VISIBLE) return
+        rowView.isClickable = true
+        rowView.isFocusable = true
+        rowView.setBackgroundResource(selectableBg)
+        rowView.setOnClickListener { action() }
+        rowView.findViewById<TextView>(R.id.detail_value)?.setOnClickListener { action() }
     }
 
     val dur = try {
@@ -67,6 +155,13 @@ fun showConnectionDetailSheet(context: Context, connection: Connection) {
     row(R.id.row_dest_port,   context.getString(R.string.conn_dest_port),   meta.destinationPort)
     row(R.id.row_remote_dest, context.getString(R.string.conn_remote_dest), meta.remoteDestination)
 
+    // Clickable IP rows — same showIpMenu used in logcat
+    if (meta.destinationIP.isNotEmpty()) makeClickable(R.id.row_dest_ip) { showIpMenu(context, meta.destinationIP) }
+    if (meta.sourceIP.isNotEmpty())      makeClickable(R.id.row_src_ip)  { showIpMenu(context, meta.sourceIP) }
+    if (meta.remoteDestination.isNotEmpty()) makeClickable(R.id.row_remote_dest) { showIpMenu(context, meta.remoteDestination) }
+    if (meta.host.isNotEmpty())          makeClickable(R.id.row_host)      { showHostMenu(context, meta.host) }
+    if (meta.sniffHost.isNotEmpty())     makeClickable(R.id.row_sniff_host){ showHostMenu(context, meta.sniffHost) }
+
     val isInner = meta.type.equals("inner", ignoreCase = true)
     sheetView.findViewById<View>(R.id.section_process).visibility =
         if (isInner) View.GONE else View.VISIBLE
@@ -75,20 +170,8 @@ fun showConnectionDetailSheet(context: Context, connection: Connection) {
         row(R.id.row_process,      context.getString(R.string.conn_process),      procText)
         row(R.id.row_process_path, context.getString(R.string.conn_process_path), meta.processPath)
 
-        // Process row click: copy / open app / open in store
-        val processRow = sheetView.findViewById<View>(R.id.row_process)
-        if (processRow.visibility == View.VISIBLE && meta.process.isNotEmpty()) {
-            processRow.isClickable = true
-            processRow.isFocusable = true
-            processRow.setBackgroundResource(android.R.attr.selectableItemBackground.let {
-                val ta = context.obtainStyledAttributes(intArrayOf(it))
-                val res = ta.getResourceId(0, 0)
-                ta.recycle()
-                res
-            })
-            processRow.setOnClickListener {
-                showProcessMenu(context, meta.process)
-            }
+        if (meta.process.isNotEmpty()) {
+            makeClickable(R.id.row_process) { showProcessMenu(context, meta.process) }
         }
     }
 
@@ -111,41 +194,4 @@ fun showConnectionDetailSheet(context: Context, connection: Connection) {
     row(R.id.row_dscp,          context.getString(R.string.conn_dscp),          if (meta.dscp > 0) meta.dscp.toString() else "")
 
     dialog.show()
-}
-
-private fun showProcessMenu(context: Context, packageName: String) {
-    val items = arrayOf(
-        context.getString(R.string.copy_process_name),
-        context.getString(R.string.open_app),
-        context.getString(R.string.open_in_store),
-    )
-    MaterialAlertDialogBuilder(context)
-        .setItems(items) { _, which ->
-            when (which) {
-                0 -> copyToClipboard(context, packageName)
-                1 -> openApp(context, packageName)
-                2 -> openInStore(context, packageName)
-            }
-        }
-        .show()
-}
-
-private fun copyToClipboard(context: Context, text: String) {
-    context.getSystemService<ClipboardManager>()
-        ?.setPrimaryClip(ClipData.newPlainText("process", text))
-}
-
-private fun openApp(context: Context, packageName: String) {
-    val intent = context.packageManager.getLaunchIntentForPackage(packageName)
-    if (intent != null) {
-        context.startActivity(intent)
-    }
-}
-
-private fun openInStore(context: Context, packageName: String) {
-    runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
-    }.onFailure {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
-    }
 }
