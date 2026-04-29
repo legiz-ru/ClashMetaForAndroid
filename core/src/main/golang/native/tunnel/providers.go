@@ -3,11 +3,14 @@ package tunnel
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/metacubex/mihomo/constant/provider"
 	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
+	"gopkg.in/yaml.v3"
 )
 
 var ErrInvalidType = errors.New("invalid type")
@@ -65,24 +68,55 @@ func QueryProviders() []*Provider {
 	return result
 }
 
-type RuleEntry struct {
-	Type    string `json:"type"`
-	Payload string `json:"payload"`
+// vehicleGetter matches ruleSetProvider (HTTP/File providers) which embeds resource.Fetcher.
+type vehicleGetter interface {
+	Vehicle() provider.Vehicle
 }
 
-func QueryRuleProviderContent(name string) []RuleEntry {
+// QueryRuleProviderContent reads the cached rule file for the named provider and returns
+// each rule entry as a string. Returns nil if the provider is not found or is inline/binary.
+func QueryRuleProviderContent(name string) []string {
 	p := tunnel.RuleProviders()[name]
 	if p == nil {
 		return nil
 	}
 
-	rules := p.Rules()
-	result := make([]RuleEntry, 0, len(rules))
-	for _, rule := range rules {
-		result = append(result, RuleEntry{
-			Type:    rule.RuleType().String(),
-			Payload: rule.Payload(),
-		})
+	vg, ok := p.(vehicleGetter)
+	if !ok {
+		return nil // inline providers have no backing file
+	}
+
+	buf, err := os.ReadFile(vg.Vehicle().Path())
+	if err != nil {
+		return nil
+	}
+
+	return parseRuleFileContent(buf)
+}
+
+func parseRuleFileContent(buf []byte) []string {
+	// YAML format: payload: [...] or rules: [...]
+	var schema struct {
+		Payload []string `yaml:"payload"`
+		Rules   []string `yaml:"rules"`
+	}
+	if err := yaml.Unmarshal(buf, &schema); err == nil {
+		if len(schema.Payload) > 0 {
+			return schema.Payload
+		}
+		if len(schema.Rules) > 0 {
+			return schema.Rules
+		}
+	}
+
+	// Text format: one rule per line
+	var result []string
+	for _, line := range strings.Split(string(buf), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
+			continue
+		}
+		result = append(result, line)
 	}
 	return result
 }
