@@ -98,7 +98,11 @@ func queryProviders() *C.char {
 
 //export queryRuleProviderContent
 func queryRuleProviderContent(name C.c_string) *C.char {
-	return marshalJson(tunnel.QueryRuleProviderContent(C.GoString(name)))
+	result := tunnel.QueryRuleProviderContent(C.GoString(name))
+	if result == nil {
+		return nil
+	}
+	return marshalJson(result)
 }
 
 //export updateProvider

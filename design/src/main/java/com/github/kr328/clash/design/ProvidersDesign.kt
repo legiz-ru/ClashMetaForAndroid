@@ -2,6 +2,7 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
+import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.core.model.Provider
@@ -57,9 +58,11 @@ class ProvidersDesign(
 
     suspend fun showRuleContent(provider: Provider, rules: List<String>) {
         withContext(Dispatchers.Main) {
+            val maxHeight = (context.resources.displayMetrics.heightPixels * 0.6).toInt()
             val recycler = RecyclerView(context).apply {
                 layoutManager = LinearLayoutManager(context)
                 adapter = RuleEntryAdapter(rules)
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxHeight)
             }
 
             val title = "${provider.name} (${rules.size})"

@@ -15,6 +15,9 @@ import (
 
 var ErrInvalidType = errors.New("invalid type")
 
+// zstd magic bytes — MRS files are zstd-compressed
+var zstdMagic = []byte{0x28, 0xB5, 0x2F, 0xFD}
+
 type Provider struct {
 	Name        string `json:"name"`
 	VehicleType string `json:"vehicleType"`
@@ -36,7 +39,6 @@ func QueryProviders() []*Provider {
 		if rule.VehicleType() == provider.Compatible {
 			continue
 		}
-
 		providers = append(providers, rule)
 	}
 
@@ -44,7 +46,6 @@ func QueryProviders() []*Provider {
 		if proxy.VehicleType() == provider.Compatible {
 			continue
 		}
-
 		providers = append(providers, proxy)
 	}
 
@@ -52,11 +53,9 @@ func QueryProviders() []*Provider {
 
 	for _, p := range providers {
 		updatedAt := time.Time{}
-
 		if s, ok := p.(UpdatableProvider); ok {
 			updatedAt = s.UpdatedAt()
 		}
-
 		result = append(result, &Provider{
 			Name:        p.Name(),
 			VehicleType: p.VehicleType().String(),
@@ -68,13 +67,13 @@ func QueryProviders() []*Provider {
 	return result
 }
 
-// vehicleGetter matches ruleSetProvider (HTTP/File providers) which embeds resource.Fetcher.
+// vehicleGetter matches ruleSetProvider (HTTP/File) which embeds resource.Fetcher.
 type vehicleGetter interface {
 	Vehicle() provider.Vehicle
 }
 
-// QueryRuleProviderContent reads the cached rule file for the named provider and returns
-// each rule entry as a string. Returns nil if the provider is not found or is inline/binary.
+// QueryRuleProviderContent reads the cached rule file and returns each rule as a string.
+// Returns nil for inline providers, binary (MRS/zstd) files, or read errors.
 func QueryRuleProviderContent(name string) []string {
 	p := tunnel.RuleProviders()[name]
 	if p == nil {
@@ -91,10 +90,23 @@ func QueryRuleProviderContent(name string) []string {
 		return nil
 	}
 
+	// MRS files are zstd-compressed — unreadable as text, skip immediately.
+	if len(buf) >= 4 && buf[0] == zstdMagic[0] && buf[1] == zstdMagic[1] &&
+		buf[2] == zstdMagic[2] && buf[3] == zstdMagic[3] {
+		return nil
+	}
+
 	return parseRuleFileContent(buf)
 }
 
-func parseRuleFileContent(buf []byte) []string {
+func parseRuleFileContent(buf []byte) (result []string) {
+	// Recover from any panic inside yaml.Unmarshal (e.g. malformed binary input).
+	defer func() {
+		if r := recover(); r != nil {
+			result = nil
+		}
+	}()
+
 	// YAML format: payload: [...] or rules: [...]
 	var schema struct {
 		Payload []string `yaml:"payload"`
@@ -110,7 +122,6 @@ func parseRuleFileContent(buf []byte) []string {
 	}
 
 	// Text format: one rule per line
-	var result []string
 	for _, line := range strings.Split(string(buf), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
@@ -130,14 +141,12 @@ func UpdateProvider(t string, name string) error {
 		if p == nil {
 			return fmt.Errorf("%s not found", name)
 		}
-
 		err = p.Update()
 	case "Proxy":
 		p := tunnel.Providers()[name]
 		if p == nil {
 			return fmt.Errorf("%s not found", name)
 		}
-
 		err = p.Update()
 	}
 
