@@ -60,7 +60,14 @@ class ProviderAdapter(
             holder.binding.endView.visibility = View.GONE
             holder.binding.elapsedView.visibility = View.GONE
             holder.binding.divider.visibility = View.GONE
-            holder.binding.viewBtn.visibility = View.GONE
+            if (state.provider.type == Provider.Type.Rule) {
+                holder.binding.viewBtn.visibility = View.VISIBLE
+                holder.binding.viewContent = View.OnClickListener {
+                    requestViewContent(position, state.provider)
+                }
+            } else {
+                holder.binding.viewBtn.visibility = View.GONE
+            }
         } else {
             holder.binding.endView.visibility = View.VISIBLE
             holder.binding.elapsedView.visibility = View.VISIBLE

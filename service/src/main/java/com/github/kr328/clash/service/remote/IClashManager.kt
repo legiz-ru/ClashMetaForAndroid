@@ -12,6 +12,7 @@ interface IClashManager {
     fun queryProxyGroup(name: String, proxySort: ProxySort): ProxyGroup
     fun queryConfiguration(): UiConfiguration
     fun queryProviders(): ProviderList
+    fun dumpRuleProviderToText(name: String, outputPath: String): String
     fun queryRuleProviderFilePath(name: String): String
 
     fun patchSelector(group: String, name: String): Boolean

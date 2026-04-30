@@ -188,6 +188,10 @@ object Clash {
         }
     }
 
+    fun dumpRuleProviderToText(name: String, outputPath: String): String {
+        return Bridge.nativeDumpRuleProviderToText(name, outputPath) ?: ""
+    }
+
     fun queryRuleProviderFilePath(name: String): String? {
         return Bridge.nativeQueryRuleProviderFilePath(name)
     }

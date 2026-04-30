@@ -62,14 +62,15 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
                         is ProvidersDesign.Request.ViewContent -> {
                             launch {
                                 try {
-                                    val filePath = withClash {
-                                        queryRuleProviderFilePath(it.provider.name)
-                                    }
-                                    val rules = if (filePath.isBlank()) {
-                                        emptyList()
-                                    } else {
-                                        withContext(Dispatchers.IO) {
-                                            readRuleProviderContent(filePath)
+                                    val rules = withContext(Dispatchers.IO) {
+                                        val filePath = withClash {
+                                            queryRuleProviderFilePath(it.provider.name)
+                                        }
+                                        when {
+                                            filePath.isBlank() || isMrsFile(filePath) ->
+                                                dumpProviderToTextFile(it.provider.name)
+                                            else ->
+                                                readRuleProviderContent(filePath)
                                         }
                                     }
                                     design.showRuleContent(it.provider, rules)
@@ -89,6 +90,26 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
         }
     }
 
+    private fun isMrsFile(path: String): Boolean {
+        val file = File(path)
+        if (!file.exists() || file.length() < 4) return false
+        val header = ByteArray(4)
+        file.inputStream().use { it.read(header) }
+        return header[0] == 0x28.toByte() && header[1] == 0xB5.toByte() &&
+            header[2] == 0x2F.toByte() && header[3] == 0xFD.toByte()
+    }
+
+    private suspend fun dumpProviderToTextFile(providerName: String): List<String> {
+        val tempFile = File(cacheDir, "pr_${providerName.hashCode()}.txt")
+        return try {
+            val errMsg = withClash { dumpRuleProviderToText(providerName, tempFile.absolutePath) }
+            if (errMsg.isNotBlank()) emptyList()
+            else tempFile.readLines().filter { it.isNotBlank() }
+        } finally {
+            tempFile.delete()
+        }
+    }
+
     private fun readRuleProviderContent(filePath: String): List<String> {
         val file = File(filePath)
         if (!file.exists()) return emptyList()
@@ -96,7 +117,6 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
         val bytes = file.readBytes()
         if (bytes.size < 4) return emptyList()
 
-        // MRS files are zstd-compressed — unreadable as text
         if (bytes[0] == 0x28.toByte() && bytes[1] == 0xB5.toByte() &&
             bytes[2] == 0x2F.toByte() && bytes[3] == 0xFD.toByte()
         ) return emptyList()
