@@ -8,7 +8,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.net.InetSocketAddress
 
@@ -188,10 +187,8 @@ object Clash {
         }
     }
 
-    fun queryRuleProviderContent(name: String): List<String> {
-        val json = Bridge.nativeQueryRuleProviderContent(name) ?: return emptyList()
-        val array = Json.Default.decodeFromString(JsonArray.serializer(), json)
-        return array.map { it.jsonPrimitive.content }
+    fun queryRuleProviderFilePath(name: String): String? {
+        return Bridge.nativeQueryRuleProviderFilePath(name)
     }
 
     fun updateProvider(type: Provider.Type, name: String): CompletableDeferred<Unit> {
