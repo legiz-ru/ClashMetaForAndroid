@@ -3,13 +3,13 @@ module cfa
 go 1.20
 
 require (
-	github.com/dlclark/regexp2 v1.11.5
+	github.com/dlclark/regexp2 v1.12.0
 	github.com/metacubex/mihomo v1.7.0
 	golang.org/x/sync v0.11.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen v1.1.20-moshen
+replace github.com/metacubex/mihomo => github.com/legiz-ru/moshen v1.1.21-moshen
 
 replace google.golang.org/protobuf => github.com/metacubex/protobuf-go v0.0.0-20260306035419-7ceee0674686
 
@@ -22,7 +22,7 @@ require (
 	github.com/coreos/go-iptables v0.8.0 // indirect
 	github.com/dmitryikh/leaves v0.0.0-20230708180554-25d19a787328 // indirect
 	github.com/dunglas/httpsfv v1.0.2 // indirect
-	github.com/enfein/mieru/v3 v3.30.1 // indirect
+	github.com/enfein/mieru/v3 v3.31.0 // indirect
 	github.com/ericlagergren/aegis v0.0.0-20250325060835-cd0defd64358 // indirect
 	github.com/ericlagergren/polyval v0.0.0-20220411101811-e25bc10ba391 // indirect
 	github.com/ericlagergren/siv v0.0.0-20220507050439-0b757b3aa5f1 // indirect
@@ -44,7 +44,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/klauspost/reedsolomon v1.12.3 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
-	github.com/mdlayher/socket v0.4.1 // indirect
+	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/metacubex/amneziawg-go v0.0.0-20251104174305-5a0e9f7e361d // indirect
 	github.com/metacubex/ascon v0.1.0 // indirect
 	github.com/metacubex/bart v0.26.0 // indirect
@@ -60,11 +60,11 @@ require (
 	github.com/metacubex/gvisor v0.0.0-20251227095601-261ec1326fe8 // indirect
 	github.com/metacubex/hkdf v0.1.0 // indirect
 	github.com/metacubex/hpke v0.1.0 // indirect
-	github.com/metacubex/http v0.1.1 // indirect
+	github.com/metacubex/http v0.1.2 // indirect
 	github.com/metacubex/kcp-go v0.0.0-20260105040817-550693377604 // indirect
 	github.com/metacubex/mhurl v0.1.0 // indirect
 	github.com/metacubex/mlkem v0.1.0 // indirect
-	github.com/metacubex/nftables v0.0.0-20250503052935-30a69ab87793 // indirect
+	github.com/metacubex/nftables v0.0.0-20260426003805-208c2c1ba2cb // indirect
 	github.com/metacubex/qpack v0.6.0 // indirect
 	github.com/metacubex/quic-go v0.59.1-0.20260413153657-53bb22f2c306 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
@@ -75,7 +75,7 @@ require (
 	github.com/metacubex/sing-shadowsocks v0.2.12 // indirect
 	github.com/metacubex/sing-shadowsocks2 v0.2.7 // indirect
 	github.com/metacubex/sing-shadowtls v0.0.0-20250503063515-5d9f966d17a2 // indirect
-	github.com/metacubex/sing-tun v0.4.17 // indirect
+	github.com/metacubex/sing-tun v0.4.18 // indirect
 	github.com/metacubex/sing-vmess v0.2.5 // indirect
 	github.com/metacubex/sing-wireguard v0.0.0-20250503063753-2dc62acc626f // indirect
 	github.com/metacubex/smux v0.0.0-20260105030934-d0c8756d3141 // indirect
@@ -98,7 +98,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923 // indirect
 	github.com/vernesong/leaves v0.0.0-20251129203830-02de011aefeb // indirect
-	github.com/vishvananda/netns v0.0.4 // indirect
+	github.com/vishvananda/netns v0.0.5 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
