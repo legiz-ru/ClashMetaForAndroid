@@ -1,3 +1,4 @@
+import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -46,15 +47,47 @@ task("downloadGeoFiles") {
         "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb" to "ASN.mmdb",
     )
 
+    fun openStreamFollowingRedirects(urlStr: String): java.io.InputStream {
+        var location = urlStr
+        repeat(10) {
+            val conn = URL(location).openConnection() as HttpURLConnection
+            conn.instanceFollowRedirects = false
+            conn.connectTimeout = 30_000
+            conn.readTimeout = 60_000
+            conn.connect()
+            val code = conn.responseCode
+            if (code in 300..399) {
+                location = conn.getHeaderField("Location") ?: throw Exception("Redirect with no Location header")
+                conn.disconnect()
+            } else {
+                return conn.inputStream
+            }
+        }
+        throw Exception("Too many redirects for $urlStr")
+    }
+
     doLast {
         geoFilesUrls.forEach { (downloadUrl, outputFileName) ->
-            val url = URL(downloadUrl)
             val outputPath = file("$geoFilesDownloadDir/$outputFileName")
             outputPath.parentFile.mkdirs()
-            url.openStream().use { input ->
-                Files.copy(input, outputPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                println("$outputFileName downloaded to $outputPath")
+            var lastException: Exception? = null
+            repeat(3) { attempt ->
+                try {
+                    openStreamFollowingRedirects(downloadUrl).use { input ->
+                        Files.copy(input, outputPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    println("$outputFileName downloaded to $outputPath")
+                    lastException = null
+                    return@repeat
+                } catch (e: Exception) {
+                    lastException = e
+                    if (attempt < 2) {
+                        println("Download failed (attempt ${attempt + 1}/3): ${e.message}, retrying...")
+                        Thread.sleep(5_000L * (attempt + 1))
+                    }
+                }
             }
+            lastException?.let { throw it }
         }
     }
 }
