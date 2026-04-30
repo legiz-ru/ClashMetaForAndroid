@@ -8,9 +8,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.kr328.clash.core.model.Provider
 import com.github.kr328.clash.design.adapter.RuleEntryAdapter
 import com.github.kr328.clash.design.databinding.DesignProviderDetailBinding
-import com.github.kr328.clash.design.util.applyFrom
-import com.github.kr328.clash.design.util.applyLinearAdapter
-import com.github.kr328.clash.design.util.bindAppBarElevation
+import com.github.kr328.clash.design.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -62,7 +60,7 @@ class ProviderDetailDesign(
             matchPositions = emptyList()
             currentMatchIndex = 0
             adapter.updateSearch("", emptySet(), -1)
-            binding.searchCounter.text = ""
+            binding.searchCounter.visibility = View.GONE
             return
         }
         matchPositions = allRules.indices.filter { idx ->
@@ -77,7 +75,8 @@ class ProviderDetailDesign(
         val matchSet = matchPositions.toSet()
         val currentPos = if (matchPositions.isNotEmpty()) matchPositions[currentMatchIndex] else -1
         adapter.updateSearch(currentQuery, matchSet, currentPos)
-        binding.searchCounter.text = if (matchPositions.isEmpty()) ""
+        binding.searchCounter.visibility = View.VISIBLE
+        binding.searchCounter.text = if (matchPositions.isEmpty()) "0"
         else "${currentMatchIndex + 1}/${matchPositions.size}"
     }
 
@@ -118,16 +117,8 @@ class ProviderDetailDesign(
             }
         }
 
-        binding.activityBarLayout.viewTreeObserver.addOnGlobalLayoutListener {
-            val h = binding.activityBarLayout.height
-            if (binding.recyclerList.paddingTop != h) {
-                binding.recyclerList.setPaddingRelative(
-                    binding.recyclerList.paddingStart,
-                    h,
-                    binding.recyclerList.paddingEnd,
-                    binding.recyclerList.paddingBottom
-                )
-            }
+        binding.activityBarLayout.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+            binding.recyclerList.setPaddingRelative(0, v.height, 0, binding.recyclerList.paddingBottom)
         }
 
         binding.searchInput.addTextChangedListener(object : TextWatcher {
