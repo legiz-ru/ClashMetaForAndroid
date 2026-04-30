@@ -1,36 +1,36 @@
 package com.github.kr328.clash.design.adapter
 
 import android.content.Context
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.core.model.Provider
-import com.github.kr328.clash.design.databinding.AdapterProviderBinding
+import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.model.ProviderState
-import com.github.kr328.clash.design.ui.ObservableCurrentTime
-import com.github.kr328.clash.design.util.layoutInflater
+import com.github.kr328.clash.design.util.elapsedIntervalString
+import com.github.kr328.clash.design.util.type
 
 class ProviderAdapter(
     private val context: Context,
     providers: List<Provider>,
-    private val requestUpdate: (Int, Provider) -> Unit,
-    private val requestViewContent: (Int, Provider) -> Unit,
+    private val onClick: (Int, Provider) -> Unit,
 ) : RecyclerView.Adapter<ProviderAdapter.Holder>() {
-    class Holder(val binding: AdapterProviderBinding) : RecyclerView.ViewHolder(binding.root)
 
-    private val currentTime = ObservableCurrentTime()
+    class Holder(root: View) : RecyclerView.ViewHolder(root) {
+        val name: TextView = root.findViewById(R.id.provider_name)
+        val subtitle: TextView = root.findViewById(R.id.provider_subtitle)
+    }
 
     val states = providers.map { ProviderState(it, it.updatedAt, false) }
 
     fun updateElapsed() {
-        currentTime.update()
+        notifyItemRangeChanged(0, states.size)
     }
 
     fun notifyUpdated(index: Int) {
-        states[index].apply {
-            updating = false
-        }
-
+        states[index].updating = false
         notifyItemChanged(index)
     }
 
@@ -39,55 +39,33 @@ class ProviderAdapter(
             updating = false
             updatedAt = System.currentTimeMillis()
         }
-
         notifyItemChanged(index)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-        return Holder(
-            AdapterProviderBinding
-                .inflate(context.layoutInflater, parent, false)
-                .also { it.currentTime = currentTime }
-        )
+        val view = LayoutInflater.from(context).inflate(R.layout.adapter_provider, parent, false)
+        return Holder(view)
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val state = states[position]
+        val provider = state.provider
 
-        holder.binding.provider = state.provider
-        holder.binding.state = state
-        if (state.provider.vehicleType == Provider.VehicleType.Inline) {
-            holder.binding.endView.visibility = View.GONE
-            holder.binding.elapsedView.visibility = View.GONE
-            holder.binding.divider.visibility = View.GONE
-            if (state.provider.type == Provider.Type.Rule) {
-                holder.binding.viewBtn.visibility = View.VISIBLE
-                holder.binding.viewContent = View.OnClickListener {
-                    requestViewContent(position, state.provider)
-                }
-            } else {
-                holder.binding.viewBtn.visibility = View.GONE
-            }
-        } else {
-            holder.binding.endView.visibility = View.VISIBLE
-            holder.binding.elapsedView.visibility = View.VISIBLE
-            holder.binding.divider.visibility = View.VISIBLE
-            holder.binding.update = View.OnClickListener {
-                state.updating = true
-                requestUpdate(position, state.provider)
-            }
-            if (state.provider.type == Provider.Type.Rule) {
-                holder.binding.viewBtn.visibility = View.VISIBLE
-                holder.binding.viewContent = View.OnClickListener {
-                    requestViewContent(position, state.provider)
-                }
-            } else {
-                holder.binding.viewBtn.visibility = View.GONE
-            }
-        }
+        holder.name.text = provider.name
+        holder.subtitle.text = buildSubtitle(provider, state.updatedAt)
+        holder.itemView.setOnClickListener { onClick(position, provider) }
     }
 
-    override fun getItemCount(): Int {
-        return states.size
+    override fun getItemCount(): Int = states.size
+
+    private fun buildSubtitle(provider: Provider, updatedAt: Long): String {
+        val typeStr = provider.type(context)
+        return when (provider.vehicleType) {
+            Provider.VehicleType.Inline -> typeStr
+            else -> {
+                val elapsed = (System.currentTimeMillis() - updatedAt).elapsedIntervalString(context)
+                "$typeStr • $elapsed"
+            }
+        }
     }
 }

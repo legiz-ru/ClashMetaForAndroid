@@ -5,12 +5,9 @@ import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.design.ProvidersDesign
 import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.util.withClash
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.withContext
-import java.io.File
 import java.util.concurrent.TimeUnit
 import com.github.kr328.clash.design.R
 
@@ -29,7 +26,6 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
                     when (it) {
                         Event.ProfileLoaded -> {
                             val newList = withClash { queryProviders().sorted() }
-
                             if (newList != providers) {
                                 startActivity(ProvidersActivity::class.intent)
                                 finish()
@@ -40,6 +36,13 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
                 }
                 design.requests.onReceive {
                     when (it) {
+                        is ProvidersDesign.Request.Open -> {
+                            startActivity(
+                                ProviderDetailActivity::class.intent.putExtra(
+                                    ProviderDetailActivity.EXTRA_PROVIDER, it.provider
+                                )
+                            )
+                        }
                         is ProvidersDesign.Request.Update -> {
                             launch {
                                 try {
@@ -59,26 +62,6 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
                                 }
                             }
                         }
-                        is ProvidersDesign.Request.ViewContent -> {
-                            launch {
-                                try {
-                                    val rules = withContext(Dispatchers.IO) {
-                                        val filePath = withClash {
-                                            queryRuleProviderFilePath(it.provider.name)
-                                        }
-                                        when {
-                                            filePath.isBlank() || isMrsFile(filePath) ->
-                                                dumpProviderToTextFile(it.provider.name)
-                                            else ->
-                                                readRuleProviderContent(filePath)
-                                        }
-                                    }
-                                    design.showRuleContent(it.provider, rules)
-                                } catch (e: Exception) {
-                                    design.showExceptionToast(e)
-                                }
-                            }
-                        }
                     }
                 }
                 if (activityStarted) {
@@ -88,66 +71,5 @@ class ProvidersActivity : BaseActivity<ProvidersDesign>() {
                 }
             }
         }
-    }
-
-    private fun isMrsFile(path: String): Boolean {
-        val file = File(path)
-        if (!file.exists() || file.length() < 4) return false
-        val header = ByteArray(4)
-        file.inputStream().use { it.read(header) }
-        return header[0] == 0x28.toByte() && header[1] == 0xB5.toByte() &&
-            header[2] == 0x2F.toByte() && header[3] == 0xFD.toByte()
-    }
-
-    private suspend fun dumpProviderToTextFile(providerName: String): List<String> {
-        val tempFile = File(cacheDir, "pr_${providerName.hashCode()}.txt")
-        return try {
-            val errMsg = withClash { dumpRuleProviderToText(providerName, tempFile.absolutePath) }
-            if (errMsg.isNotBlank()) emptyList()
-            else tempFile.readLines().filter { it.isNotBlank() }
-        } finally {
-            tempFile.delete()
-        }
-    }
-
-    private fun readRuleProviderContent(filePath: String): List<String> {
-        val file = File(filePath)
-        if (!file.exists()) return emptyList()
-
-        val bytes = file.readBytes()
-        if (bytes.size < 4) return emptyList()
-
-        if (bytes[0] == 0x28.toByte() && bytes[1] == 0xB5.toByte() &&
-            bytes[2] == 0x2F.toByte() && bytes[3] == 0xFD.toByte()
-        ) return emptyList()
-
-        return parseRuleText(bytes.toString(Charsets.UTF_8))
-    }
-
-    private fun parseRuleText(text: String): List<String> {
-        val result = mutableListOf<String>()
-        var inList = false
-
-        for (rawLine in text.lines()) {
-            val line = rawLine.trim()
-            if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) continue
-
-            if (line == "payload:" || line == "rules:") {
-                inList = true
-                continue
-            }
-
-            if (inList && line.startsWith("- ")) {
-                var entry = line.removePrefix("- ").trim()
-                if (entry.startsWith("'") && entry.endsWith("'"))
-                    entry = entry.substring(1, entry.length - 1)
-                else if (entry.startsWith("\"") && entry.endsWith("\""))
-                    entry = entry.substring(1, entry.length - 1)
-                if (entry.isNotEmpty()) result.add(entry)
-            } else if (!inList) {
-                result.add(line)
-            }
-        }
-        return result
     }
 }

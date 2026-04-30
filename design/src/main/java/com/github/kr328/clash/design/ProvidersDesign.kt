@@ -2,15 +2,10 @@ package com.github.kr328.clash.design
 
 import android.content.Context
 import android.view.View
-import android.view.ViewGroup
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.core.model.Provider
 import com.github.kr328.clash.design.adapter.ProviderAdapter
-import com.github.kr328.clash.design.adapter.RuleEntryAdapter
 import com.github.kr328.clash.design.databinding.DesignProvidersBinding
 import com.github.kr328.clash.design.util.*
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -19,8 +14,8 @@ class ProvidersDesign(
     providers: List<Provider>,
 ) : Design<ProvidersDesign.Request>(context) {
     sealed class Request {
+        data class Open(val index: Int, val provider: Provider) : Request()
         data class Update(val index: Int, val provider: Provider) : Request()
-        data class ViewContent(val index: Int, val provider: Provider) : Request()
     }
 
     private val binding = DesignProvidersBinding
@@ -32,11 +27,8 @@ class ProvidersDesign(
     private val adapter = ProviderAdapter(
         context,
         providers,
-        requestUpdate = { index, provider ->
-            requests.trySend(Request.Update(index, provider))
-        },
-        requestViewContent = { index, provider ->
-            requests.trySend(Request.ViewContent(index, provider))
+        onClick = { index, provider ->
+            requests.trySend(Request.Open(index, provider))
         },
     )
 
@@ -56,25 +48,6 @@ class ProvidersDesign(
         }
     }
 
-    suspend fun showRuleContent(provider: Provider, rules: List<String>) {
-        withContext(Dispatchers.Main) {
-            val maxHeight = (context.resources.displayMetrics.heightPixels * 0.6).toInt()
-            val recycler = RecyclerView(context).apply {
-                layoutManager = LinearLayoutManager(context)
-                adapter = RuleEntryAdapter(rules)
-                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxHeight)
-            }
-
-            val title = "${provider.name} (${rules.size})"
-
-            MaterialAlertDialogBuilder(context)
-                .setTitle(title)
-                .setView(recycler)
-                .setPositiveButton(R.string.close) { _, _ -> }
-                .show()
-        }
-    }
-
     init {
         binding.self = this
 
@@ -85,9 +58,9 @@ class ProvidersDesign(
     }
 
     fun requestUpdateAll() {
-        adapter.states.filter { !it.updating }.forEachIndexed { index, state ->
-            state.updating = true
-            if (state.provider.vehicleType != Provider.VehicleType.Inline) {
+        adapter.states.forEachIndexed { index, state ->
+            if (state.provider.vehicleType != Provider.VehicleType.Inline && !state.updating) {
+                state.updating = true
                 requests.trySend(Request.Update(index, state.provider))
             }
         }

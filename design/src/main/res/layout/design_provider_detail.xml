@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <data>
+        <variable
+            name="self"
+            type="com.github.kr328.clash.design.ProviderDetailDesign" />
+    </data>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="@{self.surface.insets.start + (int)@dimen/sub_settings_horizontal_padding}"
+        android:paddingEnd="@{self.surface.insets.end + (int)@dimen/sub_settings_horizontal_padding}">
+
+        <!-- Rules list (paddingTop set programmatically to match toolbar height) -->
+        <com.github.kr328.clash.design.view.AppRecyclerView
+            android:id="@+id/recycler_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="@{(float) self.surface.insets.bottom}" />
+
+        <!-- Loading indicator shown while rules are being loaded -->
+        <ProgressBar
+            android:id="@+id/loading_bar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:visibility="visible" />
+
+        <!-- Floating top bar: toolbar row + optional search row -->
+        <com.github.kr328.clash.design.view.ActivityBarLayout
+            android:id="@+id/activity_bar_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="@{self.surface.insets.top}">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Toolbar row -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="@dimen/item_tailing_margin">
+
+                    <include
+                        android:id="@+id/activity_bar"
+                        layout="@layout/common_activity_bar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:layout_toStartOf="@id/btn_update" />
+
+                    <ImageView
+                        android:id="@+id/btn_update"
+                        android:layout_width="@dimen/item_tailing_component_size"
+                        android:layout_height="@dimen/item_tailing_component_size"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_toolbar_button_focus"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:padding="@dimen/toolbar_image_action_padding"
+                        android:src="@drawable/ic_baseline_sync"
+                        android:contentDescription="@string/update" />
+
+                </RelativeLayout>
+
+                <!-- Search bar row — shown only for Rule providers -->
+                <LinearLayout
+                    android:id="@+id/search_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="@dimen/item_header_margin"
+                    android:paddingEnd="4dp"
+                    android:paddingBottom="8dp"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/search_input"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="@string/search"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+                    <TextView
+                        android:id="@+id/search_counter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp"
+                        android:minWidth="44dp"
+                        android:gravity="center"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <ImageButton
+                        android:id="@+id/btn_nav_prev"
+                        android:layout_width="@dimen/item_tailing_component_size"
+                        android:layout_height="@dimen/item_tailing_component_size"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_baseline_expand_more"
+                        android:rotation="180"
+                        android:contentDescription="@null"
+                        android:padding="4dp" />
+
+                    <ImageButton
+                        android:id="@+id/btn_nav_next"
+                        android:layout_width="@dimen/item_tailing_component_size"
+                        android:layout_height="@dimen/item_tailing_component_size"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_baseline_expand_more"
+                        android:contentDescription="@null"
+                        android:padding="4dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.github.kr328.clash.design.view.ActivityBarLayout>
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</layout>
