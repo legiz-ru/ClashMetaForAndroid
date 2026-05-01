@@ -13,11 +13,12 @@
     android:orientation="horizontal"
     android:paddingVertical="@dimen/item_padding_vertical">
 
-    <View
+    <ImageView
         android:layout_width="@dimen/item_header_component_size"
         android:layout_height="@dimen/item_header_component_size"
         android:layout_marginHorizontal="@dimen/item_header_margin"
-        android:background="@drawable/ic_baseline_view_list" />
+        android:src="@drawable/ic_baseline_vpn_key"
+        android:contentDescription="@null" />
 
     <TextView
         android:id="@+id/link_alias"
