@@ -32,6 +32,22 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object ProfileProcessor {
+    class HwidNotSupportedException : IOException("HWID_NOT_SUPPORTED")
+    class HwidMaxDevicesReachedException : IOException("HWID_MAX_DEVICES_REACHED")
+
+    private fun isHeaderTrue(headers: okhttp3.Headers, name: String): Boolean {
+        return headers[name]?.trim()?.equals("true", ignoreCase = true) == true
+    }
+
+    private fun throwIfHwidBlocked(headers: okhttp3.Headers) {
+        if (isHeaderTrue(headers, "x-hwid-not-supported")) {
+            throw HwidNotSupportedException()
+        }
+
+        if (isHeaderTrue(headers, "x-hwid-max-devices-reached")) {
+            throw HwidMaxDevicesReachedException()
+        }
+    }
 
     fun buildProfileRequest(context: Context, url: String): Request {
         val uiPrefs = context.getSharedPreferences("ui", Context.MODE_PRIVATE)
@@ -91,6 +107,8 @@ object ProfileProcessor {
                 .build()
 
             client.newCall(request).execute().use { response ->
+                throwIfHwidBlocked(response.headers)
+
                 if (!response.isSuccessful) return PrefetchResult(false)
 
                 val body = response.body ?: return PrefetchResult(false)
@@ -126,6 +144,8 @@ object ProfileProcessor {
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
         client.newCall(request).execute().use { response ->
+            throwIfHwidBlocked(response.headers)
+
             if (!response.isSuccessful) {
                 throw IOException("Failed to fetch profile: HTTP ${response.code}")
             }
@@ -936,6 +956,7 @@ object ProfileProcessor {
         val profileLogo: String = "",
         val profileUpdateInterval: Int = 0,
         val announce: String = "",
+        val hwidActive: Boolean = false,
         val latencyDots: Int = -1,
         val globalModeMp: Boolean = false,
         val connsViewMp: Boolean = false,
@@ -954,6 +975,7 @@ object ProfileProcessor {
                 if (hours != null && hours > 0) json.put("profile_update_interval", hours)
             }
             headers["announce"]?.let { if (it.isNotBlank()) json.put("announce", decodeHeaderValue(it)) }
+            if (isHeaderTrue(headers, "x-hwid-active")) json.put("x_hwid_active", true)
             headers["pxa-latency-dots"]?.trim()?.toIntOrNull()?.let {
                 if (it == 0 || it == 1) json.put("pxa_latency_dots", it)
             }
@@ -976,6 +998,7 @@ object ProfileProcessor {
                     profileLogo = json.optString("profile_logo", ""),
                     profileUpdateInterval = json.optInt("profile_update_interval", 0),
                     announce = json.optString("announce", ""),
+                    hwidActive = json.optBoolean("x_hwid_active", false),
                     latencyDots = if (json.has("pxa_latency_dots")) json.getInt("pxa_latency_dots") else -1,
                     globalModeMp = json.optBoolean("pxa_global_mode_mp", false),
                     connsViewMp = json.optBoolean("pxa_conns_view_mp", false),

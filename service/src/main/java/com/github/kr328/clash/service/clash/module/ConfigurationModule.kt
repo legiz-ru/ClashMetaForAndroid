@@ -9,6 +9,7 @@ import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
+import com.github.kr328.clash.service.util.patchTunPackages
 import com.github.kr328.clash.service.util.sendProfileLoaded
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.select
@@ -55,7 +56,22 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                 val active = ImportedDao().queryByUUID(current)
                     ?: throw NullPointerException("No profile selected")
 
-                Clash.load(service.importedDir.resolve(active.uuid.toString())).await()
+                val profileDir = service.importedDir.resolve(active.uuid.toString())
+                val configFile = profileDir.resolve("config.yaml")
+                var originalConfig: String? = null
+                try {
+                    if (configFile.exists()) {
+                        val original = configFile.readText()
+                        val patched = patchTunPackages(original, store.accessControlMode, store.accessControlPackages)
+                        if (patched != original) {
+                            originalConfig = original
+                            configFile.writeText(patched)
+                        }
+                    }
+                    Clash.load(profileDir).await()
+                } finally {
+                    originalConfig?.let { configFile.writeText(it) }
+                }
 
                 val remove = SelectionDao().querySelections(active.uuid)
                     .filterNot { Clash.patchSelector(it.proxy, it.selected) }

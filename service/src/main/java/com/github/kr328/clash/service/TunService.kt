@@ -14,7 +14,9 @@ import com.github.kr328.clash.service.clash.module.*
 import com.github.kr328.clash.service.model.AccessControlMode
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.cancelAndJoinBlocking
+import com.github.kr328.clash.service.util.importedDir
 import com.github.kr328.clash.service.util.parseCIDR
+import com.github.kr328.clash.service.util.parseTunPackageLists
 import com.github.kr328.clash.service.util.sendClashStarted
 import com.github.kr328.clash.service.util.sendClashStopped
 import kotlinx.coroutines.*
@@ -153,16 +155,39 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
                 }
             }
 
-            // Access Control
+            // Access Control — merge profile tun packages with UI settings (union)
+            val profileUuid = store.activeProfile
+            val (profileInclude, profileExclude) = if (profileUuid != null) {
+                val configFile = self.importedDir
+                    .resolve(profileUuid.toString())
+                    .resolve("config.yaml")
+                if (configFile.exists()) parseTunPackageLists(configFile.readText())
+                else Pair(emptySet(), emptySet())
+            } else Pair(emptySet<String>(), emptySet<String>())
+
+            val allInclude = mutableSetOf<String>()
+            val allExclude = mutableSetOf<String>()
+
+            allInclude.addAll(profileInclude)
+            allExclude.addAll(profileExclude)
+
             when (store.accessControlMode) {
-                AccessControlMode.AcceptAll -> Unit
-                AccessControlMode.AcceptSelected -> {
-                    (store.accessControlPackages + packageName).forEach {
+                AccessControlMode.AcceptSelected -> allInclude.addAll(store.accessControlPackages)
+                AccessControlMode.DenySelected   -> allExclude.addAll(store.accessControlPackages)
+                AccessControlMode.AcceptAll      -> Unit
+            }
+
+            when {
+                allInclude.isNotEmpty() -> {
+                    // Whitelist — Android does not support mixing both lists simultaneously
+                    if (allExclude.isNotEmpty())
+                        Log.w("TUN: exclude-package ignored because include-package is active (Android limitation)")
+                    (allInclude + packageName).forEach {
                         runCatching { addAllowedApplication(it) }
                     }
                 }
-                AccessControlMode.DenySelected -> {
-                    (store.accessControlPackages - packageName).forEach {
+                allExclude.isNotEmpty() -> {
+                    (allExclude - packageName).forEach {
                         runCatching { addDisallowedApplication(it) }
                     }
                 }

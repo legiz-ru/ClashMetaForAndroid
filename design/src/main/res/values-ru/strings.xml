@@ -506,6 +506,13 @@
 
     <string name="paste_links">Вставить ссылки</string>
 
+    <string name="hwid_active_title">Ограничение HWID активно</string>
+    <string name="hwid_active_desc">Для этой подписки включена привязка устройств по HWID.</string>
+    <string name="hwid_not_supported_title">HWID не поддерживается</string>
+    <string name="hwid_not_supported_msg">Сервер требует HWID, но профиль был запрошен без него. Включите HWID в настройках приложения и повторите попытку.</string>
+    <string name="hwid_max_devices_title">Достигнут лимит устройств</string>
+    <string name="hwid_max_devices_msg">Вы достигли максимального количества устройств для этой подписки.</string>
+
     <!-- Profile card shortcut icons -->
     <string name="mode_selector_title">Режим подключения</string>
     <string name="mode_rule_label">Правила</string>

@@ -27,7 +27,27 @@ class ClashManager(private val context: Context) : IClashManager,
     }
 
     override fun queryProxyGroupNames(excludeNotSelectable: Boolean): List<String> {
-        return Clash.queryGroupNames(excludeNotSelectable)
+        val names = Clash.queryGroupNames(excludeNotSelectable)
+
+        val globalName = names.firstOrNull { it.equals("GLOBAL", ignoreCase = true) } ?: return names
+
+        val global = runCatching {
+            Clash.queryGroup(globalName, ProxySort.Default)
+        }.getOrNull() ?: return names
+
+        val globalOrder = global.proxies.mapIndexed { index, proxy -> proxy.name to index }.toMap()
+
+        return names
+            .mapIndexed { index, name ->
+                val rank = when {
+                    name.equals(globalName, ignoreCase = true) -> -1
+                    else -> globalOrder[name] ?: Int.MAX_VALUE
+                }
+
+                Triple(rank, index, name)
+            }
+            .sortedWith(compareBy<Triple<Int, Int, String>> { it.first }.thenBy { it.second })
+            .map { it.third }
     }
 
     override fun queryProxyGroup(name: String, proxySort: ProxySort): ProxyGroup {

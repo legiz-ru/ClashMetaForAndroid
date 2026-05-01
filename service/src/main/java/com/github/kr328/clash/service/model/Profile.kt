@@ -33,6 +33,7 @@ data class Profile(
     val profileLogo: String = "",
     val profileUpdateInterval: Int = 0,
     val announce: String = "",
+    val hwidActive: Boolean = false,
     val allowTemplateSelection: Boolean = true,
     val latencyDots: Int = -1,
     val globalModeMp: Boolean = false,

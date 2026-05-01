@@ -136,6 +136,15 @@
                     app:icon="@drawable/ic_outline_article"
                     app:subtext="@string/select_template_desc"
                     app:text="@string/select_template" />
+
+                <com.github.kr328.clash.design.view.ActionLabel
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="@dimen/properties_element_margin_vertical"
+                    android:visibility="@{profile.hwidActive ? View.VISIBLE : View.GONE}"
+                    app:icon="@drawable/ic_outline_info"
+                    app:subtext="@string/hwid_active_desc"
+                    app:text="@string/hwid_active_title" />
             </LinearLayout>
         </com.github.kr328.clash.design.view.ObservableScrollView>
 

@@ -542,6 +542,13 @@
 
     <string name="paste_links">Paste links</string>
 
+    <string name="hwid_active_title">HWID Limit Enabled</string>
+    <string name="hwid_active_desc">This subscription enforces device binding by HWID.</string>
+    <string name="hwid_not_supported_title">HWID is not supported</string>
+    <string name="hwid_not_supported_msg">The server requires HWID, but this profile was requested without it. Enable HWID in app settings and try again.</string>
+    <string name="hwid_max_devices_title">Device limit reached</string>
+    <string name="hwid_max_devices_msg">You have reached the maximum number of devices for this subscription.</string>
+
     <!-- Profile card shortcut icons -->
     <string name="mode_selector_title">Connection Mode</string>
     <string name="mode_rule_label">Rules</string>
