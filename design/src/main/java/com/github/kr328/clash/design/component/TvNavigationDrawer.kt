@@ -25,15 +25,26 @@ class TvNavigationDrawer(
 
     var onNavigate: ((NavItem) -> Unit)? = null
     var onToggleStatus: (() -> Unit)? = null
+    var onUrlTest: (() -> Unit)? = null
+
     var isClashRunning: Boolean = false
         set(value) {
             field = value
             updateToggleButton()
+            updateUrlTestButton()
+        }
+
+    var isOnegroupMp: Boolean = false
+        set(value) {
+            field = value
+            updateUrlTestButton()
         }
 
     private var toggleButton: LinearLayout? = null
     private var toggleIcon: ImageView? = null
     private var toggleText: TextView? = null
+    private var urlTestButton: LinearLayout? = null
+    private var urlTestDivider: View? = null
 
     // D-pad navigation support
     private val drawerFocusableItems = mutableListOf<View>()
@@ -195,7 +206,20 @@ class TvNavigationDrawer(
             val toggle = createToggleItem(dp)
             addView(toggle)
 
-            // Divider
+            // URL test button (visible only in onegroup-mp mode while running)
+            val urlTestDiv = createItemDivider(dp).also {
+                it.visibility = View.GONE
+                urlTestDivider = it
+            }
+            addView(urlTestDiv)
+
+            val urlTest = createUrlTestItem(dp).also {
+                it.visibility = View.GONE
+                urlTestButton = it
+            }
+            addView(urlTest)
+
+            // Divider before nav items
             addView(createItemDivider(dp))
 
             // Navigation items
@@ -336,6 +360,12 @@ class TvNavigationDrawer(
         }
     }
 
+    private fun updateUrlTestButton() {
+        val show = isClashRunning && isOnegroupMp
+        urlTestButton?.visibility = if (show) View.VISIBLE else View.GONE
+        urlTestDivider?.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
     private fun createNavItem(
         dp: Float,
         iconRes: Int,
@@ -403,6 +433,53 @@ class TvNavigationDrawer(
         if (isSelected) {
             selectedNavItemView = item
         }
+
+        return item
+    }
+
+    private fun createUrlTestItem(dp: Float): LinearLayout {
+        val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+
+        val item = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (56 * dp).toInt(),
+            ).apply {
+                marginStart = (12 * dp).toInt()
+                marginEnd = (12 * dp).toInt()
+            }
+            setPadding((16 * dp).toInt(), 0, (16 * dp).toInt(), 0)
+            isFocusable = true
+            isClickable = true
+            background = createFocusableBackground(dp, 0x00000000)
+            setOnClickListener { onUrlTest?.invoke() }
+        }
+
+        val icon = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams((24 * dp).toInt(), (24 * dp).toInt()).apply {
+                marginEnd = (16 * dp).toInt()
+            }
+            setImageResource(R.drawable.ic_baseline_speed)
+            imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+        }
+
+        val text = TextView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+            this.text = context.getString(R.string.delay_test)
+            textSize = 15f
+            setTextColor(onSurfaceVariantColor)
+        }
+
+        item.addView(icon)
+        item.addView(text)
+
+        item.id = View.generateViewId()
+        drawerFocusableItems.add(item)
 
         return item
     }

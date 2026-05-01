@@ -265,6 +265,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileRpMp = profile.rpMp
                 binding.profileOnegroupMp = profile.onegroupMp
                 isOnegroupMp = profile.onegroupMp
+                tvDrawer?.isOnegroupMp = profile.onegroupMp
+                tvDrawer?.onUrlTest = {
+                    pendingUrlTestGroup = firstOnegroupGroupName
+                    requests.trySend(Request.UrlTest)
+                }
 
                 binding.urlTestFab?.setOnClickListener {
                     pendingUrlTestGroup = firstOnegroupGroupName
@@ -323,6 +328,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileRpMp = false
                 binding.profileOnegroupMp = false
                 isOnegroupMp = false
+                tvDrawer?.isOnegroupMp = false
                 // Reset logo and title to defaults
                 binding.appLogo.setImageResource(R.drawable.ic_clash)
                 binding.appLogo.imageTintList = null
@@ -1107,6 +1113,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                         noTopBar = true, fixedHeight = false,
                     )
                     container.addView(inlineView)
+                    if (isTv) focusFirstProxyItem()
                 } else {
                     firstOnegroupGroupName = null
                 }
@@ -1421,10 +1428,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         if (useDrawerNav) {
             (binding.profileCard as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 
-            // Prevent data binding from re-showing the FAB after rebind
+            // Prevent data binding from re-showing the FABs after rebind
             binding.addOnRebindCallback(object : OnRebindCallback<DesignMainBinding>() {
                 override fun onBound(binding: DesignMainBinding?) {
                     binding?.disconnectFab?.visibility = View.GONE
+                    binding?.urlTestFab?.visibility = View.GONE
                 }
             })
         }
