@@ -38,6 +38,7 @@ data class Profile(
     val globalModeMp: Boolean = false,
     val connsViewMp: Boolean = false,
     val rpMp: Boolean = false,
+    val onegroupMp: Boolean = false,
 ) : Parcelable {
     enum class Type {
         File, Url, External,

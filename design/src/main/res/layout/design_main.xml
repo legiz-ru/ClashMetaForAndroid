@@ -68,6 +68,9 @@
         <variable
             name="profileRpMp"
             type="boolean" />
+        <variable
+            name="profileOnegroupMp"
+            type="boolean" />
 
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
@@ -543,6 +546,19 @@
                 app:labelVisibilityMode="labeled" />
 
         </LinearLayout>
+
+        <!-- ========== URL TEST MINI-FAB (onegroup-mp mode, left of disconnect FAB) ========== -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/url_test_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="72dp"
+            android:contentDescription="@string/delay_test"
+            android:src="@drawable/ic_baseline_speed"
+            android:visibility="@{clashRunning &amp;&amp; profileOnegroupMp ? View.VISIBLE : View.GONE}"
+            app:fabSize="mini" />
 
         <!-- ========== DISCONNECT FAB (connected state, above bottom nav, right-aligned) ========== -->
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton

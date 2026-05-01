@@ -132,6 +132,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private val iconExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    private var isOnegroupMp = false
+    private var firstOnegroupGroupName: String? = null
+
     private var pendingSelectGroup: String? = null
     private var pendingSelectName: String? = null
     private var pendingUrlTestGroup: String? = null
@@ -260,6 +263,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileGlobalModeMp = profile.globalModeMp
                 binding.profileConnsViewMp = profile.connsViewMp
                 binding.profileRpMp = profile.rpMp
+                binding.profileOnegroupMp = profile.onegroupMp
+                isOnegroupMp = profile.onegroupMp
+
+                binding.urlTestFab?.setOnClickListener {
+                    pendingUrlTestGroup = firstOnegroupGroupName
+                    requests.trySend(Request.UrlTest)
+                }
 
                 // Wire click listeners for shortcut icons
                 binding.btnModeSelector?.setOnClickListener { requests.trySend(Request.OpenModeSelector) }
@@ -311,6 +321,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileGlobalModeMp = false
                 binding.profileConnsViewMp = false
                 binding.profileRpMp = false
+                binding.profileOnegroupMp = false
+                isOnegroupMp = false
                 // Reset logo and title to defaults
                 binding.appLogo.setImageResource(R.drawable.ic_clash)
                 binding.appLogo.imageTintList = null
@@ -516,6 +528,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         group: ProxyGroup,
         groupMap: Map<String, ProxyGroup>,
         useDots: Boolean,
+        noTopBar: Boolean = false,
+        fixedHeight: Boolean = true,
     ): View {
         val dp = context.resources.displayMetrics.density
         val maxSheetHeight = (context.resources.displayMetrics.heightPixels * 0.7f).toInt()
@@ -540,63 +554,68 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             // AppBottomSheetDialog (phone) already provides this via its theme.
             if (isTv) background = context.getDrawable(R.drawable.bg_bottom_sheet)
 
-            val topBar = FrameLayout(context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                )
-                setPadding((12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt(), (8 * dp).toInt())
-            }
+            if (!noTopBar) {
+                val topBar = FrameLayout(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    )
+                    setPadding((12 * dp).toInt(), (8 * dp).toInt(), (12 * dp).toInt(), (8 * dp).toInt())
+                }
 
-            val sortButton = ImageView(context).apply {
-                layoutParams = FrameLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt(), Gravity.START or Gravity.CENTER_VERTICAL)
-                setImageResource(R.drawable.ic_baseline_sort)
-                imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
-                background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
-                setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
-                isFocusable = true
-                isClickable = true
-                setOnClickListener {
-                    openSortPicker {
-                        refreshOpenedProxyGroupSheet()
+                val sortButton = ImageView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt(), Gravity.START or Gravity.CENTER_VERTICAL)
+                    setImageResource(R.drawable.ic_baseline_sort)
+                    imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                    setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
+                    isFocusable = true
+                    isClickable = true
+                    setOnClickListener {
+                        openSortPicker {
+                            refreshOpenedProxyGroupSheet()
+                        }
                     }
                 }
-            }
 
-            val titleView = TextView(context).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.CENTER,
-                )
-                text = groupName
-                textSize = 15f
-                setTypeface(typeface, Typeface.BOLD)
-                setTextColor(onSurfaceColor)
-                maxLines = 1
-                ellipsize = TextUtils.TruncateAt.END
-            }
-
-            val urlTestButton = ImageView(context).apply {
-                layoutParams = FrameLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt(), Gravity.END or Gravity.CENTER_VERTICAL)
-                setImageResource(R.drawable.ic_baseline_speed)
-                imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
-                background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
-                setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
-                isFocusable = true
-                isClickable = true
-                setOnClickListener {
-                    pendingUrlTestGroup = groupName
-                    requests.trySend(Request.UrlTest)
+                val titleView = TextView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        Gravity.CENTER,
+                    )
+                    text = groupName
+                    textSize = 15f
+                    setTypeface(typeface, Typeface.BOLD)
+                    setTextColor(onSurfaceColor)
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
                 }
-            }
 
-            proxyGroupSortButton = sortButton
-            proxyGroupUrlTestButton = urlTestButton
-            topBar.addView(sortButton)
-            topBar.addView(titleView)
-            topBar.addView(urlTestButton)
-            addView(topBar)
+                val urlTestButton = ImageView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams((28 * dp).toInt(), (28 * dp).toInt(), Gravity.END or Gravity.CENTER_VERTICAL)
+                    setImageResource(R.drawable.ic_baseline_speed)
+                    imageTintList = ColorStateList.valueOf(onSurfaceVariantColor)
+                    background = context.getDrawable(R.drawable.bg_accordion_header_ripple)
+                    setPadding((4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt(), (4 * dp).toInt())
+                    isFocusable = true
+                    isClickable = true
+                    setOnClickListener {
+                        pendingUrlTestGroup = groupName
+                        requests.trySend(Request.UrlTest)
+                    }
+                }
+
+                proxyGroupSortButton = sortButton
+                proxyGroupUrlTestButton = urlTestButton
+                topBar.addView(sortButton)
+                topBar.addView(titleView)
+                topBar.addView(urlTestButton)
+                addView(topBar)
+            } else {
+                proxyGroupSortButton = null
+                proxyGroupUrlTestButton = null
+            }
 
             // Build each proxy row as a standalone view.
             // Using unique item view types prevents RecyclerView from recycling
@@ -830,8 +849,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val rv = RecyclerView(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    listHeight,
+                    if (fixedHeight) listHeight else LinearLayout.LayoutParams.WRAP_CONTENT,
                 )
+                if (!fixedHeight) isNestedScrollingEnabled = false
                 layoutManager = LinearLayoutManager(context)
                 clipToPadding = false
                 setPadding((12 * dp).toInt(), 0, (12 * dp).toInt(), (12 * dp).toInt())
@@ -1076,6 +1096,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             latestProxyGroups = groupMap
             latestUseDots = useDots
             refreshOpenedProxyGroupSheet()
+
+            // onegroup-mp: show first group's proxies inline, no accordion, no bottom sheet
+            if (isOnegroupMp) {
+                if (visibleGroups.isNotEmpty()) {
+                    val (firstName, firstGroup) = visibleGroups.first()
+                    firstOnegroupGroupName = firstName
+                    val inlineView = buildProxyGroupSheet(
+                        firstName, firstGroup, groupMap, useDots,
+                        noTopBar = true, fixedHeight = false,
+                    )
+                    container.addView(inlineView)
+                } else {
+                    firstOnegroupGroupName = null
+                }
+                return@withContext
+            }
 
             for ((name, group) in visibleGroups) {
                 val (selectedInfoText, _) = resolveSelectedInfo(groupMap, name, group.now)
@@ -1410,9 +1446,15 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 override fun onGlobalLayout() {
                     binding.bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
                     val dp = context.resources.displayMetrics.density
+                    val bottomOffset = binding.bottomNav.height + (12 * dp).toInt()
                     val params = binding.disconnectFab.layoutParams as CoordinatorLayout.LayoutParams
-                    params.bottomMargin = binding.bottomNav.height + (12 * dp).toInt()
+                    params.bottomMargin = bottomOffset
                     binding.disconnectFab.layoutParams = params
+                    binding.urlTestFab?.let { fab ->
+                        val fabParams = fab.layoutParams as CoordinatorLayout.LayoutParams
+                        fabParams.bottomMargin = bottomOffset
+                        fab.layoutParams = fabParams
+                    }
                 }
             })
         }

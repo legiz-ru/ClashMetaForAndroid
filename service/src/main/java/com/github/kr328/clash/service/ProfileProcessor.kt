@@ -940,6 +940,7 @@ object ProfileProcessor {
         val globalModeMp: Boolean = false,
         val connsViewMp: Boolean = false,
         val rpMp: Boolean = false,
+        val onegroupMp: Boolean = false,
     )
 
     fun saveProfileHeaders(profileDir: File, headers: okhttp3.Headers) {
@@ -960,6 +961,7 @@ object ProfileProcessor {
             if (headers["pxa-global-mode-mp"]?.trim() == "1") json.put("pxa_global_mode_mp", true)
             if (headers["pxa-conns-view-mp"]?.trim() == "1") json.put("pxa_conns_view_mp", true)
             if (headers["pxa-rp-mp"]?.trim() == "1") json.put("pxa_rp_mp", true)
+            if (headers["pxa-onegroup-mp"]?.trim() == "1") json.put("pxa_onegroup_mp", true)
             profileDir.resolve("profile_links.json").writeText(json.toString())
         } catch (_: Exception) {}
     }
@@ -980,6 +982,7 @@ object ProfileProcessor {
                     globalModeMp = json.optBoolean("pxa_global_mode_mp", false),
                     connsViewMp = json.optBoolean("pxa_conns_view_mp", false),
                     rpMp = json.optBoolean("pxa_rp_mp", false),
+                    onegroupMp = json.optBoolean("pxa_onegroup_mp", false),
                 )
             } else ProfileHeaders()
         } catch (_: Exception) { ProfileHeaders() }
