@@ -93,6 +93,13 @@ class AppSettingsDesign(
             )
 
             switch(
+                value = uiStore::displayGlobalByMode,
+                icon = R.drawable.ic_mdi_earth,
+                title = R.string.display_global_by_mode_title,
+                summary = R.string.display_global_by_mode_desc,
+            )
+
+            switch(
                 value = uiStore::hideAppIcon,
                 icon = R.drawable.ic_baseline_hide,
                 title = R.string.hide_app_icon_title,

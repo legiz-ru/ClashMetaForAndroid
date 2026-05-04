@@ -410,6 +410,8 @@
     <string name="delay_display">Delay Display</string>
     <string name="delay_display_dots">Colored dots</string>
     <string name="delay_display_ms">Milliseconds</string>
+    <string name="display_global_by_mode_title">Display GLOBAL by mode</string>
+    <string name="display_global_by_mode_desc">Show GLOBAL group inline when Global mode is active</string>
 
     <!-- TV Navigation -->
     <string name="start">Start</string>

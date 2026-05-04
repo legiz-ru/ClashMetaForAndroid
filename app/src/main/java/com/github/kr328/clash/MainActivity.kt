@@ -249,11 +249,23 @@ class MainActivity : BaseActivity<MainDesign>() {
                 else -> uiStore.delayDisplayDots
             }
             withClash {
+                val currentMode = queryTunnelState().mode
+                val isGlobalMode = currentMode == com.github.kr328.clash.core.model.TunnelState.Mode.Global
+                val displayGlobal = uiStore.displayGlobalByMode && isGlobalMode
+
+                setGlobalModeDisplay(displayGlobal)
+
                 val names = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
                 val groups = names.map { name ->
                     name to queryProxyGroup(name, uiStore.proxySort)
                 }.filter { !it.second.hidden }
-                setProxyGroups(groups, effectiveDots)
+
+                val displayGroups = if (displayGlobal) {
+                    groups.filter { it.first == "GLOBAL" }.ifEmpty { groups.take(1) }
+                } else {
+                    groups
+                }
+                setProxyGroups(displayGroups, effectiveDots)
             }
         } catch (_: Exception) {
             // Proxy groups may not be available yet

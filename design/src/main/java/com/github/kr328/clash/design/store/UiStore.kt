@@ -88,6 +88,11 @@ class UiStore(context: Context) {
         defaultValue = true,
     )
 
+    var displayGlobalByMode: Boolean by store.boolean(
+        key = "display_global_by_mode",
+        defaultValue = false,
+    )
+
     var summerModeUnlocked: Boolean by store.boolean(
         key = "summer_mode_unlocked",
         defaultValue = false,

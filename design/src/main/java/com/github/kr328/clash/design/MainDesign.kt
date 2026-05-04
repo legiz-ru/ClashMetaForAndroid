@@ -133,7 +133,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var isOnegroupMp = false
+    private var isGlobalModeDisplay = false
     private var firstOnegroupGroupName: String? = null
+
+    // Combined inline-proxy mode: triggered by profile header OR by displayGlobalByMode setting
+    private val isInlineProxyMode: Boolean get() = isOnegroupMp || isGlobalModeDisplay
 
     private var pendingSelectGroup: String? = null
     private var pendingSelectName: String? = null
@@ -187,6 +191,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 proxyGroupSheetRoot = null
                 groupInfoViews.clear()
                 dismissProxyGroupSheet()
+                isGlobalModeDisplay = false
+                binding.globalModeDisplay = false
+                updateDrawerInlineMode()
                 val container = binding.proxyGroupsContainer
                 container.removeAllViews()
                 // Add a centered spinner as placeholder (shown when container becomes visible on next start)
@@ -223,6 +230,25 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 TunnelState.Mode.Global -> context.getString(R.string.global_mode)
                 TunnelState.Mode.Rule -> context.getString(R.string.rule_mode)
                 else -> context.getString(R.string.rule_mode)
+            }
+        }
+    }
+
+    suspend fun setGlobalModeDisplay(active: Boolean) {
+        withContext(Dispatchers.Main) {
+            isGlobalModeDisplay = active
+            binding.globalModeDisplay = active
+            updateDrawerInlineMode()
+        }
+    }
+
+    private fun updateDrawerInlineMode() {
+        val inlineActive = isInlineProxyMode
+        tvDrawer?.isOnegroupMp = inlineActive
+        if (inlineActive) {
+            tvDrawer?.onUrlTest = {
+                pendingUrlTestGroup = firstOnegroupGroupName
+                requests.trySend(Request.UrlTest)
             }
         }
     }
@@ -265,11 +291,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileRpMp = profile.rpMp
                 binding.profileOnegroupMp = profile.onegroupMp
                 isOnegroupMp = profile.onegroupMp
-                tvDrawer?.isOnegroupMp = profile.onegroupMp
-                tvDrawer?.onUrlTest = {
-                    pendingUrlTestGroup = firstOnegroupGroupName
-                    requests.trySend(Request.UrlTest)
-                }
+                updateDrawerInlineMode()
 
                 binding.urlTestFab?.setOnClickListener {
                     pendingUrlTestGroup = firstOnegroupGroupName
@@ -328,7 +350,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileRpMp = false
                 binding.profileOnegroupMp = false
                 isOnegroupMp = false
-                tvDrawer?.isOnegroupMp = false
+                updateDrawerInlineMode()
                 // Reset logo and title to defaults
                 binding.appLogo.setImageResource(R.drawable.ic_clash)
                 binding.appLogo.imageTintList = null
@@ -1103,8 +1125,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             latestUseDots = useDots
             refreshOpenedProxyGroupSheet()
 
-            // onegroup-mp: show first group's proxies inline, no accordion, no bottom sheet
-            if (isOnegroupMp) {
+            // Inline proxy mode: triggered by pxa-onegroup-mp header OR displayGlobalByMode setting
+            if (isInlineProxyMode) {
                 if (visibleGroups.isNotEmpty()) {
                     val (firstName, firstGroup) = visibleGroups.first()
                     firstOnegroupGroupName = firstName

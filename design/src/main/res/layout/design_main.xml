@@ -71,6 +71,9 @@
         <variable
             name="profileOnegroupMp"
             type="boolean" />
+        <variable
+            name="globalModeDisplay"
+            type="boolean" />
 
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
@@ -557,7 +560,7 @@
             android:layout_marginBottom="72dp"
             android:contentDescription="@string/delay_test"
             android:src="@drawable/ic_baseline_speed"
-            android:visibility="@{clashRunning &amp;&amp; profileOnegroupMp ? View.VISIBLE : View.GONE}"
+            android:visibility="@{clashRunning &amp;&amp; (profileOnegroupMp || globalModeDisplay) ? View.VISIBLE : View.GONE}"
             app:fabSize="mini" />
 
         <!-- ========== DISCONNECT FAB (connected state, above bottom nav, right-aligned) ========== -->
