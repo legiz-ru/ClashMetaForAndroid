@@ -112,6 +112,9 @@ class ProxyActivity : BaseActivity<ProxyDesign>() {
 
                                 patchOverride(Clash.OverrideSlot.Session, o)
                             }
+
+                            startActivity(ProxyActivity::class.intent)
+                            finish()
                         }
                     }
                 }

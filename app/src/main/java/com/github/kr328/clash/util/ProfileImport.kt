@@ -124,6 +124,17 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
 
     // Standard HTTP(S) URL flow.
     val headers = ProfileProcessor.fetchUrlHeaders(this, url)
+
+    // Show HWID dialog immediately if the server already signals an error — no profile created.
+    if (headers.hwidNotSupported) {
+        showHwidNotSupportedImportDialog()
+        return ProfileImportResult(java.util.UUID.randomUUID(), false)
+    }
+    if (headers.hwidMaxDevicesReached) {
+        showHwidMaxDevicesImportDialog(headers.supportUrl)
+        return ProfileImportResult(java.util.UUID.randomUUID(), false)
+    }
+
     val name = headers.title.ifEmpty { getString(com.github.kr328.clash.design.R.string.new_profile) }
     val intervalMs = if (headers.updateIntervalHours > 0) headers.updateIntervalHours.toLong() * 60 * 60 * 1000 else 0L
 

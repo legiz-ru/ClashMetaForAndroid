@@ -1011,6 +1011,9 @@ object ProfileProcessor {
     data class UrlHeaders(
         val title: String = "",
         val updateIntervalHours: Int = 0,
+        val hwidNotSupported: Boolean = false,
+        val hwidMaxDevicesReached: Boolean = false,
+        val supportUrl: String = "",
     )
 
     suspend fun fetchUrlHeaders(context: Context, url: String): UrlHeaders {
@@ -1023,9 +1026,20 @@ object ProfileProcessor {
                 val baseRequest = buildProfileRequest(context, url)
 
                 fun parse(response: okhttp3.Response): UrlHeaders {
+                    val hdrs = response.headers
+                    // Check HWID error headers first — they can arrive on any status code (incl. 4xx).
+                    val hwidNotSupported = isHeaderTrue(hdrs, "x-hwid-not-supported")
+                    val hwidMaxDevices = isHeaderTrue(hdrs, "x-hwid-max-devices-reached")
+                    if (hwidNotSupported || hwidMaxDevices) {
+                        return UrlHeaders(
+                            hwidNotSupported = hwidNotSupported,
+                            hwidMaxDevicesReached = hwidMaxDevices,
+                            supportUrl = hdrs["support-url"]?.trim() ?: "",
+                        )
+                    }
                     if (!response.isSuccessful) return UrlHeaders()
-                    val title = response.headers["profile-title"]?.let { decodeHeaderValue(it) } ?: ""
-                    val interval = response.headers["profile-update-interval"]?.trim()?.toIntOrNull() ?: 0
+                    val title = hdrs["profile-title"]?.let { decodeHeaderValue(it) } ?: ""
+                    val interval = hdrs["profile-update-interval"]?.trim()?.toIntOrNull() ?: 0
                     return UrlHeaders(title, interval)
                 }
 
@@ -1033,7 +1047,8 @@ object ProfileProcessor {
                 val headRequest = baseRequest.newBuilder().head().build()
                 client.newCall(headRequest).execute().use { response ->
                     val headers = parse(response)
-                    if (headers.title.isNotEmpty() || headers.updateIntervalHours > 0) {
+                    if (headers.hwidNotSupported || headers.hwidMaxDevicesReached
+                        || headers.title.isNotEmpty() || headers.updateIntervalHours > 0) {
                         return@withContext headers
                     }
                 }

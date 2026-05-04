@@ -1,5 +1,7 @@
 package com.github.kr328.clash
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.util.GetContentCompat
 import com.github.kr328.clash.common.util.intent
@@ -227,9 +229,10 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
                     finish()
                 } catch (e: Exception) {
-                    when (resolveHwidIssue(e)) {
+                    val (issue, supportUrl) = resolveHwidIssue(e)
+                    when (issue) {
                         HwidIssue.NotSupported -> showHwidNotSupportedDialog()
-                        HwidIssue.MaxDevicesReached -> showHwidMaxDevicesDialog()
+                        HwidIssue.MaxDevicesReached -> showHwidMaxDevicesDialog(supportUrl)
                         HwidIssue.None -> showExceptionToast(e)
                     }
                 }
@@ -243,28 +246,28 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         MaxDevicesReached,
     }
 
-    private fun resolveHwidIssue(exception: Throwable): HwidIssue {
+    private fun resolveHwidIssue(exception: Throwable): Pair<HwidIssue, String> {
         var current: Throwable? = exception
 
         while (current != null) {
             when (current) {
-                is ProfileProcessor.HwidNotSupportedException -> return HwidIssue.NotSupported
-                is ProfileProcessor.HwidMaxDevicesReachedException -> return HwidIssue.MaxDevicesReached
+                is ProfileProcessor.HwidNotSupportedException -> return HwidIssue.NotSupported to ""
+                is ProfileProcessor.HwidMaxDevicesReachedException -> return HwidIssue.MaxDevicesReached to current.supportUrl
             }
 
             val message = current.message.orEmpty()
             if (message.contains("HWID_NOT_SUPPORTED", ignoreCase = true)) {
-                return HwidIssue.NotSupported
+                return HwidIssue.NotSupported to ""
             }
 
             if (message.contains("HWID_MAX_DEVICES_REACHED", ignoreCase = true)) {
-                return HwidIssue.MaxDevicesReached
+                return HwidIssue.MaxDevicesReached to ""
             }
 
             current = current.cause
         }
 
-        return HwidIssue.None
+        return HwidIssue.None to ""
     }
 
     private suspend fun PropertiesDesign.showHwidNotSupportedDialog() {
@@ -283,17 +286,27 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         }
     }
 
-    private suspend fun PropertiesDesign.showHwidMaxDevicesDialog() {
+    private suspend fun PropertiesDesign.showHwidMaxDevicesDialog(supportUrl: String) {
         withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { cont ->
-                val dialog = MaterialAlertDialogBuilder(context)
+                val builder = MaterialAlertDialogBuilder(context)
                     .setTitle(R.string.hwid_max_devices_title)
                     .setMessage(R.string.hwid_max_devices_msg)
                     .setPositiveButton(R.string.ok) { _, _ -> cont.resume(Unit) }
                     .setNegativeButton(R.string.cancel) { _, _ -> cont.resume(Unit) }
                     .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
-                    .show()
-
+                if (supportUrl.isNotEmpty()) {
+                    builder.setNeutralButton(R.string.hwid_support_btn) { _, _ ->
+                        cont.resume(Unit)
+                        try {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(supportUrl))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } catch (_: Exception) {}
+                    }
+                }
+                val dialog = builder.show()
                 cont.invokeOnCancellation { dialog.dismiss() }
             }
         }
