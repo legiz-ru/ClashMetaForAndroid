@@ -1,6 +1,8 @@
 package com.github.kr328.clash.util
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import com.github.kr328.clash.MainActivity
 import com.github.kr328.clash.PropertiesActivity
@@ -11,7 +13,12 @@ import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.util.pendingDir
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.util.UUID
+import kotlin.coroutines.resume
 
 data class ProfileImportResult(
     val uuid: UUID,
@@ -23,6 +30,70 @@ private val PROXY_SCHEMES = listOf(
     "vless://", "trojan://", "vmess://", "ss://", "ssr://",
     "hysteria://", "hysteria2://", "hy2://", "tuic://", "anytls://", "wireguard://"
 )
+
+private enum class HwidIssue { None, NotSupported, MaxDevicesReached }
+
+private fun resolveHwidImportIssue(exception: Throwable): Pair<HwidIssue, String> {
+    var current: Throwable? = exception
+    while (current != null) {
+        when (current) {
+            is ProfileProcessor.HwidNotSupportedException ->
+                return HwidIssue.NotSupported to ""
+            is ProfileProcessor.HwidMaxDevicesReachedException ->
+                return HwidIssue.MaxDevicesReached to current.supportUrl
+        }
+        val msg = current.message.orEmpty()
+        if (msg.contains("HWID_NOT_SUPPORTED", ignoreCase = true))
+            return HwidIssue.NotSupported to ""
+        if (msg.contains("HWID_MAX_DEVICES_REACHED", ignoreCase = true))
+            return HwidIssue.MaxDevicesReached to ""
+        current = current.cause
+    }
+    return HwidIssue.None to ""
+}
+
+private suspend fun Context.showHwidNotSupportedImportDialog() {
+    withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine<Unit> { cont ->
+            val dialog = MaterialAlertDialogBuilder(this@showHwidNotSupportedImportDialog)
+                .setTitle(com.github.kr328.clash.design.R.string.hwid_not_supported_title)
+                .setMessage(com.github.kr328.clash.design.R.string.hwid_not_supported_msg)
+                .setPositiveButton(com.github.kr328.clash.design.R.string.ok) { _, _ ->
+                    if (cont.isActive) cont.resume(Unit)
+                }
+                .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
+                .show()
+            cont.invokeOnCancellation { dialog.dismiss() }
+        }
+    }
+}
+
+private suspend fun Context.showHwidMaxDevicesImportDialog(supportUrl: String) {
+    withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine<Unit> { cont ->
+            val builder = MaterialAlertDialogBuilder(this@showHwidMaxDevicesImportDialog)
+                .setTitle(com.github.kr328.clash.design.R.string.hwid_max_devices_title)
+                .setMessage(com.github.kr328.clash.design.R.string.hwid_max_devices_msg)
+                .setPositiveButton(com.github.kr328.clash.design.R.string.ok) { _, _ ->
+                    if (cont.isActive) cont.resume(Unit)
+                }
+                .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
+            if (supportUrl.isNotEmpty()) {
+                builder.setNeutralButton(com.github.kr328.clash.design.R.string.hwid_support_btn) { _, _ ->
+                    if (cont.isActive) cont.resume(Unit)
+                    try {
+                        startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(supportUrl))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    } catch (_: Exception) {}
+                }
+            }
+            val dialog = builder.show()
+            cont.invokeOnCancellation { dialog.dismiss() }
+        }
+    }
+}
 
 /**
  * Returns true when [input] starts with a recognised proxy-link URI scheme,
@@ -66,6 +137,10 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
     val autoImported = hasAutoHeaders || forceAutoImport
 
     if (autoImported) {
+        var hwidIssue = HwidIssue.None
+        var hwidSupportUrl = ""
+        var committed = false
+
         withModelProgressBar {
             configure {
                 isIndeterminate = true
@@ -75,22 +150,34 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
             try {
                 withProfile { commit(uuid, null) }
                 withProfile { queryByUUID(uuid)?.let { setActive(it) } }
-            } catch (_: Exception) {
-                Toast.makeText(
-                    this@importProfileFromUrl,
-                    getString(com.github.kr328.clash.design.R.string.import_profile_failed),
-                    Toast.LENGTH_LONG
-                ).show()
-                startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                committed = true
+            } catch (e: Exception) {
+                val (issue, supportUrl) = resolveHwidImportIssue(e)
+                hwidIssue = issue
+                hwidSupportUrl = supportUrl
+                if (issue == HwidIssue.None) {
+                    Toast.makeText(
+                        this@importProfileFromUrl,
+                        getString(com.github.kr328.clash.design.R.string.import_profile_failed),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                }
                 return@withModelProgressBar
             }
         }
 
-        startActivity(
-            MainActivity::class.intent
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        )
+        when (hwidIssue) {
+            HwidIssue.NotSupported -> showHwidNotSupportedImportDialog()
+            HwidIssue.MaxDevicesReached -> showHwidMaxDevicesImportDialog(hwidSupportUrl)
+            HwidIssue.None -> if (committed) {
+                startActivity(
+                    MainActivity::class.intent
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                )
+            }
+        }
     } else {
         startActivity(PropertiesActivity::class.intent.setUUID(uuid))
     }

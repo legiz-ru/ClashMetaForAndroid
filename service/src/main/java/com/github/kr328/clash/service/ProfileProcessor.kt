@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit
 
 object ProfileProcessor {
     class HwidNotSupportedException : IOException("HWID_NOT_SUPPORTED")
-    class HwidMaxDevicesReachedException : IOException("HWID_MAX_DEVICES_REACHED")
+    class HwidMaxDevicesReachedException(val supportUrl: String = "") : IOException("HWID_MAX_DEVICES_REACHED")
 
     private fun isHeaderTrue(headers: okhttp3.Headers, name: String): Boolean {
         return headers[name]?.trim()?.equals("true", ignoreCase = true) == true
@@ -45,7 +45,7 @@ object ProfileProcessor {
         }
 
         if (isHeaderTrue(headers, "x-hwid-max-devices-reached")) {
-            throw HwidMaxDevicesReachedException()
+            throw HwidMaxDevicesReachedException(headers["support-url"]?.trim() ?: "")
         }
     }
 
