@@ -26,45 +26,12 @@ class ClashManager(private val context: Context) : IClashManager,
         return Clash.queryTrafficTotal()
     }
 
-    // Whether the active config has a user-defined GLOBAL override group.
-    // Updated by queryProxyGroupNames(); read by queryProxyGroup() to suppress the hidden flag.
-    @Volatile private var hasGlobalOverride = false
-
     override fun queryProxyGroupNames(excludeNotSelectable: Boolean): List<String> {
-        // Always fetch all group names to detect a GLOBAL override group.
-        val allNames = Clash.queryGroupNames(false)
-        val globalName = allNames.firstOrNull { it.equals("GLOBAL", ignoreCase = true) }
-
-        if (globalName != null) {
-            hasGlobalOverride = true
-
-            // Determine the effective tunnel mode (session override takes precedence).
-            val effectiveMode = runCatching {
-                Clash.queryOverride(Clash.OverrideSlot.Session).mode
-                    ?: Clash.queryTunnelState().mode
-            }.getOrElse {
-                runCatching { Clash.queryTunnelState().mode }.getOrDefault(TunnelState.Mode.Rule)
-            }
-
-            return if (effectiveMode == TunnelState.Mode.Global) {
-                // Global mode: show GLOBAL first, then all other groups.
-                listOf(globalName) + allNames.filter { !it.equals(globalName, ignoreCase = true) }
-            } else {
-                // Rules / Direct / Script mode: show all groups except GLOBAL.
-                allNames.filter { !it.equals(globalName, ignoreCase = true) }
-            }
-        }
-
-        hasGlobalOverride = false
         return Clash.queryGroupNames(excludeNotSelectable)
     }
 
     override fun queryProxyGroup(name: String, proxySort: ProxySort): ProxyGroup {
-        val group = Clash.queryGroup(name, proxySort)
-        // When a GLOBAL override group is present, suppress the hidden flag so that
-        // sub-groups (which the engine may mark hidden) are still visible in the UI.
-        if (hasGlobalOverride) return group.copy(hidden = false)
-        return group
+        return Clash.queryGroup(name, proxySort)
     }
 
     override fun queryConfiguration(): UiConfiguration {

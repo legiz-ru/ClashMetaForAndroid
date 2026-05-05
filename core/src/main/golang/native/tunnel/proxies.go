@@ -63,6 +63,43 @@ func (s *sortableProxyList) Swap(i, j int) {
 	s.list[i], s.list[j] = s.list[j], s.list[i]
 }
 
+func isProxyGroupHidden(p C.Proxy) bool {
+	if g, ok := p.Adapter().(outboundgroup.ProxyGroup); ok {
+		switch v := g.(type) {
+		case *outboundgroup.Selector:
+			return v.Hidden()
+		case *outboundgroup.URLTest:
+			return v.Hidden()
+		case *outboundgroup.Fallback:
+			return v.Hidden()
+		case *outboundgroup.LoadBalance:
+			return v.Hidden()
+		}
+		return false
+	}
+	if p.Type() == C.Smart {
+		if sg, ok := p.Adapter().(*outboundgroup.Smart); ok {
+			return sg.Hidden()
+		}
+	}
+	return false
+}
+
+func isProxyGroupVisible(p C.Proxy, excludeNotSelectable bool) bool {
+	_, isGroup := p.Adapter().(outboundgroup.ProxyGroup)
+	isSmart := p.Type() == C.Smart
+	if !isGroup && !isSmart {
+		return false
+	}
+	if isProxyGroupHidden(p) {
+		return false
+	}
+	if excludeNotSelectable && p.Type() != C.Selector {
+		return false
+	}
+	return true
+}
+
 func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 	mode := tunnel.Mode()
 
@@ -78,36 +115,28 @@ func QueryProxyGroupNames(excludeNotSelectable bool) []string {
 		result = append(result, "GLOBAL")
 	}
 
+	seen := make(map[string]bool, len(proxies))
 	for _, p := range proxies {
-		if g, ok := p.Adapter().(outboundgroup.ProxyGroup); ok {
-			// Skip hidden groups using concrete type assertions
-			hidden := false
-			switch v := g.(type) {
-			case *outboundgroup.Selector:
-				hidden = v.Hidden()
-			case *outboundgroup.URLTest:
-				hidden = v.Hidden()
-			case *outboundgroup.Fallback:
-				hidden = v.Hidden()
-			case *outboundgroup.LoadBalance:
-				hidden = v.Hidden()
-			}
-			if hidden {
-				continue
-			}
-			if !excludeNotSelectable || p.Type() == C.Selector {
-				result = append(result, p.Name())
-			}
-		} else if p.Type() == C.Smart {
-			// Smart does not implement outboundgroup.ProxyGroup (no Providers()),
-			// so handle it separately.
-			if sg, ok := p.Adapter().(*outboundgroup.Smart); ok {
-				if sg.Hidden() {
-					continue
-				}
-				result = append(result, p.Name())
-			}
+		if !isProxyGroupVisible(p, excludeNotSelectable) {
+			continue
 		}
+		result = append(result, p.Name())
+		seen[p.Name()] = true
+	}
+
+	// When a user defines a proxy-group named "GLOBAL", it replaces the
+	// auto-generated catch-all GLOBAL. The auto-generated GLOBAL contains
+	// all proxy groups; the user-defined one only contains explicitly listed
+	// proxies. Any proxy group not covered above belongs to this case and
+	// must be included so all groups are visible in the UI.
+	for name, p := range tunnel.Proxies() {
+		if name == "GLOBAL" || seen[name] {
+			continue
+		}
+		if !isProxyGroupVisible(p, excludeNotSelectable) {
+			continue
+		}
+		result = append(result, name)
 	}
 
 	return result
