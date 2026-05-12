@@ -49,6 +49,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import android.graphics.Color
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.RadioGroup
 import android.widget.Toast
 import com.github.kr328.clash.design.databinding.DialogWhitelistBypassBinding
@@ -1342,6 +1344,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val binding = DialogWhitelistBypassBinding.inflate(context.layoutInflater)
         bypassBinding = binding
 
+        val prefs = context.getSharedPreferences("bypass_prefs", Context.MODE_PRIVATE)
+
         fun applyStatus(status: BypassStatus) {
             val (label, color) = when (status) {
                 BypassStatus.IDLE       -> context.getString(R.string.whitelist_bypass_status_idle)       to Color.GRAY
@@ -1357,15 +1361,41 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             binding.btnStop.isEnabled  = status != BypassStatus.IDLE
         }
 
-        binding.platformWbstream.isChecked = true
+        fun selectPlatformRadio(platform: BypassPlatform) {
+            when (platform) {
+                BypassPlatform.WBSTREAM  -> binding.platformWbstream.isChecked = true
+                BypassPlatform.TELEMOST  -> binding.platformTelemost.isChecked = true
+                BypassPlatform.VK        -> binding.platformVk.isChecked = true
+            }
+        }
+
+        // Restore saved URL and auto-select matching platform radio
+        val savedUrl = prefs.getString("last_join_url", "") ?: ""
+        if (savedUrl.isNotEmpty()) {
+            binding.joinLinkInput.setText(savedUrl)
+            selectPlatformRadio(BypassPlatform.fromUrl(savedUrl))
+        } else {
+            binding.platformWbstream.isChecked = true
+        }
+
+        // Auto-detect platform as the user types and persist the URL
+        binding.joinLinkInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val url = s?.toString()?.trim() ?: return
+                if (url.isEmpty()) return
+                selectPlatformRadio(BypassPlatform.fromUrl(url))
+                prefs.edit().putString("last_join_url", url).apply()
+            }
+        })
 
         // If a tunnel is already running, restore its status in the freshly-opened dialog
         val runningCtrl = bypassController
         if (runningCtrl != null && runningCtrl.isRunning) {
             applyStatus(runningCtrl.currentStatus)
-            // Redirect the controller's callbacks to the new binding
-            runningCtrl.onStatus = { s -> mainHandler.post { bypassBinding?.let { b -> applyStatus(s) } } }
-            runningCtrl.onLog    = { line -> postLogDebounced(line) }
+            runningCtrl.onStatus     = { s -> mainHandler.post { bypassBinding?.let { applyStatus(s) } } }
+            runningCtrl.onLog        = { line -> postLogDebounced(line) }
             runningCtrl.onCaptchaUrl = { url -> mainHandler.post { openCaptchaUrl(url) } }
         } else {
             applyStatus(BypassStatus.IDLE)
@@ -1389,6 +1419,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.platformVk.isChecked       -> BypassPlatform.VK
                 else                               -> BypassPlatform.fromUrl(joinLink)
             }
+            prefs.edit().putString("last_join_url", joinLink).apply()
             bypassController?.stop()
             bypassController = BypassRelayController(
                 context      = context,

@@ -105,6 +105,9 @@ class BypassRelayController(
                 val json = JSONObject().apply {
                     put("roomId", roomId)
                     put("displayName", displayName.ifEmpty { "Joiner" })
+                    put("tunnelMode", tunnelMode)
+                    put("vp8Fps", vp8Fps)
+                    put("vp8Batch", vp8Batch)
                 }
                 writeLine("JOIN:$json")
             }
