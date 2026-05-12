@@ -1369,31 +1369,19 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         val prefs = context.getSharedPreferences("bypass_prefs", Context.MODE_PRIVATE)
 
-        fun selectPlatformRadio(platform: BypassPlatform) {
-            when (platform) {
-                BypassPlatform.WBSTREAM -> binding.platformWbstream.isChecked = true
-                BypassPlatform.TELEMOST -> binding.platformTelemost.isChecked = true
-                BypassPlatform.VK       -> binding.platformVk.isChecked = true
-            }
-        }
-
-        // Restore saved URL and auto-select matching platform radio
+        // Restore saved URL
         val savedUrl = prefs.getString("last_join_url", "") ?: ""
         if (savedUrl.isNotEmpty()) {
             binding.joinLinkInput.setText(savedUrl)
-            selectPlatformRadio(BypassPlatform.fromUrl(savedUrl))
-        } else {
-            binding.platformWbstream.isChecked = true
         }
 
-        // Auto-detect platform as the user types and persist the URL
+        // Persist URL as user types
         binding.joinLinkInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 val url = s?.toString()?.trim() ?: return
                 if (url.isEmpty()) return
-                selectPlatformRadio(BypassPlatform.fromUrl(url))
                 prefs.edit().putString("last_join_url", url).apply()
             }
         })
@@ -1412,12 +1400,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val dialog = AppBottomSheetDialog(context)
 
         binding.btnSettings.setOnClickListener {
-            val currentPlatform = when {
-                binding.platformTelemost.isChecked -> BypassPlatform.TELEMOST
-                binding.platformVk.isChecked       -> BypassPlatform.VK
-                else                               -> BypassPlatform.WBSTREAM
-            }
-            showBypassSettingsDialog(currentPlatform)
+            showBypassSettingsDialog(binding.joinLinkInput.text?.toString()?.trim() ?: "")
         }
 
         binding.btnStart.setOnClickListener {
@@ -1430,16 +1413,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 Toast.makeText(context, R.string.whitelist_bypass_join_link_hint, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            val platform = when {
-                binding.platformWbstream.isChecked -> BypassPlatform.WBSTREAM
-                binding.platformTelemost.isChecked -> BypassPlatform.TELEMOST
-                binding.platformVk.isChecked       -> BypassPlatform.VK
-                else                               -> BypassPlatform.fromUrl(joinLink)
-            }
+            val platform = BypassPlatform.fromUrl(joinLink)
             val dcMode = prefs.getBoolean("dc_mode", false) && platform != BypassPlatform.TELEMOST
             val displayName = prefs.getString("display_name", "Joiner") ?: "Joiner"
             prefs.edit().putString("last_join_url", joinLink).apply()
-            bypassController?.stop()
+            val prev = bypassController
             bypassController = BypassRelayController(
                 context      = context,
                 proxyConfig  = proxyConfig,
@@ -1447,15 +1425,17 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 onLog        = { line -> postLogDebounced(line) },
                 onCaptchaUrl = { url -> mainHandler.post { openCaptchaUrl(url) } },
             ).also { ctrl ->
+                launch(Dispatchers.IO) { prev?.stop() }
                 ctrl.start(platform, dcMode)
                 ctrl.sendAuth(joinLink, displayName, dcMode)
             }
         }
 
         binding.btnStop.setOnClickListener {
-            bypassController?.stop()
+            val ctrl = bypassController
             bypassController = null
             applyBypassStatus(BypassStatus.IDLE, binding)
+            launch(Dispatchers.IO) { ctrl?.stop() }
         }
 
         // Dismiss does NOT stop the tunnel — user must tap Stop explicitly.
@@ -1467,7 +1447,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         dialog.show()
     }
 
-    private fun showBypassSettingsDialog(currentPlatform: BypassPlatform) {
+    private fun showBypassSettingsDialog(currentUrl: String) {
         val prefs = context.getSharedPreferences("bypass_prefs", Context.MODE_PRIVATE)
         val view = android.view.LayoutInflater.from(context)
             .inflate(R.layout.dialog_bypass_settings, null, false)
@@ -1478,11 +1458,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val btnOk       = view.findViewById<android.view.View>(R.id.btn_ok)
 
         inputName.setText(prefs.getString("display_name", "Joiner") ?: "Joiner")
-        switchDc.isChecked  = prefs.getBoolean("dc_mode", false)
+        switchDc.isChecked   = prefs.getBoolean("dc_mode", false)
         switchAuto.isChecked = prefs.getBoolean("auto_start", false)
 
         // DC not available for Telemost
-        if (currentPlatform == BypassPlatform.TELEMOST) {
+        if (BypassPlatform.fromUrl(currentUrl) == BypassPlatform.TELEMOST) {
             switchDc.isChecked = false
             switchDc.isEnabled = false
         }
