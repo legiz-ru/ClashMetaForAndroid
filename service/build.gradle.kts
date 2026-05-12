@@ -75,10 +75,9 @@ afterEvaluate {
             sourceSets[it.name].java.srcDir(buildDir.resolve("generated/ksp/${it.name}/java"))
         }
 
-        // JS assets from whitelist-bypass submodule — no copying needed,
-        // Gradle merges multiple asset dirs automatically.
-        sourceSets["main"].assets.srcDirs(
-            "src/main/assets",
+        // JS assets from whitelist-bypass submodule — srcDir() adds to existing
+        // dirs without replacing them, avoiding duplicate-asset errors.
+        sourceSets["main"].assets.srcDir(
             rootProject.file("whitelist-bypass/android-app/app/src/main/assets")
         )
     }
