@@ -48,6 +48,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import android.graphics.Color
+import android.widget.RadioGroup
+import android.widget.Toast
+import com.github.kr328.clash.design.databinding.DialogWhitelistBypassBinding
+import com.github.kr328.clash.service.bypass.BypassPlatform
+import com.github.kr328.clash.service.bypass.BypassRelayController
+import com.github.kr328.clash.service.bypass.BypassStatus
+import com.github.kr328.clash.service.bypass.BypassProxyConfig
 import java.net.URL
 import kotlin.coroutines.resume
 import java.text.SimpleDateFormat
@@ -1322,6 +1330,85 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
         }
+    }
+
+    fun showBypassTunnelDialog(proxyConfig: BypassProxyConfig?) {
+        val binding = DialogWhitelistBypassBinding
+            .inflate(context.layoutInflater)
+
+        var controller: BypassRelayController? = null
+
+        fun updateStatus(status: BypassStatus) {
+            val (label, color) = when (status) {
+                BypassStatus.IDLE       -> context.getString(R.string.whitelist_bypass_status_idle)       to Color.GRAY
+                BypassStatus.STARTING   -> context.getString(R.string.whitelist_bypass_status_starting)   to Color.parseColor("#FF9800")
+                BypassStatus.CONNECTING -> context.getString(R.string.whitelist_bypass_status_connecting) to Color.parseColor("#2196F3")
+                BypassStatus.CONNECTED  -> context.getString(R.string.whitelist_bypass_status_connected)  to Color.parseColor("#4CAF50")
+                BypassStatus.LOST       -> context.getString(R.string.whitelist_bypass_status_lost)       to Color.parseColor("#F44336")
+                BypassStatus.ERROR      -> context.getString(R.string.whitelist_bypass_status_error)      to Color.parseColor("#F44336")
+            }
+            binding.status = label
+            binding.statusColor = color
+            binding.btnStart.isEnabled = status in listOf(BypassStatus.IDLE, BypassStatus.LOST, BypassStatus.ERROR)
+            binding.btnStop.isEnabled  = status != BypassStatus.IDLE
+        }
+
+        binding.platformWbstream.isChecked = true
+        updateStatus(BypassStatus.IDLE)
+
+        val dialog = AppBottomSheetDialog(context)
+
+        binding.btnStart.setOnClickListener {
+            if (proxyConfig == null) {
+                Toast.makeText(context, R.string.whitelist_bypass_proxy_not_found, Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            val joinLink = binding.joinLinkInput.text?.toString()?.trim() ?: ""
+            if (joinLink.isEmpty()) {
+                Toast.makeText(context, R.string.whitelist_bypass_join_link_hint, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val platform = when {
+                binding.platformWbstream.isChecked  -> BypassPlatform.WBSTREAM
+                binding.platformTelemost.isChecked  -> BypassPlatform.TELEMOST
+                binding.platformVk.isChecked        -> BypassPlatform.VK
+                else                                -> BypassPlatform.fromUrl(joinLink)
+            }
+            controller?.stop()
+            controller = BypassRelayController(
+                context = context,
+                proxyConfig = proxyConfig,
+                onStatus  = { s -> (context as? Activity)?.runOnUiThread { updateStatus(s) } },
+                onLog     = { line -> (context as? Activity)?.runOnUiThread { binding.logText = line } },
+                onCaptchaUrl = { url ->
+                    (context as? Activity)?.runOnUiThread {
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(url))
+                            )
+                        }
+                    }
+                }
+            ).also { ctrl ->
+                ctrl.start(platform)
+                ctrl.sendAuth(joinLink)
+            }
+        }
+
+        binding.btnStop.setOnClickListener {
+            controller?.stop()
+            controller = null
+            updateStatus(BypassStatus.IDLE)
+        }
+
+        dialog.setOnDismissListener {
+            controller?.stop()
+            controller = null
+        }
+
+        dialog.setContentView(binding.root)
+        dialog.show()
     }
 
     fun showAddProfileSheet() {

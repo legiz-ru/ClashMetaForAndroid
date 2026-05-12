@@ -189,12 +189,14 @@ class MainActivity : BaseActivity<MainDesign>() {
                             startActivity(ConnectionsActivity::class.intent)
                         MainDesign.Request.OpenWhitelistBypass -> {
                             val active = withProfile { queryActive() }
-                            if (active != null) {
-                                startActivity(
-                                    BypassTunnelActivity::class.intent
-                                        .putExtra(BypassTunnelActivity.EXTRA_PROFILE_UUID, active.uuid.toString())
-                                )
-                            }
+                            val proxyConfig = if (active != null) {
+                                withContext(Dispatchers.IO) {
+                                    com.github.kr328.clash.service.bypass.parseBypassProxyConfig(
+                                        this@MainActivity, active.uuid
+                                    )
+                                }
+                            } else null
+                            design.showBypassTunnelDialog(proxyConfig)
                         }
                         MainDesign.Request.OpenModeSelector -> {
                             launch {
