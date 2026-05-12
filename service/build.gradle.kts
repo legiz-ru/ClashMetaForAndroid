@@ -32,7 +32,11 @@ relayAbis.forEach { (abi, goarch, goarm) ->
         commandLine("go", "build", "-trimpath", "-ldflags", "-s -w",
             "-o", outFile.absolutePath, ".")
 
-        inputs.dir(relaySourceDir)
+        // Use @Optional so Gradle doesn't fail validation when the submodule
+        // hasn't been initialised yet (inputs.dir requires the path to exist).
+        inputs.files(fileTree(relaySourceDir) { include("**/*.go", "go.mod", "go.sum") })
+            .withPropertyName("relaySources")
+            .optional(true)
         outputs.file(outFile)
     }
 }
