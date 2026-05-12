@@ -5,6 +5,44 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// ── Relay (whitelist-bypass) build ──────────────────────────────────────────
+// librelay.so is a standalone Go binary (GOOS=linux, CGO_ENABLED=0) that runs
+// as a subprocess providing SOCKS5 endpoint for VK/Telemost/WBStream tunnels.
+// Sources live in the whitelist-bypass git submodule; we never copy them.
+
+val relaySourceDir = rootProject.file("whitelist-bypass/relay")
+val relayAbis = listOf(
+    Triple("arm64-v8a",   "arm64", null),
+    Triple("armeabi-v7a", "arm",   "7"),
+)
+
+relayAbis.forEach { (abi, goarch, goarm) ->
+    val outFile = file("src/main/jniLibs/$abi/librelay.so")
+    val taskName = "buildRelay_${abi.replace("-", "_")}"
+
+    tasks.register<Exec>(taskName) {
+        description = "Build librelay.so for $abi from whitelist-bypass submodule"
+        group = "relay"
+
+        workingDir = relaySourceDir
+        environment("GOOS",         "linux")
+        environment("GOARCH",       goarch)
+        environment("CGO_ENABLED",  "0")
+        if (goarm != null) environment("GOARM", goarm)
+        commandLine("go", "build", "-trimpath", "-ldflags", "-s -w",
+            "-o", outFile.absolutePath, ".")
+
+        inputs.dir(relaySourceDir)
+        outputs.file(outFile)
+    }
+}
+
+tasks.named("preBuild") {
+    relayAbis.forEach { (abi, _, _) ->
+        dependsOn("buildRelay_${abi.replace("-", "_")}")
+    }
+}
+
 dependencies {
     implementation(project(":core"))
     implementation(project(":common"))
@@ -32,5 +70,12 @@ afterEvaluate {
             sourceSets[it.name].kotlin.srcDir(buildDir.resolve("generated/ksp/${it.name}/kotlin"))
             sourceSets[it.name].java.srcDir(buildDir.resolve("generated/ksp/${it.name}/java"))
         }
+
+        // JS assets from whitelist-bypass submodule — no copying needed,
+        // Gradle merges multiple asset dirs automatically.
+        sourceSets["main"].assets.srcDirs(
+            "src/main/assets",
+            rootProject.file("whitelist-bypass/android-app/app/src/main/assets")
+        )
     }
 }

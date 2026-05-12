@@ -2,3 +2,6 @@
 	path = core/src/foss/golang/clash
 	url = https://github.com/MetaCubeX/mihomo
 	branch = Alpha
+[submodule "whitelist-bypass"]
+	path = whitelist-bypass
+	url = https://github.com/kulikov0/whitelist-bypass.git
