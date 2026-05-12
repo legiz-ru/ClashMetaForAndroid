@@ -200,6 +200,11 @@
             android:configChanges="uiMode"
             android:exported="false"
             android:label="@string/tv_import_title" />
+        <activity
+            android:name=".BypassTunnelActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/whitelist_bypass_title" />
 
         <service
             android:name=".LogcatService"

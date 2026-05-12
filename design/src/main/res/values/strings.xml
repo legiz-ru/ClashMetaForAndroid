@@ -556,4 +556,16 @@
     <string name="mode_rule_desc">Use profile rules. Recommended for daily use</string>
     <string name="mode_global_label">Global</string>
     <string name="mode_global_desc">Route all traffic through selected server</string>
+    <string name="whitelist_bypass_title">Whitelist Bypass Tunnel</string>
+    <string name="whitelist_bypass_platform">Platform</string>
+    <string name="whitelist_bypass_join_link_hint">Join link / Room ID</string>
+    <string name="whitelist_bypass_start">Start</string>
+    <string name="whitelist_bypass_stop">Stop</string>
+    <string name="whitelist_bypass_status_idle">Idle</string>
+    <string name="whitelist_bypass_status_starting">Starting…</string>
+    <string name="whitelist_bypass_status_connecting">Connecting…</string>
+    <string name="whitelist_bypass_status_connected">Connected</string>
+    <string name="whitelist_bypass_status_lost">Connection lost</string>
+    <string name="whitelist_bypass_status_error">Error</string>
+    <string name="whitelist_bypass_proxy_not_found">Proxy \"whitelist-bypass\" not found in profile</string>
 </resources>

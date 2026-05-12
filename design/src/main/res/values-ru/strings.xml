@@ -520,4 +520,16 @@
     <string name="mode_rule_desc">Использовать правила профиля. Рекомендуется</string>
     <string name="mode_global_label">Глобальный</string>
     <string name="mode_global_desc">Пустить весь трафик через выбранный сервер</string>
+    <string name="whitelist_bypass_title">Туннель обхода блокировок</string>
+    <string name="whitelist_bypass_platform">Платформа</string>
+    <string name="whitelist_bypass_join_link_hint">Ссылка / ID комнаты</string>
+    <string name="whitelist_bypass_start">Запустить</string>
+    <string name="whitelist_bypass_stop">Остановить</string>
+    <string name="whitelist_bypass_status_idle">Не активен</string>
+    <string name="whitelist_bypass_status_starting">Запуск…</string>
+    <string name="whitelist_bypass_status_connecting">Подключение…</string>
+    <string name="whitelist_bypass_status_connected">Подключено</string>
+    <string name="whitelist_bypass_status_lost">Соединение потеряно</string>
+    <string name="whitelist_bypass_status_error">Ошибка</string>
+    <string name="whitelist_bypass_proxy_not_found">Прокси «whitelist-bypass» не найден в профиле</string>
 </resources>

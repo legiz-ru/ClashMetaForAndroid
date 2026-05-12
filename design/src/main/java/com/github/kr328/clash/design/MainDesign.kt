@@ -78,6 +78,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         UrlTest,
         OpenConnections,
         OpenModeSelector,
+        OpenWhitelistBypass,
     }
 
     private val binding = DesignMainBinding
@@ -260,11 +261,13 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileGlobalModeMp = profile.globalModeMp
                 binding.profileConnsViewMp = profile.connsViewMp
                 binding.profileRpMp = profile.rpMp
+                binding.profileWhitelistBypass = profile.whitelistBypass
 
                 // Wire click listeners for shortcut icons
                 binding.btnModeSelector?.setOnClickListener { requests.trySend(Request.OpenModeSelector) }
                 binding.btnOpenConnections?.setOnClickListener { requests.trySend(Request.OpenConnections) }
                 binding.btnOpenProviders?.setOnClickListener { requests.trySend(Request.OpenProviders) }
+                binding.btnWhitelistBypass?.setOnClickListener { requests.trySend(Request.OpenWhitelistBypass) }
 
                 // Wire click listeners for support/webpage icons
                 binding.profileSupportIcon?.setOnClickListener {

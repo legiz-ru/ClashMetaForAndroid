@@ -187,6 +187,15 @@ class MainActivity : BaseActivity<MainDesign>() {
                         }
                         MainDesign.Request.OpenConnections ->
                             startActivity(ConnectionsActivity::class.intent)
+                        MainDesign.Request.OpenWhitelistBypass -> {
+                            val active = withProfile { queryActive() }
+                            if (active != null) {
+                                startActivity(
+                                    BypassTunnelActivity::class.intent
+                                        .putExtra(BypassTunnelActivity.EXTRA_PROFILE_UUID, active.uuid.toString())
+                                )
+                            }
+                        }
                         MainDesign.Request.OpenModeSelector -> {
                             launch {
                                 val currentMode = withClash {

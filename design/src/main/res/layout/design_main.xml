@@ -68,6 +68,9 @@
         <variable
             name="profileRpMp"
             type="boolean" />
+        <variable
+            name="profileWhitelistBypass"
+            type="boolean" />
 
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
@@ -390,7 +393,7 @@
                                 android:layout_marginTop="8dp"
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal"
-                                android:visibility="@{(!TextUtils.isEmpty(profileSupportUrl) || !TextUtils.isEmpty(profileWebPageUrl) || (clashRunning &amp;&amp; (profileGlobalModeMp || profileConnsViewMp || profileRpMp))) ? View.VISIBLE : View.GONE}">
+                                android:visibility="@{(!TextUtils.isEmpty(profileSupportUrl) || !TextUtils.isEmpty(profileWebPageUrl) || (clashRunning &amp;&amp; (profileGlobalModeMp || profileConnsViewMp || profileRpMp || profileWhitelistBypass))) ? View.VISIBLE : View.GONE}">
 
                                 <!-- Left: shortcut icons visible only when Clash is running -->
                                 <ImageView
@@ -429,6 +432,19 @@
                                     android:padding="4dp"
                                     android:src="@drawable/ic_mdi_database"
                                     android:visibility="@{clashRunning &amp;&amp; profileRpMp ? View.VISIBLE : View.GONE}"
+                                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                                <ImageView
+                                    android:id="@+id/btn_whitelist_bypass"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="4dp"
+                                    android:background="@drawable/bg_toolbar_button_focus"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:padding="4dp"
+                                    android:src="@drawable/access_point_plus"
+                                    android:visibility="@{clashRunning &amp;&amp; profileWhitelistBypass ? View.VISIBLE : View.GONE}"
                                     app:tint="?attr/colorOnSurfaceVariant" />
 
                                 <!-- Spacer pushes right-side icons to the end -->

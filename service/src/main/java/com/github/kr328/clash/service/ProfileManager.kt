@@ -305,6 +305,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.globalModeMp,
             hdrs.connsViewMp,
             hdrs.rpMp,
+            hdrs.whitelistBypass,
         )
     }
 
