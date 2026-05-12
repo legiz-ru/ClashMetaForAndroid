@@ -85,8 +85,7 @@ class BypassRelayController(
                     onLog(line)
                     when {
                         line.startsWith("RESOLVE:") -> handleResolve(line.removePrefix("RESOLVE:").trim())
-                        line.startsWith("STATUS:") -> handleStatus(line.removePrefix("STATUS:").trim())
-                        line.startsWith("CAPTCHA:") -> onCaptchaUrl(line.removePrefix("CAPTCHA:").trim())
+                        line.startsWith("STATUS:")  -> handleStatus(line.removePrefix("STATUS:").trim())
                     }
                 }
             } finally {
@@ -168,11 +167,12 @@ class BypassRelayController(
 
     private fun handleStatus(status: String) {
         val s = when {
-            status == "READY" -> BypassStatus.STARTING
-            status == "CONNECTING" -> BypassStatus.CONNECTING
+            status == "READY"            -> BypassStatus.STARTING
+            status == "CONNECTING"       -> BypassStatus.CONNECTING
             status == "TUNNEL_CONNECTED" -> BypassStatus.CONNECTED
-            status == "TUNNEL_LOST" -> BypassStatus.LOST
-            else -> BypassStatus.CONNECTING
+            status == "TUNNEL_LOST"      -> BypassStatus.LOST
+            status.startsWith("ERROR:")  -> BypassStatus.ERROR
+            else -> return
         }
         currentStatus = s
         onStatus(s)

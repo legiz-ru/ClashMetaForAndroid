@@ -1349,6 +1349,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
 
     private fun applyBypassStatus(status: BypassStatus, b: DialogWhitelistBypassBinding) {
+        if (!b.root.isAttachedToWindow) return
         val (label, color) = when (status) {
             BypassStatus.IDLE       -> context.getString(R.string.whitelist_bypass_status_idle)       to Color.GRAY
             BypassStatus.STARTING   -> context.getString(R.string.whitelist_bypass_status_starting)   to Color.parseColor("#FF9800")
