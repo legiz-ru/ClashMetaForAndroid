@@ -532,4 +532,10 @@
     <string name="whitelist_bypass_status_lost">Соединение потеряно</string>
     <string name="whitelist_bypass_status_error">Ошибка</string>
     <string name="whitelist_bypass_proxy_not_found">Прокси «whitelist-bypass» не найден в профиле</string>
+    <string name="bypass_settings_title">Настройки туннеля</string>
+    <string name="bypass_settings_display_name">Имя в звонке</string>
+    <string name="bypass_settings_dc_mode">DC-режим</string>
+    <string name="bypass_settings_dc_mode_desc">Быстрее, без видео. Недоступен для Telemost.</string>
+    <string name="bypass_settings_auto_start">Автозапуск с профилем</string>
+    <string name="bypass_settings_auto_start_desc">Запускать туннель при старте Clash</string>
 </resources>

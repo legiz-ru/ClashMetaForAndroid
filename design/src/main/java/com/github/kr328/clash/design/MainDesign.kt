@@ -58,6 +58,8 @@ import com.github.kr328.clash.service.bypass.BypassPlatform
 import com.github.kr328.clash.service.bypass.BypassRelayController
 import com.github.kr328.clash.service.bypass.BypassStatus
 import com.github.kr328.clash.service.bypass.BypassProxyConfig
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.TextInputEditText
 import java.net.URL
 import kotlin.coroutines.resume
 import java.text.SimpleDateFormat
@@ -1340,32 +1342,32 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    private fun applyBypassStatus(status: BypassStatus, b: DialogWhitelistBypassBinding) {
+        val (label, color) = when (status) {
+            BypassStatus.IDLE       -> context.getString(R.string.whitelist_bypass_status_idle)       to Color.GRAY
+            BypassStatus.STARTING   -> context.getString(R.string.whitelist_bypass_status_starting)   to Color.parseColor("#FF9800")
+            BypassStatus.CONNECTING -> context.getString(R.string.whitelist_bypass_status_connecting) to Color.parseColor("#2196F3")
+            BypassStatus.CONNECTED  -> context.getString(R.string.whitelist_bypass_status_connected)  to Color.parseColor("#4CAF50")
+            BypassStatus.LOST       -> context.getString(R.string.whitelist_bypass_status_lost)       to Color.parseColor("#F44336")
+            BypassStatus.ERROR      -> context.getString(R.string.whitelist_bypass_status_error)      to Color.parseColor("#F44336")
+        }
+        b.status = label
+        b.statusColor = color
+        b.btnStart.isEnabled = status in listOf(BypassStatus.IDLE, BypassStatus.LOST, BypassStatus.ERROR)
+        b.btnStop.isEnabled  = status != BypassStatus.IDLE
+    }
+
     fun showBypassTunnelDialog(proxyConfig: BypassProxyConfig?) {
         val binding = DialogWhitelistBypassBinding.inflate(context.layoutInflater)
         bypassBinding = binding
 
         val prefs = context.getSharedPreferences("bypass_prefs", Context.MODE_PRIVATE)
 
-        fun applyStatus(status: BypassStatus) {
-            val (label, color) = when (status) {
-                BypassStatus.IDLE       -> context.getString(R.string.whitelist_bypass_status_idle)       to Color.GRAY
-                BypassStatus.STARTING   -> context.getString(R.string.whitelist_bypass_status_starting)   to Color.parseColor("#FF9800")
-                BypassStatus.CONNECTING -> context.getString(R.string.whitelist_bypass_status_connecting) to Color.parseColor("#2196F3")
-                BypassStatus.CONNECTED  -> context.getString(R.string.whitelist_bypass_status_connected)  to Color.parseColor("#4CAF50")
-                BypassStatus.LOST       -> context.getString(R.string.whitelist_bypass_status_lost)       to Color.parseColor("#F44336")
-                BypassStatus.ERROR      -> context.getString(R.string.whitelist_bypass_status_error)      to Color.parseColor("#F44336")
-            }
-            binding.status = label
-            binding.statusColor = color
-            binding.btnStart.isEnabled = status in listOf(BypassStatus.IDLE, BypassStatus.LOST, BypassStatus.ERROR)
-            binding.btnStop.isEnabled  = status != BypassStatus.IDLE
-        }
-
         fun selectPlatformRadio(platform: BypassPlatform) {
             when (platform) {
-                BypassPlatform.WBSTREAM  -> binding.platformWbstream.isChecked = true
-                BypassPlatform.TELEMOST  -> binding.platformTelemost.isChecked = true
-                BypassPlatform.VK        -> binding.platformVk.isChecked = true
+                BypassPlatform.WBSTREAM -> binding.platformWbstream.isChecked = true
+                BypassPlatform.TELEMOST -> binding.platformTelemost.isChecked = true
+                BypassPlatform.VK       -> binding.platformVk.isChecked = true
             }
         }
 
@@ -1393,15 +1395,24 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         // If a tunnel is already running, restore its status in the freshly-opened dialog
         val runningCtrl = bypassController
         if (runningCtrl != null && runningCtrl.isRunning) {
-            applyStatus(runningCtrl.currentStatus)
-            runningCtrl.onStatus     = { s -> mainHandler.post { bypassBinding?.let { applyStatus(s) } } }
+            applyBypassStatus(runningCtrl.currentStatus, binding)
+            runningCtrl.onStatus     = { s -> mainHandler.post { bypassBinding?.let { applyBypassStatus(s, it) } } }
             runningCtrl.onLog        = { line -> postLogDebounced(line) }
             runningCtrl.onCaptchaUrl = { url -> mainHandler.post { openCaptchaUrl(url) } }
         } else {
-            applyStatus(BypassStatus.IDLE)
+            applyBypassStatus(BypassStatus.IDLE, binding)
         }
 
         val dialog = AppBottomSheetDialog(context)
+
+        binding.btnSettings.setOnClickListener {
+            val currentPlatform = when {
+                binding.platformTelemost.isChecked -> BypassPlatform.TELEMOST
+                binding.platformVk.isChecked       -> BypassPlatform.VK
+                else                               -> BypassPlatform.WBSTREAM
+            }
+            showBypassSettingsDialog(currentPlatform)
+        }
 
         binding.btnStart.setOnClickListener {
             if (proxyConfig == null) {
@@ -1419,24 +1430,26 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.platformVk.isChecked       -> BypassPlatform.VK
                 else                               -> BypassPlatform.fromUrl(joinLink)
             }
+            val dcMode = prefs.getBoolean("dc_mode", false) && platform != BypassPlatform.TELEMOST
+            val displayName = prefs.getString("display_name", "Joiner") ?: "Joiner"
             prefs.edit().putString("last_join_url", joinLink).apply()
             bypassController?.stop()
             bypassController = BypassRelayController(
                 context      = context,
                 proxyConfig  = proxyConfig,
-                onStatus     = { s -> mainHandler.post { bypassBinding?.let { applyStatus(s) } } },
+                onStatus     = { s -> mainHandler.post { bypassBinding?.let { applyBypassStatus(s, it) } } },
                 onLog        = { line -> postLogDebounced(line) },
                 onCaptchaUrl = { url -> mainHandler.post { openCaptchaUrl(url) } },
             ).also { ctrl ->
-                ctrl.start(platform)
-                ctrl.sendAuth(joinLink)
+                ctrl.start(platform, dcMode)
+                ctrl.sendAuth(joinLink, displayName, dcMode)
             }
         }
 
         binding.btnStop.setOnClickListener {
             bypassController?.stop()
             bypassController = null
-            applyStatus(BypassStatus.IDLE)
+            applyBypassStatus(BypassStatus.IDLE, binding)
         }
 
         // Dismiss does NOT stop the tunnel — user must tap Stop explicitly.
@@ -1446,6 +1459,65 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         dialog.setContentView(binding.root)
         dialog.show()
+    }
+
+    private fun showBypassSettingsDialog(currentPlatform: BypassPlatform) {
+        val prefs = context.getSharedPreferences("bypass_prefs", Context.MODE_PRIVATE)
+        val view = android.view.LayoutInflater.from(context)
+            .inflate(R.layout.dialog_bypass_settings, null, false)
+
+        val inputName   = view.findViewById<TextInputEditText>(R.id.input_display_name)
+        val switchDc    = view.findViewById<MaterialSwitch>(R.id.switch_dc_mode)
+        val switchAuto  = view.findViewById<MaterialSwitch>(R.id.switch_auto_start)
+        val btnOk       = view.findViewById<android.view.View>(R.id.btn_ok)
+
+        inputName.setText(prefs.getString("display_name", "Joiner") ?: "Joiner")
+        switchDc.isChecked  = prefs.getBoolean("dc_mode", false)
+        switchAuto.isChecked = prefs.getBoolean("auto_start", false)
+
+        // DC not available for Telemost
+        if (currentPlatform == BypassPlatform.TELEMOST) {
+            switchDc.isChecked = false
+            switchDc.isEnabled = false
+        }
+
+        val settingsDialog = AppBottomSheetDialog(context)
+
+        btnOk.setOnClickListener {
+            val name = inputName.text?.toString()?.trim()?.takeIf { it.isNotEmpty() } ?: "Joiner"
+            prefs.edit()
+                .putString("display_name", name)
+                .putBoolean("dc_mode", switchDc.isChecked)
+                .putBoolean("auto_start", switchAuto.isChecked)
+                .apply()
+            settingsDialog.dismiss()
+        }
+
+        settingsDialog.setContentView(view)
+        settingsDialog.show()
+    }
+
+    fun autoStartBypassTunnel(proxyConfig: BypassProxyConfig) {
+        val prefs = context.getSharedPreferences("bypass_prefs", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("auto_start", false)) return
+        val savedUrl = prefs.getString("last_join_url", "") ?: ""
+        if (savedUrl.isEmpty()) return
+        if (bypassController?.isRunning == true) return
+
+        val platform = BypassPlatform.fromUrl(savedUrl)
+        val dcMode = prefs.getBoolean("dc_mode", false) && platform != BypassPlatform.TELEMOST
+        val displayName = prefs.getString("display_name", "Joiner") ?: "Joiner"
+
+        bypassController = BypassRelayController(
+            context      = context,
+            proxyConfig  = proxyConfig,
+            onStatus     = { s -> mainHandler.post { bypassBinding?.let { applyBypassStatus(s, it) } } },
+            onLog        = { line -> postLogDebounced(line) },
+            onCaptchaUrl = { url -> mainHandler.post { openCaptchaUrl(url) } },
+        ).also { ctrl ->
+            ctrl.start(platform, dcMode)
+            ctrl.sendAuth(savedUrl, displayName, dcMode)
+        }
     }
 
     private fun postLogDebounced(line: String) {

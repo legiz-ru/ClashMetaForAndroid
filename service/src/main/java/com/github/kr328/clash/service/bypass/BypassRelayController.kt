@@ -46,7 +46,7 @@ class BypassRelayController(
 
     val isRunning get() = running
 
-    fun start(platform: BypassPlatform) {
+    fun start(platform: BypassPlatform, dcMode: Boolean = false) {
         if (running) return
         running = true
 
@@ -58,9 +58,10 @@ class BypassRelayController(
             return
         }
 
+        val effectiveMode = if (dcMode) "dc-joiner" else platform.relayMode
         val cmd = mutableListOf(
             relayBin.absolutePath,
-            "--mode", platform.relayMode,
+            "--mode", effectiveMode,
             "--socks-port", proxyConfig.port.toString(),
         )
         if (proxyConfig.username.isNotEmpty()) {
@@ -96,8 +97,20 @@ class BypassRelayController(
         }.also { it.isDaemon = true; it.start() }
     }
 
-    fun sendAuth(joinLink: String, displayName: String = "Joiner", tunnelMode: String = "video",
+    fun sendAuth(joinLink: String, displayName: String = "Joiner", dcMode: Boolean = false,
                  vp8Fps: Int = 24, vp8Batch: Int = 30) {
+        if (dcMode) {
+            // DC mode: all platforms use AUTH with tunnelMode=dc
+            val json = JSONObject().apply {
+                put("joinLink", joinLink)
+                put("displayName", displayName.ifEmpty { "Joiner" })
+                put("tunnelMode", "dc")
+                put("vp8Fps", vp8Fps)
+                put("vp8Batch", vp8Batch)
+            }
+            writeLine("AUTH:$json")
+            return
+        }
         val platform = BypassPlatform.fromUrl(joinLink)
         when (platform) {
             BypassPlatform.WBSTREAM -> {
@@ -105,7 +118,7 @@ class BypassRelayController(
                 val json = JSONObject().apply {
                     put("roomId", roomId)
                     put("displayName", displayName.ifEmpty { "Joiner" })
-                    put("tunnelMode", tunnelMode)
+                    put("tunnelMode", "video")
                     put("vp8Fps", vp8Fps)
                     put("vp8Batch", vp8Batch)
                 }
@@ -114,7 +127,7 @@ class BypassRelayController(
             BypassPlatform.TELEMOST -> {
                 val json = JSONObject().apply {
                     put("joinLink", joinLink)
-                    put("displayName", displayName)
+                    put("displayName", displayName.ifEmpty { "Joiner" })
                     put("vp8Fps", vp8Fps)
                     put("vp8Batch", vp8Batch)
                 }
@@ -123,8 +136,8 @@ class BypassRelayController(
             BypassPlatform.VK -> {
                 val json = JSONObject().apply {
                     put("joinLink", joinLink)
-                    put("displayName", displayName)
-                    put("tunnelMode", tunnelMode)
+                    put("displayName", displayName.ifEmpty { "Joiner" })
+                    put("tunnelMode", "video")
                     put("vp8Fps", vp8Fps)
                     put("vp8Batch", vp8Batch)
                 }

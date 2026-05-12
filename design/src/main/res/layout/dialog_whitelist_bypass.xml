@@ -28,7 +28,7 @@
             android:layout_marginBottom="16dp"
             android:background="@drawable/bg_drag_handle" />
 
-        <!-- Title row with icon -->
+        <!-- Title row with icon and settings gear -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -50,6 +50,16 @@
                 android:text="@string/whitelist_bypass_title"
                 android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textColor="?attr/colorOnSurface" />
+
+            <ImageView
+                android:id="@+id/btn_settings"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:src="@drawable/ic_baseline_settings"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:contentDescription="@string/bypass_settings_title" />
         </LinearLayout>
 
         <!-- Status chip -->

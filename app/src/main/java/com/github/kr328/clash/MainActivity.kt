@@ -92,8 +92,22 @@ class MainActivity : BaseActivity<MainDesign>() {
                     when (it) {
                         Event.ActivityStart,
                         Event.ServiceRecreated,
-                        Event.ClashStop, Event.ClashStart,
+                        Event.ClashStop,
                         Event.ProfileLoaded, Event.ProfileChanged -> design.fetch()
+                        Event.ClashStart -> {
+                            design.fetch()
+                            launch {
+                                val active = withProfile { queryActive() }
+                                if (active != null && active.whitelistBypass) {
+                                    val proxyConfig = withContext(Dispatchers.IO) {
+                                        com.github.kr328.clash.service.bypass.parseBypassProxyConfig(
+                                            this@MainActivity, active.uuid
+                                        )
+                                    }
+                                    if (proxyConfig != null) design.autoStartBypassTunnel(proxyConfig)
+                                }
+                            }
+                        }
                         else -> Unit
                     }
                 }
