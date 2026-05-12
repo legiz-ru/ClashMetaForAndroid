@@ -134,6 +134,23 @@ class AppSettingsDesign(
                 summary = R.string.send_hwid_desc,
             )
 
+            switch(
+                value = uiStore::bypassEnabled,
+                icon = R.drawable.access_point_plus,
+                title = R.string.bypass_setting_title,
+                summary = R.string.bypass_setting_desc,
+            ) {
+                listener = OnChangedListener {
+                    if (uiStore.bypassEnabled) {
+                        MaterialAlertDialogBuilder(context)
+                            .setTitle(R.string.bypass_setting_title)
+                            .setMessage(R.string.bypass_setting_hint)
+                            .setPositiveButton(R.string.ok, null)
+                            .show()
+                    }
+                }
+            }
+
             category(R.string.about)
 
             clickable(

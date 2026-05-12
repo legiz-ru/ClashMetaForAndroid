@@ -98,7 +98,7 @@ class MainActivity : BaseActivity<MainDesign>() {
                             design.fetch()
                             launch {
                                 val active = withProfile { queryActive() }
-                                if (active != null && active.whitelistBypass) {
+                                if (active != null && (active.whitelistBypass || uiStore.bypassEnabled)) {
                                     val proxyConfig = withContext(Dispatchers.IO) {
                                         com.github.kr328.clash.service.bypass.parseBypassProxyConfig(
                                             this@MainActivity, active.uuid
@@ -252,6 +252,7 @@ class MainActivity : BaseActivity<MainDesign>() {
 
         setMode(state.mode)
         setHasProviders(providers.isNotEmpty())
+        setBypassGlobalEnabled(uiStore.bypassEnabled)
 
         withProfile {
             val active = queryActive()

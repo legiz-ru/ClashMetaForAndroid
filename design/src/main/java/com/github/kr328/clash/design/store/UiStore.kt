@@ -83,6 +83,11 @@ class UiStore(context: Context) {
         defaultValue = true,
     )
 
+    var bypassEnabled: Boolean by store.boolean(
+        key = "bypass_enabled",
+        defaultValue = false,
+    )
+
     var delayDisplayDots: Boolean by store.boolean(
         key = "delay_display_dots",
         defaultValue = true,

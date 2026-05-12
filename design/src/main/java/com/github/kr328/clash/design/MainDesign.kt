@@ -249,6 +249,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    suspend fun setBypassGlobalEnabled(enabled: Boolean) {
+        withContext(Dispatchers.Main) {
+            binding.bypassGlobalEnabled = enabled
+        }
+    }
+
     suspend fun setActiveProfileInfo(profile: Profile?) {
         withContext(Dispatchers.Main) {
             if (profile != null) {

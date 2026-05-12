@@ -533,6 +533,9 @@
     <string name="whitelist_bypass_status_lost">Соединение потеряно</string>
     <string name="whitelist_bypass_status_error">Ошибка</string>
     <string name="whitelist_bypass_proxy_not_found">Прокси «whitelist-bypass» не найден в профиле</string>
+    <string name="bypass_setting_title">Туннель обхода блокировок</string>
+    <string name="bypass_setting_desc">Показывать управление туннелем на главном экране</string>
+    <string name="bypass_setting_hint">В вашем профиле в секции proxies должен быть SOCKS5-прокси с именем whitelist-bypass</string>
     <string name="bypass_settings_title">Настройки туннеля</string>
     <string name="bypass_settings_display_name">Имя в звонке</string>
     <string name="bypass_settings_dc_mode">DC-режим</string>

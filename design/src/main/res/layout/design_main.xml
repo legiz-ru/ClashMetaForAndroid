@@ -71,6 +71,9 @@
         <variable
             name="profileWhitelistBypass"
             type="boolean" />
+        <variable
+            name="bypassGlobalEnabled"
+            type="boolean" />
 
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
@@ -393,7 +396,7 @@
                                 android:layout_marginTop="8dp"
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal"
-                                android:visibility="@{(!TextUtils.isEmpty(profileSupportUrl) || !TextUtils.isEmpty(profileWebPageUrl) || (clashRunning &amp;&amp; (profileGlobalModeMp || profileConnsViewMp || profileRpMp || profileWhitelistBypass))) ? View.VISIBLE : View.GONE}">
+                                android:visibility="@{(!TextUtils.isEmpty(profileSupportUrl) || !TextUtils.isEmpty(profileWebPageUrl) || (clashRunning &amp;&amp; (profileGlobalModeMp || profileConnsViewMp || profileRpMp || profileWhitelistBypass || bypassGlobalEnabled))) ? View.VISIBLE : View.GONE}">
 
                                 <!-- Left: shortcut icons visible only when Clash is running -->
                                 <ImageView
@@ -444,7 +447,7 @@
                                     android:focusable="true"
                                     android:padding="4dp"
                                     android:src="@drawable/access_point_plus"
-                                    android:visibility="@{clashRunning &amp;&amp; profileWhitelistBypass ? View.VISIBLE : View.GONE}"
+                                    android:visibility="@{clashRunning &amp;&amp; (profileWhitelistBypass || bypassGlobalEnabled) ? View.VISIBLE : View.GONE}"
                                     app:tint="?attr/colorOnSurfaceVariant" />
 
                                 <!-- Spacer pushes right-side icons to the end -->

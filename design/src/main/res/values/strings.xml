@@ -570,6 +570,9 @@
     <string name="whitelist_bypass_status_lost">Connection lost</string>
     <string name="whitelist_bypass_status_error">Error</string>
     <string name="whitelist_bypass_proxy_not_found">Proxy \"whitelist-bypass\" not found in profile</string>
+    <string name="bypass_setting_title">Whitelist Bypass Tunnel</string>
+    <string name="bypass_setting_desc">Show bypass tunnel controls on the main screen</string>
+    <string name="bypass_setting_hint">In your profile, the proxies section must contain a SOCKS5 proxy named whitelist-bypass</string>
     <string name="bypass_settings_title">Tunnel settings</string>
     <string name="bypass_settings_display_name">Name in call</string>
     <string name="bypass_settings_dc_mode">DC mode</string>
