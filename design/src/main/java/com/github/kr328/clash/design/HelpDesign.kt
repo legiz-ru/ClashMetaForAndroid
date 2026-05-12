@@ -97,6 +97,15 @@ class HelpDesign(
                     openLink(Uri.parse(context.getString(R.string.cmfa_origin_url)))
                 }
             }
+
+            clickable(
+                title = R.string.whitelist_bypass,
+                summary = R.string.whitelist_bypass_url
+            ) {
+                clicked {
+                    openLink(Uri.parse(context.getString(R.string.whitelist_bypass_url)))
+                }
+            }
         }
 
         binding.content.addView(screen.root)

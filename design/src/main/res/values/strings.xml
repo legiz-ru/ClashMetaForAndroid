@@ -235,6 +235,8 @@
     <string name="moshen_fork_core_url" translatable="false">https://github.com/legiz-ru/moshen/releases</string>
     <string name="cmfa_origin">CMFA</string>
     <string name="cmfa_origin_url" translatable="false">https://github.com/MetaCubeX/ClashMetaForAndroid</string>
+    <string name="whitelist_bypass">Whitelist Bypass</string>
+    <string name="whitelist_bypass_url" translatable="false">https://github.com/kulikov0/whitelist-bypass</string>
 
     <string name="tips_properties"><![CDATA[Accept Only <strong>Prizrak-Box Config</strong>(including <strong>Proxy</strong>/<strong>Rules</strong>)]]></string>
     <string name="tips_help"><![CDATA[Prizrak-Box is a <strong>freeware</strong> and we do <strong>NOT</strong> provide any service for it]]></string>
