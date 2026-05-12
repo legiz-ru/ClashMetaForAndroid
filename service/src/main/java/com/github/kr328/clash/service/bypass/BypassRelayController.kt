@@ -33,13 +33,16 @@ enum class BypassStatus {
 class BypassRelayController(
     private val context: Context,
     private val proxyConfig: BypassProxyConfig,
-    val onStatus: (BypassStatus) -> Unit,
-    val onLog: (String) -> Unit,
-    val onCaptchaUrl: (String) -> Unit,
+    var onStatus: (BypassStatus) -> Unit,
+    var onLog: (String) -> Unit,
+    var onCaptchaUrl: (String) -> Unit,
 ) {
     private var process: Process? = null
     private var writer: OutputStreamWriter? = null
     @Volatile private var running = false
+
+    @Volatile var currentStatus: BypassStatus = BypassStatus.IDLE
+        private set
 
     val isRunning get() = running
 
@@ -71,6 +74,7 @@ class BypassRelayController(
         process = proc
         writer = OutputStreamWriter(proc.outputStream)
 
+        currentStatus = BypassStatus.STARTING
         onStatus(BypassStatus.STARTING)
 
         Thread {
@@ -86,6 +90,7 @@ class BypassRelayController(
                 }
             } finally {
                 running = false
+                currentStatus = BypassStatus.IDLE
                 onStatus(BypassStatus.IDLE)
             }
         }.also { it.isDaemon = true; it.start() }
@@ -127,6 +132,7 @@ class BypassRelayController(
 
     fun stop() {
         running = false
+        currentStatus = BypassStatus.IDLE
         try { writer?.close() } catch (_: Exception) {}
         try { process?.destroy() } catch (_: Exception) {}
         process = null
@@ -145,13 +151,15 @@ class BypassRelayController(
     }
 
     private fun handleStatus(status: String) {
-        onStatus(when {
+        val s = when {
             status == "READY" -> BypassStatus.STARTING
             status == "CONNECTING" -> BypassStatus.CONNECTING
             status == "TUNNEL_CONNECTED" -> BypassStatus.CONNECTED
             status == "TUNNEL_LOST" -> BypassStatus.LOST
             else -> BypassStatus.CONNECTING
-        })
+        }
+        currentStatus = s
+        onStatus(s)
     }
 
     private fun writeLine(line: String) {

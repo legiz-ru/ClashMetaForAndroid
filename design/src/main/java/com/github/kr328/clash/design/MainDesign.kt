@@ -173,6 +173,12 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     // Used as focusTrapView so D-pad UP from the first list item can reach topBar buttons.
     private var proxyGroupSheetRoot: View? = null
 
+    // Whitelist-bypass tunnel state — persists across dialog open/close
+    private var bypassController: BypassRelayController? = null
+    private var bypassBinding: DialogWhitelistBypassBinding? = null
+    @Volatile private var pendingLogLine: String? = null
+    @Volatile private var logPostPending = false
+
     // Easter egg: tap counter for summer mode
     private var logoTapCount = 0
     private val logoTapTimeout = 2000L // 2 seconds timeout between taps
@@ -1333,12 +1339,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     }
 
     fun showBypassTunnelDialog(proxyConfig: BypassProxyConfig?) {
-        val binding = DialogWhitelistBypassBinding
-            .inflate(context.layoutInflater)
+        val binding = DialogWhitelistBypassBinding.inflate(context.layoutInflater)
+        bypassBinding = binding
 
-        var controller: BypassRelayController? = null
-
-        fun updateStatus(status: BypassStatus) {
+        fun applyStatus(status: BypassStatus) {
             val (label, color) = when (status) {
                 BypassStatus.IDLE       -> context.getString(R.string.whitelist_bypass_status_idle)       to Color.GRAY
                 BypassStatus.STARTING   -> context.getString(R.string.whitelist_bypass_status_starting)   to Color.parseColor("#FF9800")
@@ -1354,7 +1358,18 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
 
         binding.platformWbstream.isChecked = true
-        updateStatus(BypassStatus.IDLE)
+
+        // If a tunnel is already running, restore its status in the freshly-opened dialog
+        val runningCtrl = bypassController
+        if (runningCtrl != null && runningCtrl.isRunning) {
+            applyStatus(runningCtrl.currentStatus)
+            // Redirect the controller's callbacks to the new binding
+            runningCtrl.onStatus = { s -> mainHandler.post { bypassBinding?.let { b -> applyStatus(s) } } }
+            runningCtrl.onLog    = { line -> postLogDebounced(line) }
+            runningCtrl.onCaptchaUrl = { url -> mainHandler.post { openCaptchaUrl(url) } }
+        } else {
+            applyStatus(BypassStatus.IDLE)
+        }
 
         val dialog = AppBottomSheetDialog(context)
 
@@ -1369,27 +1384,18 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 return@setOnClickListener
             }
             val platform = when {
-                binding.platformWbstream.isChecked  -> BypassPlatform.WBSTREAM
-                binding.platformTelemost.isChecked  -> BypassPlatform.TELEMOST
-                binding.platformVk.isChecked        -> BypassPlatform.VK
-                else                                -> BypassPlatform.fromUrl(joinLink)
+                binding.platformWbstream.isChecked -> BypassPlatform.WBSTREAM
+                binding.platformTelemost.isChecked -> BypassPlatform.TELEMOST
+                binding.platformVk.isChecked       -> BypassPlatform.VK
+                else                               -> BypassPlatform.fromUrl(joinLink)
             }
-            controller?.stop()
-            controller = BypassRelayController(
-                context = context,
-                proxyConfig = proxyConfig,
-                onStatus  = { s -> (context as? Activity)?.runOnUiThread { updateStatus(s) } },
-                onLog     = { line -> (context as? Activity)?.runOnUiThread { binding.logText = line } },
-                onCaptchaUrl = { url ->
-                    (context as? Activity)?.runOnUiThread {
-                        runCatching {
-                            context.startActivity(
-                                android.content.Intent(android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(url))
-                            )
-                        }
-                    }
-                }
+            bypassController?.stop()
+            bypassController = BypassRelayController(
+                context      = context,
+                proxyConfig  = proxyConfig,
+                onStatus     = { s -> mainHandler.post { bypassBinding?.let { applyStatus(s) } } },
+                onLog        = { line -> postLogDebounced(line) },
+                onCaptchaUrl = { url -> mainHandler.post { openCaptchaUrl(url) } },
             ).also { ctrl ->
                 ctrl.start(platform)
                 ctrl.sendAuth(joinLink)
@@ -1397,18 +1403,37 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
 
         binding.btnStop.setOnClickListener {
-            controller?.stop()
-            controller = null
-            updateStatus(BypassStatus.IDLE)
+            bypassController?.stop()
+            bypassController = null
+            applyStatus(BypassStatus.IDLE)
         }
 
+        // Dismiss does NOT stop the tunnel — user must tap Stop explicitly.
         dialog.setOnDismissListener {
-            controller?.stop()
-            controller = null
+            if (bypassBinding === binding) bypassBinding = null
         }
 
         dialog.setContentView(binding.root)
         dialog.show()
+    }
+
+    private fun postLogDebounced(line: String) {
+        pendingLogLine = line
+        if (!logPostPending) {
+            logPostPending = true
+            mainHandler.postDelayed({
+                logPostPending = false
+                bypassBinding?.logText = pendingLogLine
+            }, 150)
+        }
+    }
+
+    private fun openCaptchaUrl(url: String) {
+        runCatching {
+            context.startActivity(
+                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            )
+        }
     }
 
     fun showAddProfileSheet() {
