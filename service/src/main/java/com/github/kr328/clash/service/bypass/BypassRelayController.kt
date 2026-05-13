@@ -166,6 +166,10 @@ class BypassRelayController(
     }
 
     private fun handleStatus(status: String) {
+        if (status.startsWith("CAPTCHA:")) {
+            onCaptchaUrl(status.removePrefix("CAPTCHA:"))
+            return
+        }
         val s = when {
             status == "READY"            -> BypassStatus.STARTING
             status == "CONNECTING"       -> BypassStatus.CONNECTING
