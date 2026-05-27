@@ -557,7 +557,8 @@
             android:contentDescription="@string/disconnect"
             android:onClick="@{() -> self.request(Request.ToggleStatus)}"
             android:src="@drawable/ic_mdi_power"
-            android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}" />
+            android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Prizrak.Fab.Circular" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
