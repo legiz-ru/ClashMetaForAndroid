@@ -210,7 +210,7 @@
                         android:foreground="@drawable/bg_card_focus_ripple"
                         android:visibility="@{hasProfiles &amp;&amp; !isLoading ? View.VISIBLE : View.GONE}"
                         app:cardBackgroundColor="?attr/colorSurfaceVariant"
-                        app:cardCornerRadius="16dp"
+                        app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/card_stroke_focus"
                         app:strokeWidth="2dp">
