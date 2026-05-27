@@ -538,24 +538,26 @@
                 android:id="@+id/bottom_nav"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="?attr/colorSurfaceContainer"
                 android:paddingBottom="@{self.surface.insets.bottom}"
+                app:elevation="0dp"
                 app:menu="@menu/bottom_nav_menu"
                 app:labelVisibilityMode="labeled" />
 
         </LinearLayout>
 
         <!-- ========== DISCONNECT FAB (connected state, above bottom nav, right-aligned) ========== -->
-        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/disconnect_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="72dp"
+            android:contentDescription="@string/disconnect"
             android:onClick="@{() -> self.request(Request.ToggleStatus)}"
-            android:text="@string/disconnect"
-            android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-            app:icon="@drawable/ic_mdi_power" />
+            android:src="@drawable/ic_mdi_power"
+            android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
