@@ -533,16 +533,25 @@
                 </LinearLayout>
             </ScrollView>
 
-            <!-- ========== BOTTOM NAVIGATION BAR ========== -->
-            <com.google.android.material.bottomnavigation.BottomNavigationView
-                android:id="@+id/bottom_nav"
+            <!-- ========== BOTTOM NAVIGATION BAR (floating pill) ========== -->
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/colorSurfaceContainer"
-                android:paddingBottom="@{self.surface.insets.bottom}"
-                app:elevation="0dp"
-                app:menu="@menu/bottom_nav_menu"
-                app:labelVisibilityMode="labeled" />
+                android:paddingBottom="@{self.surface.insets.bottom}">
+
+                <com.google.android.material.bottomnavigation.BottomNavigationView
+                    android:id="@+id/bottom_nav"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/bg_nav_pill"
+                    android:clipToOutline="true"
+                    app:elevation="3dp"
+                    app:menu="@menu/bottom_nav_menu"
+                    app:labelVisibilityMode="labeled" />
+            </FrameLayout>
 
         </LinearLayout>
 
