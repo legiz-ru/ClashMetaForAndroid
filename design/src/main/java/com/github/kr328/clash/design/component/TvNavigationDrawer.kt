@@ -343,7 +343,7 @@ class TvNavigationDrawer(
         isSelected: Boolean,
         onClick: () -> Unit,
     ): View {
-        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        val primaryColor = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
         val secondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSecondaryContainer)
         val onSecondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSecondaryContainer)
         val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
@@ -426,7 +426,7 @@ class TvNavigationDrawer(
     }
 
     private fun createFocusableBackground(dp: Float, fillColor: Int): StateListDrawable {
-        val focusColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        val focusColor = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
 
         val focusedDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE

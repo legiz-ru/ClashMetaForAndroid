@@ -96,7 +96,7 @@ class ProfileAdapter(
             val dp = context.resources.displayMetrics.density
             if (current.active) {
                 card.strokeWidth = (2 * dp).toInt()
-                card.strokeColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+                card.strokeColor = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
             } else {
                 card.strokeWidth = 0
             }
@@ -113,7 +113,7 @@ class ProfileAdapter(
                 val dp = context.resources.displayMetrics.density
                 if (current.active) {
                     card.strokeWidth = (2 * dp).toInt()
-                    card.strokeColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+                    card.strokeColor = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
                 } else {
                     card.strokeWidth = 0
                 }

@@ -62,7 +62,7 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     fun toggleCacheClosed() {
         isCachingClosed = !isCachingClosed
         val tint = if (isCachingClosed)
-            context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+            context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
         else
             context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
         binding.cacheToggleBtn.setColorFilter(tint)

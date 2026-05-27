@@ -521,7 +521,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val maxSheetHeight = (context.resources.displayMetrics.heightPixels * 0.7f).toInt()
         val topBarHeight = (56 * dp).toInt()
         val listHeight = (maxSheetHeight - topBarHeight).coerceAtLeast((180 * dp).toInt())
-        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        val primaryColor = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
         val secondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSecondaryContainer)
         val onSecondaryContainerColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSecondaryContainer)
         val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
@@ -1067,7 +1067,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val dp = context.resources.displayMetrics.density
             val isDarkTheme =
                 (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+            val primaryColor = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
             val surfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurface)
             val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
             val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
@@ -1338,7 +1338,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     init {
         binding.self = this
 
-        binding.colorClashStarted = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        binding.colorClashStarted = context.resolveThemedColor(androidx.appcompat.R.attr.colorPrimary)
         binding.colorClashStopped = context.resolveThemedColor(R.attr.colorClashStopped)
 
         // Easter egg: 15 taps on logo unlocks Summer mode (touch-only, no D-pad)
