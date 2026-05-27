@@ -246,6 +246,9 @@
 
     <string name="dark_mode">Dark Mode</string>
 
+    <string name="dynamic_color">Dynamic Color</string>
+    <string name="dynamic_color_summary">Use colors from your wallpaper (Android 12+)</string>
+
     <string name="show_traffic">Show Traffic</string>
     <string name="show_traffic_summary">Auto refresh traffic in notification</string>
 

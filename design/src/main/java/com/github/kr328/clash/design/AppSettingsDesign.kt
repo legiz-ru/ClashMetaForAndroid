@@ -86,6 +86,17 @@ class AppSettingsDesign(
             }
 
             switch(
+                value = uiStore::dynamicColor,
+                icon = R.drawable.ic_baseline_palette,
+                title = R.string.dynamic_color,
+                summary = R.string.dynamic_color_summary,
+            ) {
+                listener = OnChangedListener {
+                    requests.trySend(Request.ReCreateAllActivities)
+                }
+            }
+
+            switch(
                 value = uiStore::delayDisplayDots,
                 icon = R.drawable.ic_baseline_speed,
                 title = R.string.delay_display,

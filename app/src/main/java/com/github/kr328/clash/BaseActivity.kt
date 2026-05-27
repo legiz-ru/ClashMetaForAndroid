@@ -24,6 +24,7 @@ import com.github.kr328.clash.remote.Broadcasts
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.util.ActivityResultLifecycle
 import com.github.kr328.clash.util.ApplicationObserver
+import com.google.android.material.color.DynamicColors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.util.*
@@ -203,6 +204,10 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
             DayNight.Night -> theme.applyStyle(R.style.AppThemeDark, true)
             DayNight.Day -> theme.applyStyle(R.style.AppThemeLight, true)
             DayNight.Summer -> theme.applyStyle(R.style.AppThemeSummer, true)
+        }
+
+        if (uiStore.dynamicColor && dayNight != DayNight.Summer) {
+            DynamicColors.applyToActivityIfAvailable(this)
         }
 
         window.isAllowForceDarkCompat = false

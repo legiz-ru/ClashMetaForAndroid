@@ -223,6 +223,9 @@
 
     <string name="dark_mode">Тёмный режим</string>
 
+    <string name="dynamic_color">Динамические цвета</string>
+    <string name="dynamic_color_summary">Цвета из ваших обоев (Android 12+)</string>
+
     <string name="show_traffic">Показывать трафик</string>
     <string name="show_traffic_summary">Автоматически обновлять счётчик трафика в уведомлении</string>
 

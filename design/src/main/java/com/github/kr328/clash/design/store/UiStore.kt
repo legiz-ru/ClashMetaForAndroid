@@ -27,6 +27,11 @@ class UiStore(context: Context) {
         values = DarkMode.values()
     )
 
+    var dynamicColor: Boolean by store.boolean(
+        key = "dynamic_color",
+        defaultValue = false
+    )
+
     var hideAppIcon: Boolean by store.boolean(
         key = "hide_app_icon",
         defaultValue = with(Companion) {
