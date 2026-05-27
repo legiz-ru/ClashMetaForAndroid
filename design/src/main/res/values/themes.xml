@@ -257,6 +257,10 @@
 
         <item name="bottomSheetDialogTheme">@style/AppBottomSheetDialogLight</item>
         <item name="fullScreenDialogTheme">@style/AppFullScreenDialogLight</item>
+
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Prizrak.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Prizrak.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Prizrak.LargeComponent</item>
     </style>
 
     <style name="AppThemeDarkBase" parent="Theme.Material3.Dark.NoActionBar">
@@ -298,6 +302,10 @@
 
         <item name="bottomSheetDialogTheme">@style/AppBottomSheetDialogDark</item>
         <item name="fullScreenDialogTheme">@style/AppFullScreenDialogDark</item>
+
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Prizrak.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Prizrak.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Prizrak.LargeComponent</item>
     </style>
 
     <style name="AppThemeLight" parent="AppThemeLightBase">
@@ -349,6 +357,10 @@
 
         <item name="bottomSheetDialogTheme">@style/AppBottomSheetDialogSummer</item>
         <item name="fullScreenDialogTheme">@style/AppFullScreenDialogSummer</item>
+
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Prizrak.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Prizrak.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Prizrak.LargeComponent</item>
     </style>
 
     <style name="AppThemeSummer" parent="AppThemeSummerBase">
