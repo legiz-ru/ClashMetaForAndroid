@@ -3,7 +3,6 @@ package com.github.kr328.clash.design.dialog
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
-import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -159,75 +158,6 @@ class AppBottomSheetDialog(
                 behavior.isHideable = true
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
             }
-        }
-    }
-}
-
-/**
- * A TV-optimised bottom panel dialog for the proxy group selector.
- *
- * Extends [Dialog] directly rather than [BottomSheetDialog] because the Material
- * BottomSheetDialog does not reliably acquire system window focus on Android TV —
- * it intermittently sets FLAG_NOT_FOCUSABLE which routes all D-pad events to the
- * underlying activity instead of the dialog.  A plain Dialog window always receives
- * key events as long as it is the top-most focusable window.
- */
-class TvProxyGroupDialog(context: Context) : Dialog(context), FocusTrapDialog {
-
-    override var focusTrapView: View? = null
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus) return
-        val trap = focusTrapView ?: return
-        when (val focused = trap.findFocus()) {
-            null -> trap.requestFocus()
-            is RecyclerView -> if (focused.isFocused) focused.requestFocus(View.FOCUS_DOWN)
-        }
-    }
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val trap = focusTrapView
-
-        if (trap != null && event.action == KeyEvent.ACTION_DOWN &&
-            (event.keyCode == KeyEvent.KEYCODE_DPAD_UP || event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
-        ) {
-            val focused = trap.findFocus()
-            if (focused is RecyclerView && focused.isFocused) {
-                val dir = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) View.FOCUS_DOWN else View.FOCUS_UP
-                if (focused.requestFocus(dir)) return true
-            }
-            if (trap.isFocused) {
-                val dir = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) View.FOCUS_DOWN else View.FOCUS_UP
-                if (trap.requestFocus(dir)) return true
-            }
-        }
-
-        val handled = super.dispatchKeyEvent(event)
-
-        if (!handled && event.action == KeyEvent.ACTION_DOWN && trap != null) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    val currentFocus = trap.findFocus()
-                    if (currentFocus == null || currentFocus === trap) trap.requestFocus()
-                    return true
-                }
-            }
-        }
-        return handled
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setCancelable(true)
-        window?.apply {
-            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            setGravity(Gravity.BOTTOM)
-            // Transparent window background — the content view provides its own background
-            // (bg_bottom_sheet with rounded top corners).
-            setBackgroundDrawableResource(android.R.color.transparent)
-            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            setDimAmount(0.5f)
         }
     }
 }
