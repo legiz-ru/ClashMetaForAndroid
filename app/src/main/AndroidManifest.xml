@@ -29,6 +29,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/BootstrapTheme"
+        android:localeConfig="@xml/locales_config"
         tools:ignore="GoogleAppIndexingWarning"
         tools:targetApi="N">
         <meta-data
