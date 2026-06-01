@@ -42,16 +42,11 @@ class RulesDesign(context: Context) : Design<RulesDesign.Request>(context) {
             val top = binding.activityBarLayout.height
             if (binding.recyclerList.paddingTop != top) {
                 binding.recyclerList.setPadding(0, top, 0, binding.recyclerList.paddingBottom)
-                binding.swipeRefresh.setProgressViewOffset(false, top, top + 96)
             }
         }
 
         binding.recyclerList.bindAppBarElevation(binding.activityBarLayout)
         binding.recyclerList.applyLinearAdapter(context, adapter)
-
-        binding.swipeRefresh.setOnRefreshListener {
-            requests.trySend(Request.Refresh)
-        }
 
         binding.searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -70,7 +65,6 @@ class RulesDesign(context: Context) : Design<RulesDesign.Request>(context) {
 
     fun setLoading(loading: Boolean) {
         binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-        binding.swipeRefresh.isRefreshing = false
         binding.refreshBtn.isEnabled = !loading
         if (loading) {
             binding.emptyView.visibility = View.GONE

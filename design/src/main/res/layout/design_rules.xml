@@ -21,18 +21,11 @@
             android:layout_height="match_parent"
             android:paddingBottom="@{self.surface.insets.bottom}">
 
-            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-                android:id="@+id/swipe_refresh"
+            <com.github.kr328.clash.design.view.AppRecyclerView
+                android:id="@+id/recycler_list"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <com.github.kr328.clash.design.view.AppRecyclerView
-                    android:id="@+id/recycler_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:clipToPadding="false" />
-
-            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+                android:layout_height="match_parent"
+                android:clipToPadding="false" />
 
             <!-- Loading -->
             <ProgressBar
