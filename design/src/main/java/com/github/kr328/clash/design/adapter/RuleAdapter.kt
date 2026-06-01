@@ -13,11 +13,7 @@ import com.github.kr328.clash.design.R
 class RuleAdapter(private val context: Context) :
     RecyclerView.Adapter<RuleAdapter.Holder>() {
 
-    private var allRules: List<Rule> = emptyList()
-    private var filteredRules: List<Rule> = emptyList()
-
-    val totalCount: Int get() = allRules.size
-    val filteredCount: Int get() = filteredRules.size
+    private var rules: List<Rule> = emptyList()
 
     class Holder(view: View) : RecyclerView.ViewHolder(view) {
         val type: TextView = view.findViewById(R.id.rule_type)
@@ -31,7 +27,7 @@ class RuleAdapter(private val context: Context) :
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
-        val rule = filteredRules[position]
+        val rule = rules[position]
 
         holder.type.text = rule.type
         holder.proxy.text = rule.proxy
@@ -45,24 +41,10 @@ class RuleAdapter(private val context: Context) :
         }
     }
 
-    override fun getItemCount(): Int = filteredRules.size
+    override fun getItemCount(): Int = rules.size
 
-    fun updateAll(rules: List<Rule>, query: String = "") {
-        allRules = rules
-        applyFilter(query)
-    }
-
-    fun applyFilter(query: String) {
-        filteredRules = if (query.isBlank()) {
-            allRules
-        } else {
-            val q = query.lowercase()
-            allRules.filter { rule ->
-                rule.type.lowercase().contains(q) ||
-                    rule.payload.lowercase().contains(q) ||
-                    rule.proxy.lowercase().contains(q)
-            }
-        }
+    fun updateAll(newRules: List<Rule>) {
+        rules = newRules
         notifyDataSetChanged()
     }
 

@@ -4,7 +4,6 @@ import com.github.kr328.clash.core.model.Rule
 import com.github.kr328.clash.design.RulesDesign
 import com.github.kr328.clash.util.withClash
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -27,11 +26,7 @@ class RulesActivity : BaseActivity<RulesDesign>() {
                         else -> Unit
                     }
                 }
-                design.requests.onReceive {
-                    when (it) {
-                        RulesDesign.Request.Refresh -> launch { loadRules(design) }
-                    }
-                }
+                design.requests.onReceive {}
             }
         }
     }

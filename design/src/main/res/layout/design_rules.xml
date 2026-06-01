@@ -49,7 +49,7 @@
                 <ImageView
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@drawable/ic_baseline_assignment"
+                    android:src="@drawable/ic_arrow_decision_outline"
                     android:alpha="0.4"
                     android:contentDescription="@null" />
 
@@ -108,114 +108,55 @@
 
         </FrameLayout>
 
-        <!-- Toolbar overlay (toolbar + stats + search) -->
+        <!-- Toolbar overlay -->
         <com.github.kr328.clash.design.view.ActivityBarLayout
             android:id="@+id/activity_bar_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="@{self.surface.insets.top}">
 
-            <LinearLayout
+            <!-- back + title | icon + count -->
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:paddingEnd="@dimen/item_tailing_margin">
 
-                <!-- Row 1: back + title + refresh -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
+                <include
+                    layout="@layout/common_activity_bar"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingEnd="@dimen/item_tailing_margin">
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/rules_count_container" />
 
-                    <include
-                        layout="@layout/common_activity_bar"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentStart="true"
-                        android:layout_centerVertical="true"
-                        android:layout_toStartOf="@id/refresh_btn" />
-
-                    <ImageView
-                        android:id="@+id/refresh_btn"
-                        android:layout_width="@dimen/item_tailing_component_size"
-                        android:layout_height="@dimen/item_tailing_component_size"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:background="@drawable/bg_toolbar_button_focus"
-                        android:clickable="true"
-                        android:contentDescription="@string/update_all"
-                        android:focusable="true"
-                        android:onClick="@{() -> self.requestRefresh()}"
-                        android:padding="@dimen/toolbar_image_action_padding"
-                        android:src="@drawable/ic_baseline_sync" />
-
-                </RelativeLayout>
-
-                <!-- Row 2: stats header -->
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:id="@+id/rules_count_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/item_tailing_component_size"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="6dp">
+                    android:paddingStart="8dp">
 
                     <ImageView
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
-                        android:src="@drawable/ic_baseline_assignment"
-                        android:alpha="0.6"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_arrow_decision_outline"
+                        android:alpha="0.7"
                         android:contentDescription="@null" />
 
                     <TextView
-                        android:id="@+id/stats_text"
+                        android:id="@+id/rules_count_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:layout_marginStart="4dp"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
-                <!-- Row 3: search bar -->
-                <LinearLayout
-                    android:id="@+id/search_bar"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp"
-                    android:paddingBottom="8dp"
-                    android:visibility="gone">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        app:boxCornerRadiusBottomEnd="50dp"
-                        app:boxCornerRadiusBottomStart="50dp"
-                        app:boxCornerRadiusTopEnd="50dp"
-                        app:boxCornerRadiusTopStart="50dp"
-                        app:boxStrokeWidth="0dp"
-                        app:boxStrokeWidthFocused="0dp"
-                        app:endIconDrawable="@drawable/ic_baseline_close"
-                        app:endIconMode="clear_text"
-                        app:startIconDrawable="@drawable/ic_baseline_search"
-                        style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/search_input"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="@string/rules_search_hint"
-                            android:imeOptions="actionSearch"
-                            android:inputType="text"
-                            android:singleLine="true" />
-
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                </LinearLayout>
-
-            </LinearLayout>
+            </RelativeLayout>
 
         </com.github.kr328.clash.design.view.ActivityBarLayout>
 

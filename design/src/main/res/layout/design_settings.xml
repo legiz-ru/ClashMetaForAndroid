@@ -67,7 +67,7 @@
                     android:layout_height="wrap_content"
                     android:onClick="@{() -> self.request(Request.StartRules)}"
                     android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-                    app:icon="@drawable/ic_baseline_rule"
+                    app:icon="@drawable/ic_arrow_decision_outline"
                     app:text="@string/rules" />
 
                 <com.github.kr328.clash.design.view.ActionLabel
