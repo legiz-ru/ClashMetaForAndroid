@@ -1,7 +1,13 @@
 package com.github.kr328.clash
 
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.github.kr328.clash.util.GetContentCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import com.github.kr328.clash.common.util.componentName
@@ -31,6 +37,8 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
         )
 
         setContentDesign(design)
+
+        design.updateLanguageSummary(getLanguageDisplayName())
 
         while (isActive) {
             select<Unit> {
@@ -70,6 +78,9 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
                         }
                         AppSettingsDesign.Request.ShowAbout ->
                             design.showAbout(queryAppVersionName())
+                        AppSettingsDesign.Request.OpenLanguageSettings -> {
+                            openLanguageSettings()
+                        }
                         AppSettingsDesign.Request.CheckUpdate -> {
                             val pending = design.consumePendingUpdate()
                             if (pending != null) {
@@ -137,5 +148,24 @@ class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
             is UpdateChecker.CheckResult.Error ->
                 design.showUpdateErrorDialog(result.message)
         }
+    }
+
+    private fun getLanguageDisplayName(): String {
+        val locales = AppCompatDelegate.getApplicationLocales()
+        if (locales == LocaleListCompat.getEmptyLocaleList() || locales.isEmpty) {
+            return getString(com.github.kr328.clash.design.R.string.language_follow_system)
+        }
+        val locale = locales[0] ?: return getString(com.github.kr328.clash.design.R.string.language_follow_system)
+        return locale.getDisplayName(locale).replaceFirstChar { it.uppercase() }
+    }
+
+    private fun openLanguageSettings() {
+        val uri = Uri.fromParts("package", packageName, null)
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Intent(Settings.ACTION_APP_LOCALE_SETTINGS, uri)
+        } else {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri)
+        }
+        startActivity(intent)
     }
 }

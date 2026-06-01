@@ -245,6 +245,8 @@
     <string name="service">Service</string>
 
     <string name="dark_mode">Dark Mode</string>
+    <string name="language">Language</string>
+    <string name="language_follow_system">Follow System</string>
 
     <string name="show_traffic">Show Traffic</string>
     <string name="show_traffic_summary">Auto refresh traffic in notification</string>

@@ -222,6 +222,8 @@
     <string name="service">Сервис</string>
 
     <string name="dark_mode">Тёмный режим</string>
+    <string name="language">Язык</string>
+    <string name="language_follow_system">Как в системе</string>
 
     <string name="show_traffic">Показывать трафик</string>
     <string name="show_traffic_summary">Автоматически обновлять счётчик трафика в уведомлении</string>

@@ -30,10 +30,13 @@ class AppSettingsDesign(
         SelectCustomTemplate,
         ShowAbout,
         CheckUpdate,
+        OpenLanguageSettings,
     }
 
     var pendingUpdateTag: String? = null
     var pendingUpdateUrl: String? = null
+
+    private var languageItem: ClickablePreference? = null
 
     private val binding = DesignSettingsCommonBinding
         .inflate(context.layoutInflater, context.root, false)
@@ -82,6 +85,15 @@ class AppSettingsDesign(
             ) {
                 listener = OnChangedListener {
                     requests.trySend(Request.ReCreateAllActivities)
+                }
+            }
+
+            languageItem = clickable(
+                title = R.string.language,
+                icon = R.drawable.ic_baseline_language,
+            ) {
+                clicked {
+                    requests.trySend(Request.OpenLanguageSettings)
                 }
             }
 
@@ -158,6 +170,10 @@ class AppSettingsDesign(
         }
 
         binding.content.addView(screen.root)
+    }
+
+    fun updateLanguageSummary(name: CharSequence) {
+        languageItem?.summary = name
     }
 
     suspend fun showAbout(versionName: String) {
