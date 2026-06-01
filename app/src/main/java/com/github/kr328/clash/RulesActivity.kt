@@ -1,10 +1,15 @@
 package com.github.kr328.clash
 
+import com.github.kr328.clash.core.model.Rule
 import com.github.kr328.clash.design.RulesDesign
 import com.github.kr328.clash.util.withClash
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+
+private val RulesJson = Json { ignoreUnknownKeys = true }
 
 class RulesActivity : BaseActivity<RulesDesign>() {
     override suspend fun main() {
@@ -34,7 +39,8 @@ class RulesActivity : BaseActivity<RulesDesign>() {
     private suspend fun loadRules(design: RulesDesign) {
         design.setLoading(true)
         try {
-            val rules = withClash { queryRules() }
+            val json = withClash { queryRules() }
+            val rules = RulesJson.decodeFromString(ListSerializer(Rule.serializer()), json)
             design.setRules(rules)
         } catch (e: Exception) {
             design.setError(

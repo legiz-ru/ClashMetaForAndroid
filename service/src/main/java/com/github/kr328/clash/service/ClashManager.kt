@@ -38,8 +38,8 @@ class ClashManager(private val context: Context) : IClashManager,
         return Clash.queryConfiguration()
     }
 
-    override fun queryRules(): List<Rule> {
-        return Clash.queryRules()
+    override fun queryRules(): String {
+        return Clash.queryRulesJson()
     }
 
     override fun queryProviders(): ProviderList {
