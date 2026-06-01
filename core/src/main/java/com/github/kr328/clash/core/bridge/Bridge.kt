@@ -37,6 +37,7 @@ object Bridge {
 
     external fun nativeLoad(completable: CompletableDeferred<Unit>, path: String)
     external fun nativeQueryProviders(): String
+    external fun nativeQueryRules(): String
     external fun nativeDumpRuleProviderToText(name: String, outputPath: String): String?
     external fun nativeQueryRuleProviderFilePath(name: String): String?
     external fun nativeUpdateProvider(

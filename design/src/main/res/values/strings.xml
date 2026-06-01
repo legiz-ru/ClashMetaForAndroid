@@ -274,6 +274,12 @@
     <string name="not_selectable">Not Selectable</string>
 
     <string name="providers">Providers</string>
+    <string name="rules">Rules</string>
+    <string name="rules_count">%d rules</string>
+    <string name="rules_found">%1$d / %2$d</string>
+    <string name="rules_search_hint">Search rules…</string>
+    <string name="no_rules">No rules</string>
+    <string name="no_rules_desc">No active rules loaded</string>
 
     <string name="files">Files</string>
     <string name="browse_files">Browse Files</string>

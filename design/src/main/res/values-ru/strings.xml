@@ -246,6 +246,12 @@
     <string name="not_selectable">Not Selectable</string>
 
     <string name="providers">Провайдеры</string>
+    <string name="rules">Правила</string>
+    <string name="rules_count">%d правил</string>
+    <string name="rules_found">%1$d / %2$d</string>
+    <string name="rules_search_hint">Поиск правил…</string>
+    <string name="no_rules">Нет правил</string>
+    <string name="no_rules_desc">Нет активных правил</string>
 
     <string name="files">Файлы</string>
     <string name="browse_files">Обзор файлов</string>

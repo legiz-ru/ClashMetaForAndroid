@@ -188,6 +188,15 @@ object Clash {
         }
     }
 
+    fun queryRules(): List<Rule> {
+        val rules =
+            Json.Default.decodeFromString(JsonArray.serializer(), Bridge.nativeQueryRules())
+
+        return List(rules.size) {
+            Json.Default.decodeFromJsonElement(Rule.serializer(), rules[it])
+        }
+    }
+
     fun dumpRuleProviderToText(name: String, outputPath: String): String {
         return Bridge.nativeDumpRuleProviderToText(name, outputPath) ?: ""
     }

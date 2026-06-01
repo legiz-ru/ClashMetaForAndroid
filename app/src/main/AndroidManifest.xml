@@ -133,6 +133,11 @@
             android:exported="false"
             android:label="@string/providers" />
         <activity
+            android:name=".RulesActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/rules" />
+        <activity
             android:name=".ProviderDetailActivity"
             android:configChanges="uiMode"
             android:exported="false" />

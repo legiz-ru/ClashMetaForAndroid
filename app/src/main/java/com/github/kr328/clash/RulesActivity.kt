@@ -1,0 +1,46 @@
+package com.github.kr328.clash
+
+import com.github.kr328.clash.design.RulesDesign
+import com.github.kr328.clash.util.withClash
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
+
+class RulesActivity : BaseActivity<RulesDesign>() {
+    override suspend fun main() {
+        val design = RulesDesign(this)
+
+        setContentDesign(design)
+
+        loadRules(design)
+
+        while (isActive) {
+            select<Unit> {
+                events.onReceive {
+                    when (it) {
+                        Event.ProfileLoaded -> loadRules(design)
+                        else -> Unit
+                    }
+                }
+                design.requests.onReceive {
+                    when (it) {
+                        RulesDesign.Request.Refresh -> launch { loadRules(design) }
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun loadRules(design: RulesDesign) {
+        design.setLoading(true)
+        try {
+            val rules = withClash { queryRules() }
+            design.setRules(rules)
+        } catch (e: Exception) {
+            design.setError(
+                getString(com.github.kr328.clash.design.R.string.no_rules),
+                e.message ?: e.javaClass.simpleName
+            )
+        }
+    }
+}

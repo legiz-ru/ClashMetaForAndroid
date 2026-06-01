@@ -96,6 +96,11 @@ func queryProviders() *C.char {
 	return marshalJson(tunnel.QueryProviders())
 }
 
+//export queryRules
+func queryRules() *C.char {
+	return marshalJson(tunnel.QueryRules())
+}
+
 //export queryRuleProviderFilePath
 func queryRuleProviderFilePath(name C.c_string) *C.char {
 	path := tunnel.QueryRuleProviderFilePath(C.GoString(name))

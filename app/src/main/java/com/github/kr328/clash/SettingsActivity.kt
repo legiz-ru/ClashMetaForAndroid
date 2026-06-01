@@ -38,6 +38,8 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                             startActivity(OverrideSettingsActivity::class.intent)
                         SettingsDesign.Request.StartMetaFeature ->
                             startActivity(MetaFeatureSettingsActivity::class.intent)
+                        SettingsDesign.Request.StartRules ->
+                            startActivity(RulesActivity::class.intent)
                         SettingsDesign.Request.StartProviders ->
                             startActivity(ProvidersActivity::class.intent)
                         SettingsDesign.Request.StartConnections ->
