@@ -163,7 +163,7 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 
 		// Fetch weights and ranks from the global smart store — same source the
 		// external-controller /group/{name}/weights route uses.
-		// NodeRank.Weight is an integer 0-100 (percentage); normalise to float64.
+		// NodeRankItem.Weight is a float64 0-100 (percentage); normalise to 0-1.
 		type proxyRankInfo struct {
 			weight float64
 			rank   string
@@ -171,9 +171,9 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 		proxyRankMap := make(map[string]proxyRankInfo)
 		if store := cachefile.GetSmartStore(); store != nil {
 			if ranking, err := store.GetNodeWeightRankingCache(sg.Name(), sg.GetConfigFilename()); err == nil {
-				for _, nr := range ranking {
+				for _, nr := range ranking.Result {
 					proxyRankMap[nr.Name] = proxyRankInfo{
-						weight: float64(nr.Weight) / 100.0,
+						weight: nr.Weight / 100.0,
 						rank:   nr.Rank,
 					}
 				}
