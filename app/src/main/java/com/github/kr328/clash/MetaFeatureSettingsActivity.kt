@@ -78,6 +78,22 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
                                 "*/*")
                             importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportASN)
                         }
+                        MetaFeatureSettingsDesign.Request.GenerateAgeKeyPair -> {
+                            val pair = withContext(Dispatchers.IO) { Clash.generateAgeKeyPair() }
+                            if (pair != null) {
+                                val (secretKey, publicKey) = pair
+                                withContext(Dispatchers.Main) {
+                                    MaterialAlertDialogBuilder(this@MetaFeatureSettingsActivity)
+                                        .setTitle(R.string.age_keypair_result_title)
+                                        .setMessage(
+                                            "${getString(R.string.age_public_key)}:\n$publicKey\n\n" +
+                                            "${getString(R.string.age_private_key)}:\n$secretKey"
+                                        )
+                                        .setPositiveButton(R.string.ok) { _, _ -> }
+                                        .show()
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -647,6 +647,11 @@ object ProfileProcessor {
                     saveProfileHeaders(context.processingDir, convertedHeaders!!)
                 }
 
+                if (snapshot.ageSecretKey.isNotEmpty()) {
+                    context.processingDir.resolve("age-secret-key.txt")
+                        .writeText(snapshot.ageSecretKey)
+                }
+
                 val fetchTarget = resolveFetchTarget(
                     context, snapshot.type, snapshot.source, alreadyPrefetched
                 )
@@ -687,7 +692,8 @@ object ProfileProcessor {
                                 snapshot.source,
                                 resolvedInterval,
                                 sub[0], sub[1], sub[2], sub[3],
-                                old?.createdAt ?: System.currentTimeMillis()
+                                old?.createdAt ?: System.currentTimeMillis(),
+                                ageSecretKey = snapshot.ageSecretKey,
                             )
                             if (old != null) ImportedDao().update(new) else ImportedDao().insert(new)
                             PendingDao().remove(snapshot.uuid)
@@ -737,7 +743,8 @@ object ProfileProcessor {
                                 download,
                                 total,
                                 expire,
-                                old?.createdAt ?: System.currentTimeMillis()
+                                old?.createdAt ?: System.currentTimeMillis(),
+                                ageSecretKey = snapshot.ageSecretKey,
                             )
                             if (old != null) {
                                 ImportedDao().update(new)
@@ -762,7 +769,8 @@ object ProfileProcessor {
                                 download,
                                 total,
                                 expire,
-                                old?.createdAt ?: System.currentTimeMillis()
+                                old?.createdAt ?: System.currentTimeMillis(),
+                                ageSecretKey = snapshot.ageSecretKey,
                             )
                             if (old != null) {
                                 ImportedDao().update(new)

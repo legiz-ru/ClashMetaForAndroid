@@ -15,7 +15,7 @@ class MetaFeatureSettingsDesign(
     configuration: ConfigurationOverride
 ) : Design<MetaFeatureSettingsDesign.Request>(context) {
     enum class Request {
-        ResetOverride, ImportGeoIp, ImportGeoSite, ImportCountry, ImportASN
+        ResetOverride, ImportGeoIp, ImportGeoSite, ImportCountry, ImportASN, GenerateAgeKeyPair
     }
 
     private val binding = DesignSettingsMetaFeatureBinding
@@ -310,6 +310,17 @@ class MetaFeatureSettingsDesign(
             ){
                 clicked {
                     requests.trySend(Request.ImportASN)
+                }
+            }
+
+            category(R.string.age_secret_key)
+
+            clickable(
+                title = R.string.age_keypair_generate,
+                summary = R.string.age_keypair_generate_desc,
+            ) {
+                clicked {
+                    requests.trySend(Request.GenerateAgeKeyPair)
                 }
             }
         }

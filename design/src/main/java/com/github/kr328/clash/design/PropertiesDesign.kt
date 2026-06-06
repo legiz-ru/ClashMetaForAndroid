@@ -1,6 +1,7 @@
 package com.github.kr328.clash.design
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.kr328.clash.core.model.FetchStatus
@@ -46,6 +47,7 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
             if (value.type == Profile.Type.Converted) {
                 proxyLinkAdapter.links = parseLinks(value.source)
             }
+            updateAgeKeyBtnTint(value.ageSecretKey)
         }
 
     val progressing: Boolean
@@ -225,6 +227,31 @@ class PropertiesDesign(context: Context) : Design<PropertiesDesign.Request>(cont
 
     private fun parseLinks(source: String): List<String> =
         source.lines().map { it.trim() }.filter { it.isNotBlank() }
+
+    fun inputAgeKey() {
+        launch {
+            val key = context.requestModelTextInput(
+                initial = profile.ageSecretKey,
+                title = context.getText(R.string.age_secret_key),
+                hint = context.getText(R.string.age_secret_key_hint),
+                error = context.getText(R.string.age_secret_key_error),
+                validator = ValidatorAgeSecretKey
+            )
+
+            if (key != profile.ageSecretKey) {
+                profile = profile.copy(ageSecretKey = key)
+            }
+        }
+    }
+
+    private fun updateAgeKeyBtnTint(ageSecretKey: String) {
+        val color = if (ageSecretKey.isNotEmpty()) {
+            context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        } else {
+            context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        }
+        binding.ageKeyBtn.imageTintList = ColorStateList.valueOf(color)
+    }
 
     fun requestCommit() {
         requests.trySend(Request.Commit)

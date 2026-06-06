@@ -574,4 +574,16 @@
     <string name="mode_rule_desc">Use profile rules. Recommended for daily use</string>
     <string name="mode_global_label">Global</string>
     <string name="mode_global_desc">Route all traffic through selected server</string>
+
+    <!-- Age secret key -->
+    <string name="age_secret_key">Age Secret Key</string>
+    <string name="age_secret_key_hint">AGE-SECRET-KEY-1…</string>
+    <string name="age_secret_key_error">Invalid age secret key format</string>
+    <string name="age_secret_key_set">Age key set</string>
+    <string name="age_secret_key_cleared">Age key cleared</string>
+    <string name="age_keypair_generate">Generate Age Key Pair</string>
+    <string name="age_keypair_generate_desc">Generate a new X25519 key pair for encrypting configs</string>
+    <string name="age_public_key">Public Key (for encryption)</string>
+    <string name="age_private_key">Secret Key (set in profile)</string>
+    <string name="age_keypair_result_title">Generated Key Pair</string>
 </resources>

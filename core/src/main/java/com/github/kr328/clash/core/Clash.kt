@@ -8,6 +8,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.net.InetSocketAddress
@@ -247,6 +249,20 @@ object Clash {
 
     fun closeConnection(id: String): Boolean {
         return Bridge.nativeCloseConnection(id)
+    }
+
+    fun verifySecretKeys(keys: String): Boolean {
+        return Bridge.nativeVerifySecretKeys(keys)
+    }
+
+    fun generateAgeKeyPair(): Pair<String, String>? {
+        val json = Bridge.nativeGenerateAgeKeyPair()
+        return try {
+            val obj = Json.Default.parseToJsonElement(json) as? JsonObject ?: return null
+            val secretKey = obj["secretKey"]?.jsonPrimitive?.content ?: return null
+            val publicKey = obj["publicKey"]?.jsonPrimitive?.content ?: return null
+            secretKey to publicKey
+        } catch (_: Exception) { null }
     }
 
     fun subscribeLogcat(): ReceiveChannel<LogMessage> {

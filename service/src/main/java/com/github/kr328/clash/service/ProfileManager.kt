@@ -81,6 +81,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             total = imported.total,
             download = imported.download,
             expire = imported.expire,
+            ageSecretKey = imported.ageSecretKey,
         )
 
         cloneImportedFiles(uuid, newUUID)
@@ -90,7 +91,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
         return newUUID
     }
 
-    override suspend fun patch(uuid: UUID, name: String, source: String, interval: Long) {
+    override suspend fun patch(uuid: UUID, name: String, source: String, interval: Long, ageSecretKey: String) {
         val pending = PendingDao().queryByUUID(uuid)
 
         if (pending == null) {
@@ -110,6 +111,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
                     total = 0,
                     download = 0,
                     expire = 0,
+                    ageSecretKey = ageSecretKey,
                 )
             )
         } else {
@@ -121,6 +123,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
                 total = 0,
                 download = 0,
                 expire = 0,
+                ageSecretKey = ageSecretKey,
             )
 
             PendingDao().update(newPending)
@@ -274,6 +277,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
         val download = pending?.download ?: imported?.download ?: return null
         val total = pending?.total ?: imported?.total ?: return null
         val expire = pending?.expire ?: imported?.expire ?: return null
+        val ageSecretKey = pending?.ageSecretKey ?: imported?.ageSecretKey ?: ""
 
         val profileDir = context.importedDir.resolve(uuid.toString())
         val hdrs = ProfileProcessor.readProfileHeaders(profileDir)
@@ -305,6 +309,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.globalModeMp,
             hdrs.connsViewMp,
             hdrs.rpMp,
+            ageSecretKey = ageSecretKey,
         )
     }
 

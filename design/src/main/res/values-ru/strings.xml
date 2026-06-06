@@ -528,4 +528,16 @@
     <string name="mode_rule_desc">Использовать правила профиля. Рекомендуется</string>
     <string name="mode_global_label">Глобальный</string>
     <string name="mode_global_desc">Пустить весь трафик через выбранный сервер</string>
+
+    <!-- Age secret key -->
+    <string name="age_secret_key">Секретный ключ Age</string>
+    <string name="age_secret_key_hint">AGE-SECRET-KEY-1…</string>
+    <string name="age_secret_key_error">Неверный формат секретного ключа age</string>
+    <string name="age_secret_key_set">Ключ Age установлен</string>
+    <string name="age_secret_key_cleared">Ключ Age очищен</string>
+    <string name="age_keypair_generate">Сгенерировать ключевую пару Age</string>
+    <string name="age_keypair_generate_desc">Создать новую пару ключей X25519 для шифрования конфигов</string>
+    <string name="age_public_key">Публичный ключ (для шифрования)</string>
+    <string name="age_private_key">Секретный ключ (установить в профиль)</string>
+    <string name="age_keypair_result_title">Сгенерированная пара ключей</string>
 </resources>

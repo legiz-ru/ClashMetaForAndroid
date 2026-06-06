@@ -262,4 +262,16 @@
     <string name="external_control_stopped">Prizrak-Box 服务已停止</string>
     <string name="import_from_qr_no_permission">相机权限受限，请前往设置开启。</string>
     <string name="import_from_qr_exception">发生系统未知异常，操作失败。</string>
+
+    <!-- Age secret key -->
+    <string name="age_secret_key">Age 密钥</string>
+    <string name="age_secret_key_hint">AGE-SECRET-KEY-1…</string>
+    <string name="age_secret_key_error">无效的 age 密钥格式</string>
+    <string name="age_secret_key_set">Age 密钥已设置</string>
+    <string name="age_secret_key_cleared">Age 密钥已清除</string>
+    <string name="age_keypair_generate">生成 Age 密钥对</string>
+    <string name="age_keypair_generate_desc">生成新的 X25519 密钥对用于加密配置</string>
+    <string name="age_public_key">公钥（用于加密）</string>
+    <string name="age_private_key">私钥（设置到配置文件）</string>
+    <string name="age_keypair_result_title">已生成密钥对</string>
 </resources>

@@ -165,7 +165,22 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
                     android:layout_centerVertical="true"
-                    android:layout_toStartOf="@id/action_layout" />
+                    android:layout_toStartOf="@id/age_key_btn" />
+
+                <ImageView
+                    android:id="@+id/age_key_btn"
+                    android:layout_width="@dimen/item_tailing_component_size"
+                    android:layout_height="@dimen/item_tailing_component_size"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/action_layout"
+                    android:background="@drawable/bg_toolbar_button_focus"
+                    android:clickable="true"
+                    android:contentDescription="@string/age_secret_key"
+                    android:focusable="true"
+                    android:onClick="@{() -> self.inputAgeKey()}"
+                    android:padding="@dimen/toolbar_image_action_padding"
+                    android:src="@drawable/ic_baseline_key"
+                    android:visibility="@{profile.type == Type.File || profile.type == Type.Url ? View.VISIBLE : View.GONE}" />
 
                 <FrameLayout
                     android:id="@+id/action_layout"

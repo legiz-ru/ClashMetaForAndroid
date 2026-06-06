@@ -69,7 +69,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
 
                             if (!canceled && profile != original) {
                                 withProfile {
-                                    patch(profile.uuid, profile.name, profile.source, profile.interval)
+                                    patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey)
                                 }
                             }
                         }
@@ -118,7 +118,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
         if (profile.type != Profile.Type.Converted) return
 
         // Ensure a pending record and directory exist (creates one from the imported profile if absent).
-        withProfile { patch(profile.uuid, profile.name, profile.source, profile.interval) }
+        withProfile { patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey) }
 
         val pendingProfileDir = pendingDir.resolve(profile.uuid.toString())
         val currentTemplateId = TemplateManager.getSelectedTemplateId(pendingProfileDir)
@@ -208,7 +208,7 @@ class PropertiesActivity : BaseActivity<PropertiesDesign>() {
                 try {
                     withProcessing { updateStatus ->
                         withProfile {
-                            patch(profile.uuid, profile.name, profile.source, profile.interval)
+                            patch(profile.uuid, profile.name, profile.source, profile.interval, profile.ageSecretKey)
 
                             coroutineScope {
                                 commit(profile.uuid) {
