@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.widget.ImageView
 import android.widget.TextView
 import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.core.model.ConnectionSnapshot
@@ -23,6 +22,64 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(context) {
+
+    enum class DisplayField(val labelRes: Int) {
+        HOST(R.string.conn_host),
+        TYPE(R.string.conn_type),
+        CHAINS(R.string.conn_proxy_chain),
+        RULE(R.string.conn_rule),
+        UPLOAD(R.string.conn_upload),
+        DOWNLOAD(R.string.conn_download),
+        TIME(R.string.conn_duration),
+        SOURCE_IP(R.string.conn_src_ip);
+
+        companion object {
+            val DEFAULTS: Set<DisplayField> = setOf(HOST, TYPE, CHAINS, UPLOAD, DOWNLOAD, TIME)
+        }
+    }
+
+    enum class SortField(val labelRes: Int) {
+        SPEED(R.string.connections_sort_speed),
+        UPLOAD(R.string.conn_upload),
+        DOWNLOAD(R.string.conn_download),
+        HOST(R.string.conn_host),
+        CHAINS(R.string.conn_proxy_chain),
+        RULE(R.string.conn_rule),
+        TYPE(R.string.conn_type),
+        TIME(R.string.conn_duration),
+        SOURCE_IP(R.string.conn_src_ip);
+
+        companion object {
+            val DEFAULT = SPEED
+        }
+    }
+
+    enum class SortDirection { ASC, DESC }
+
+    companion object {
+        var visibleFields: Set<DisplayField> = DisplayField.DEFAULTS
+        var sortField: SortField = SortField.DEFAULT
+        var sortDirection: SortDirection = SortDirection.DESC
+
+        fun sortConnectionList(connections: List<Connection>): List<Connection> {
+            val comparator: Comparator<Connection> = when (sortField) {
+                SortField.SPEED   -> compareBy { it.upload + it.download }
+                SortField.UPLOAD  -> compareBy { it.upload }
+                SortField.DOWNLOAD -> compareBy { it.download }
+                SortField.HOST    -> compareBy { it.metadata.host.ifEmpty { it.metadata.destinationIP } }
+                SortField.CHAINS  -> compareBy { it.chains.firstOrNull() ?: "" }
+                SortField.RULE    -> compareBy { it.rule }
+                SortField.TYPE    -> compareBy { it.metadata.network }
+                SortField.TIME    -> compareBy { it.start }
+                SortField.SOURCE_IP -> compareBy { it.metadata.sourceIP }
+            }
+            return if (sortDirection == SortDirection.DESC)
+                connections.sortedWith(comparator.reversed())
+            else
+                connections.sortedWith(comparator)
+        }
+    }
+
     sealed class Request {
         data class OpenApp(val group: ConnectionGroup, val showClosed: Boolean) : Request()
         class KillAll : Request()
@@ -49,6 +106,8 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     private var closedConnections: List<Connection> = emptyList()
     private val closedIds = mutableSetOf<String>()
 
+    // ─── Pause / Kill ────────────────────────────────────────────────────────
+
     fun togglePause() {
         isPaused = !isPaused
         binding.pauseBtn.setImageResource(
@@ -72,17 +131,119 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
             launch { refreshClosed() }
         }
         val msgRes = if (isCachingClosed) R.string.connections_cache_enabled
-                     else R.string.connections_cache_disabled
+        else R.string.connections_cache_disabled
         launch { showToast(msgRes, ToastDuration.Short) }
     }
 
     fun requestKillAll() {
         launch {
-            if (confirmKillAll()) {
-                requests.trySend(Request.KillAll())
-            }
+            if (confirmKillAll()) requests.trySend(Request.KillAll())
         }
     }
+
+    // ─── Filter dialog ───────────────────────────────────────────────────────
+
+    fun showFilterDialog() {
+        val fields = DisplayField.values()
+        val labels = fields.map { context.getString(it.labelRes) }.toTypedArray()
+        val checked = BooleanArray(fields.size) { fields[it] in visibleFields }
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.connections_display_fields)
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                val selected = fields.filterIndexed { i, _ -> checked[i] }.toMutableSet()
+                if (selected.isEmpty()) selected.addAll(DisplayField.DEFAULTS)
+                visibleFields = selected
+                updateFilterBtnTint()
+                launch { if (showingClosed) refreshClosed() else refreshActive(lastSnapshot.connections) }
+            }
+            .show()
+    }
+
+    fun onFilterLongClick(): Boolean {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.connections_display_fields)
+            .setMessage(R.string.connections_reset_display_fields)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.connections_reset_to_defaults) { _, _ ->
+                visibleFields = DisplayField.DEFAULTS
+                updateFilterBtnTint()
+                launch { if (showingClosed) refreshClosed() else refreshActive(lastSnapshot.connections) }
+            }
+            .show()
+        return true
+    }
+
+    // ─── Sort dialog ─────────────────────────────────────────────────────────
+
+    fun showSortDialog() {
+        val fields = SortField.values()
+        val labels = fields.map { context.getString(it.labelRes) }.toTypedArray()
+        var selectedIdx = fields.indexOf(sortField).coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.connections_sort_by)
+            .setSingleChoiceItems(labels, selectedIdx) { _, which -> selectedIdx = which }
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.connections_sort_asc) { _, _ ->
+                sortField = fields[selectedIdx]
+                sortDirection = SortDirection.ASC
+                updateSortBtnIcon()
+                launch { if (showingClosed) refreshClosed() else refreshActive(lastSnapshot.connections) }
+            }
+            .setPositiveButton(R.string.connections_sort_desc) { _, _ ->
+                sortField = fields[selectedIdx]
+                sortDirection = SortDirection.DESC
+                updateSortBtnIcon()
+                launch { if (showingClosed) refreshClosed() else refreshActive(lastSnapshot.connections) }
+            }
+            .show()
+    }
+
+    fun onSortLongClick(): Boolean {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.connections_sort_by)
+            .setMessage(R.string.connections_reset_sort)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.connections_reset_to_defaults) { _, _ ->
+                sortField = SortField.DEFAULT
+                sortDirection = SortDirection.DESC
+                updateSortBtnIcon()
+                launch { if (showingClosed) refreshClosed() else refreshActive(lastSnapshot.connections) }
+            }
+            .show()
+        return true
+    }
+
+    // ─── Icon state ──────────────────────────────────────────────────────────
+
+    private fun updateFilterBtnTint() {
+        val isDefault = visibleFields == DisplayField.DEFAULTS
+        val color = if (isDefault)
+            context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        else
+            context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        binding.filterBtn.setColorFilter(color)
+    }
+
+    private fun updateSortBtnIcon() {
+        val isDefault = sortField == SortField.DEFAULT && sortDirection == SortDirection.DESC
+        binding.sortBtn.setImageResource(
+            if (sortDirection == SortDirection.ASC) R.drawable.ic_baseline_swap_vert
+            else R.drawable.ic_baseline_sort
+        )
+        val color = if (isDefault)
+            context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        else
+            context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        binding.sortBtn.setColorFilter(color)
+    }
+
+    // ─── Data ────────────────────────────────────────────────────────────────
 
     private suspend fun confirmKillAll(): Boolean = withContext(Dispatchers.Main) {
         suspendCancellableCoroutine { cont ->
@@ -126,10 +287,11 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     private suspend fun refreshActive(connections: List<Connection>) {
         val groups = buildGroups(connections)
         val filtered = if (currentFilter.isEmpty()) groups
-        else groups.filter { it.appName.contains(currentFilter, ignoreCase = true) ||
-            it.packageName.contains(currentFilter, ignoreCase = true) ||
-            it.connections.any { c -> matchesFilter(c, currentFilter) } }
-
+        else groups.filter {
+            it.appName.contains(currentFilter, ignoreCase = true) ||
+                it.packageName.contains(currentFilter, ignoreCase = true) ||
+                it.connections.any { c -> matchesFilter(c, currentFilter) }
+        }
         withContext(Dispatchers.Main) {
             activeAdapter.groups = filtered
         }
@@ -138,9 +300,10 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     private suspend fun refreshClosed() {
         val groups = buildGroups(closedConnections)
         val filtered = if (currentFilter.isEmpty()) groups
-        else groups.filter { it.appName.contains(currentFilter, ignoreCase = true) ||
-            it.connections.any { c -> matchesFilter(c, currentFilter) } }
-
+        else groups.filter {
+            it.appName.contains(currentFilter, ignoreCase = true) ||
+                it.connections.any { c -> matchesFilter(c, currentFilter) }
+        }
         withContext(Dispatchers.Main) {
             closedAdapter.groups = filtered
         }
@@ -149,25 +312,74 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
     private suspend fun buildGroups(connections: List<Connection>): List<ConnectionGroup> {
         return withContext(Dispatchers.Default) {
             connections
-                .groupBy { c -> if (c.metadata.process.isEmpty() || c.metadata.process == appPackage) "" else c.metadata.process }
+                .groupBy { c ->
+                    if (c.metadata.process.isEmpty() || c.metadata.process == appPackage) ""
+                    else c.metadata.process
+                }
                 .map { (pkg, conns) ->
                     val isPrizrak = pkg.isEmpty()
                     val icon = if (isPrizrak) null else runCatching {
                         pm.getApplicationInfo(pkg, 0).loadIcon(pm)
                     }.getOrNull()
                     val name = if (isPrizrak) context.getString(R.string.prizrak_core_name)
-                    else runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrElse { pkg }
+                    else runCatching {
+                        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+                    }.getOrElse { pkg }
 
                     val upSpeed = conns.sumOf { it.upload }
                     val downSpeed = conns.sumOf { it.download }
+                    val sortedConns = sortConnectionList(conns)
 
-                    ConnectionGroup(pkg, name, icon, conns, upSpeed, downSpeed)
+                    ConnectionGroup(pkg, name, icon, sortedConns, upSpeed, downSpeed)
                 }
-                .sortedWith(
-                    compareByDescending<ConnectionGroup> { it.packageName.isEmpty() }
-                        .thenByDescending { it.uploadSpeed + it.downloadSpeed }
-                )
+                .sortedWith(buildGroupComparator())
         }
+    }
+
+    private fun buildGroupComparator(): Comparator<ConnectionGroup> {
+        val coreFirst = compareByDescending<ConnectionGroup> { it.packageName.isEmpty() }
+
+        val byField: Comparator<ConnectionGroup> = when (sortField) {
+            SortField.SPEED   ->
+                if (sortDirection == SortDirection.DESC)
+                    compareByDescending { it.uploadSpeed + it.downloadSpeed }
+                else
+                    compareBy { it.uploadSpeed + it.downloadSpeed }
+
+            SortField.UPLOAD  ->
+                if (sortDirection == SortDirection.DESC)
+                    compareByDescending { it.uploadSpeed }
+                else
+                    compareBy { it.uploadSpeed }
+
+            SortField.DOWNLOAD ->
+                if (sortDirection == SortDirection.DESC)
+                    compareByDescending { it.downloadSpeed }
+                else
+                    compareBy { it.downloadSpeed }
+
+            else -> {
+                val selector: (ConnectionGroup) -> String? = { g ->
+                    g.connections.firstOrNull()?.let { c ->
+                        when (sortField) {
+                            SortField.HOST   -> c.metadata.host.ifEmpty { c.metadata.destinationIP }
+                            SortField.CHAINS -> c.chains.firstOrNull() ?: ""
+                            SortField.RULE   -> c.rule
+                            SortField.TYPE   -> c.metadata.network
+                            SortField.TIME   -> c.start
+                            SortField.SOURCE_IP -> c.metadata.sourceIP
+                            else -> ""
+                        }
+                    }
+                }
+                if (sortDirection == SortDirection.DESC)
+                    compareByDescending(selector)
+                else
+                    compareBy(selector)
+            }
+        }
+
+        return coreFirst.thenComparing(byField)
     }
 
     fun showConnectionDetail(connection: Connection) {
@@ -176,20 +388,22 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
 
     private fun matchesFilter(c: Connection, q: String): Boolean {
         val m = c.metadata
-        return listOf(m.host, m.destinationIP, m.sourceIP, m.process,
+        return listOf(
+            m.host, m.destinationIP, m.sourceIP, m.process,
             m.sniffHost, m.remoteDestination, c.rule, c.rulePayload,
-            c.chains.firstOrNull() ?: "")
-            .any { it.contains(q, ignoreCase = true) }
+            c.chains.firstOrNull() ?: ""
+        ).any { it.contains(q, ignoreCase = true) }
     }
+
+    // ─── Init ────────────────────────────────────────────────────────────────
 
     init {
         binding.self = this
         binding.activityBarLayout.applyFrom(context)
 
-        // Hide title — it is shown only in Settings
-        binding.activityBarLayout.findViewById<TextView>(R.id.activity_bar_title_view)?.visibility = View.GONE
+        binding.activityBarLayout.findViewById<TextView>(R.id.activity_bar_title_view)
+            ?.visibility = View.GONE
 
-        // Set dynamic paddingTop on the list to match the toolbar height
         binding.activityBarLayout.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val top = binding.activityBarLayout.height
             if (binding.recyclerList.paddingTop != top) {
@@ -225,5 +439,12 @@ class ConnectionsDesign(context: Context) : Design<ConnectionsDesign.Request>(co
                 }
             }
         })
+
+        binding.filterBtn.setOnLongClickListener { onFilterLongClick() }
+        binding.sortBtn.setOnLongClickListener { onSortLongClick() }
+
+        // Sync icon states with current (possibly already changed) companion state
+        updateFilterBtnTint()
+        updateSortBtnIcon()
     }
 }
