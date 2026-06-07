@@ -535,9 +535,11 @@
     <string name="age_secret_key_error">Неверный формат секретного ключа age</string>
     <string name="age_secret_key_set">Ключ Age установлен</string>
     <string name="age_secret_key_cleared">Ключ Age очищен</string>
-    <string name="age_keypair_generate">Сгенерировать ключевую пару Age</string>
-    <string name="age_keypair_generate_desc">Создать новую пару ключей X25519 для шифрования конфигов</string>
-    <string name="age_public_key">Публичный ключ (для шифрования)</string>
+    <string name="age_keypair_generate">Сгенерировать ключевую пару</string>
+    <string name="age_keypair_generate_desc">Создать новую пару ключей для шифрования конфигов</string>
+    <string name="age_public_key">Публичный ключ (для шифрования, должен быть применён со стороны сервера)</string>
     <string name="age_private_key">Секретный ключ (установить в профиль)</string>
     <string name="age_keypair_result_title">Сгенерированная пара ключей</string>
+    <string name="age_regenerate">Перегенерировать</string>
+    <string name="age_copy_key">Скопировать ключ</string>
 </resources>

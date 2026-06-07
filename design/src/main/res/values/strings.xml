@@ -571,9 +571,11 @@
     <string name="age_secret_key_error">Invalid age secret key format</string>
     <string name="age_secret_key_set">Age key set</string>
     <string name="age_secret_key_cleared">Age key cleared</string>
-    <string name="age_keypair_generate">Generate Age Key Pair</string>
-    <string name="age_keypair_generate_desc">Generate a new X25519 key pair for encrypting configs</string>
-    <string name="age_public_key">Public Key (for encryption)</string>
+    <string name="age_keypair_generate">Generate Key Pair</string>
+    <string name="age_keypair_generate_desc">Generate a new key pair for encrypting configs</string>
+    <string name="age_public_key">Public Key (for encryption, must be applied on the server side)</string>
     <string name="age_private_key">Secret Key (set in profile)</string>
     <string name="age_keypair_result_title">Generated Key Pair</string>
+    <string name="age_regenerate">Regenerate</string>
+    <string name="age_copy_key">Copy key</string>
 </resources>

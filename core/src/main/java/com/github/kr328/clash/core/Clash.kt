@@ -255,12 +255,13 @@ object Clash {
         return Bridge.nativeVerifySecretKeys(keys)
     }
 
-    fun generateAgeKeyPair(): Pair<String, String>? {
-        val json = Bridge.nativeGenerateAgeKeyPair()
+    fun generateAgeKeyPair(keyType: String = "MLKEM768-X25519"): Pair<String, String>? {
+        val json = Bridge.nativeGenerateAgeKeyPairWithType(keyType)
         return try {
             val obj = Json.Default.parseToJsonElement(json) as? JsonObject ?: return null
             val secretKey = obj["secretKey"]?.jsonPrimitive?.content ?: return null
             val publicKey = obj["publicKey"]?.jsonPrimitive?.content ?: return null
+            if (secretKey.isEmpty() || publicKey.isEmpty()) return null
             secretKey to publicKey
         } catch (_: Exception) { null }
     }

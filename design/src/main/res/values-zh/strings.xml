@@ -269,9 +269,11 @@
     <string name="age_secret_key_error">无效的 age 密钥格式</string>
     <string name="age_secret_key_set">Age 密钥已设置</string>
     <string name="age_secret_key_cleared">Age 密钥已清除</string>
-    <string name="age_keypair_generate">生成 Age 密钥对</string>
-    <string name="age_keypair_generate_desc">生成新的 X25519 密钥对用于加密配置</string>
-    <string name="age_public_key">公钥（用于加密）</string>
+    <string name="age_keypair_generate">生成密钥对</string>
+    <string name="age_keypair_generate_desc">生成新的密钥对用于加密配置</string>
+    <string name="age_public_key">公钥（用于加密，须在服务端配置）</string>
     <string name="age_private_key">私钥（设置到配置文件）</string>
     <string name="age_keypair_result_title">已生成密钥对</string>
+    <string name="age_regenerate">重新生成</string>
+    <string name="age_copy_key">复制密钥</string>
 </resources>

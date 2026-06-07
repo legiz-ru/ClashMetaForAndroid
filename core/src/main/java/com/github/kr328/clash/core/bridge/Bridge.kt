@@ -58,6 +58,7 @@ object Bridge {
     external fun nativeCloseAllConnections()
     external fun nativeVerifySecretKeys(keys: String): Boolean
     external fun nativeGenerateAgeKeyPair(): String
+    external fun nativeGenerateAgeKeyPairWithType(keyType: String): String
 
     private external fun nativeInit(home: String, versionName: String, sdkVersion: Int)
 

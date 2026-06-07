@@ -386,6 +386,18 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeGenerateAgeKeyPair(JNIEnv *
     return new_string(response);
 }
 
+JNIEXPORT jstring JNICALL
+Java_com_github_kr328_clash_core_bridge_Bridge_nativeGenerateAgeKeyPairWithType(JNIEnv *env, jobject thiz,
+                                                                                jstring key_type) {
+    TRACE_METHOD();
+
+    scoped_string _key_type = get_string(key_type);
+
+    scoped_string response = generateAgeKeyPairWithType(_key_type);
+
+    return new_string(response);
+}
+
 
 static jmethodID m_tun_interface_mark_socket;
 static jmethodID m_tun_interface_query_socket_uid;

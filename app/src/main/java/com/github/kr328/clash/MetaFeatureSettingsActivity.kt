@@ -1,10 +1,15 @@
 package com.github.kr328.clash
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.view.LayoutInflater
+import android.widget.RadioGroup
+import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import com.github.kr328.clash.util.GetContentCompat
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.design.MetaFeatureSettingsDesign
@@ -79,25 +84,78 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
                             importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportASN)
                         }
                         MetaFeatureSettingsDesign.Request.GenerateAgeKeyPair -> {
-                            val pair = withContext(Dispatchers.IO) { Clash.generateAgeKeyPair() }
-                            if (pair != null) {
-                                val (secretKey, publicKey) = pair
-                                withContext(Dispatchers.Main) {
-                                    MaterialAlertDialogBuilder(this@MetaFeatureSettingsActivity)
-                                        .setTitle(R.string.age_keypair_result_title)
-                                        .setMessage(
-                                            "${getString(R.string.age_public_key)}:\n$publicKey\n\n" +
-                                            "${getString(R.string.age_private_key)}:\n$secretKey"
-                                        )
-                                        .setPositiveButton(R.string.ok) { _, _ -> }
-                                        .show()
-                                }
+                            withContext(Dispatchers.Main) {
+                                showAgeKeypairDialog()
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun copyToClipboard(label: String, text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+        Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showAgeKeypairDialog() {
+        val dialogView = LayoutInflater.from(this)
+            .inflate(R.layout.dialog_age_keypair, null)
+
+        val radioGroup = dialogView.findViewById<RadioGroup>(R.id.key_type_group)
+        val btnRegenerate = dialogView.findViewById<android.widget.ImageButton>(R.id.btn_regenerate)
+        val publicKeyText = dialogView.findViewById<TextView>(R.id.public_key_text)
+        val privateKeyText = dialogView.findViewById<TextView>(R.id.private_key_text)
+        val btnCopyPublic = dialogView.findViewById<android.widget.ImageButton>(R.id.btn_copy_public)
+        val btnCopyPrivate = dialogView.findViewById<android.widget.ImageButton>(R.id.btn_copy_private)
+
+        var currentKeyType = "MLKEM768-X25519"
+        var currentPublicKey = ""
+        var currentPrivateKey = ""
+
+        fun updateKeys(secretKey: String, publicKey: String) {
+            currentPublicKey = publicKey
+            currentPrivateKey = secretKey
+            publicKeyText.text = publicKey
+            privateKeyText.text = secretKey
+        }
+
+        fun regenerate() {
+            val pair = Clash.generateAgeKeyPair(currentKeyType)
+            if (pair != null) {
+                updateKeys(pair.first, pair.second)
+            }
+        }
+
+        // Initial generation
+        regenerate()
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.age_keypair_result_title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.ok) { _, _ -> }
+            .create()
+
+        radioGroup.setOnCheckedChangeListener { _, checkedId ->
+            currentKeyType = if (checkedId == R.id.radio_x25519) "X25519" else "MLKEM768-X25519"
+            regenerate()
+        }
+
+        btnRegenerate.setOnClickListener { regenerate() }
+
+        btnCopyPublic.setOnClickListener {
+            if (currentPublicKey.isNotEmpty())
+                copyToClipboard(getString(R.string.age_public_key), currentPublicKey)
+        }
+
+        btnCopyPrivate.setOnClickListener {
+            if (currentPrivateKey.isNotEmpty())
+                copyToClipboard(getString(R.string.age_private_key), currentPrivateKey)
+        }
+
+        dialog.show()
     }
 
     private val validDatabaseExtensions = listOf(

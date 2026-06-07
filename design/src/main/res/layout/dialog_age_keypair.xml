@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="8dp">
+
+        <!-- Key type selector row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <RadioGroup
+                android:id="@+id/key_type_group"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/radio_mlkem"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MLKEM768-X25519"
+                    android:checked="true"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+                <RadioButton
+                    android:id="@+id/radio_x25519"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="X25519"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+            </RadioGroup>
+
+            <ImageButton
+                android:id="@+id/btn_regenerate"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/age_regenerate"
+                android:padding="8dp"
+                android:src="@drawable/ic_baseline_sync" />
+
+        </LinearLayout>
+
+        <!-- Public key section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/age_public_key"
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            android:alpha="0.6"
+            android:layout_marginBottom="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/public_key_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="monospace"
+                android:textSize="11sp"
+                android:textIsSelectable="true"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
+
+            <ImageButton
+                android:id="@+id/btn_copy_public"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/age_copy_key"
+                android:padding="6dp"
+                android:src="@drawable/ic_baseline_content_copy" />
+
+        </LinearLayout>
+
+        <!-- Private key section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/age_private_key"
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            android:alpha="0.6"
+            android:layout_marginBottom="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/private_key_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="monospace"
+                android:textSize="11sp"
+                android:textIsSelectable="true"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
+
+            <ImageButton
+                android:id="@+id/btn_copy_private"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/age_copy_key"
+                android:padding="6dp"
+                android:src="@drawable/ic_baseline_content_copy" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
