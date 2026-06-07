@@ -8,11 +8,10 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.github.kr328.clash.core.model.Connection
-import com.github.kr328.clash.design.ConnectionsDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.util.toBytesString
-import java.time.Duration
 import java.time.Instant
+import java.time.Duration
 
 class ConnectionAdapter(
     private val context: Context,
@@ -33,12 +32,6 @@ class ConnectionAdapter(
             notifyDataSetChanged()
         }
 
-    var visibleFields: Set<ConnectionsDesign.DisplayField> = ConnectionsDesign.visibleFields
-        set(value) {
-            field = value
-            notifyDataSetChanged()
-        }
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val view = LayoutInflater.from(context)
             .inflate(R.layout.adapter_connection, parent, false)
@@ -48,51 +41,18 @@ class ConnectionAdapter(
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val conn = connections[position]
         val meta = conn.metadata
-        val vf = visibleFields
 
-        // Line 1: Host
-        if (ConnectionsDesign.DisplayField.HOST in vf) {
-            val displayHost = meta.host.ifEmpty { meta.destinationIP }
-            val port = meta.destinationPort
-            holder.host.text = if (port.isNotEmpty()) "$displayHost:$port" else displayHost
-            holder.host.visibility = View.VISIBLE
-        } else {
-            holder.host.visibility = View.GONE
-        }
+        val displayHost = meta.host.ifEmpty { meta.destinationIP }
+        val port = meta.destinationPort
+        holder.host.text = if (port.isNotEmpty()) "$displayHost:$port" else displayHost
 
-        // Line 2: Type and/or Chains
-        val showType = ConnectionsDesign.DisplayField.TYPE in vf
-        val showChains = ConnectionsDesign.DisplayField.CHAINS in vf
-        if (showType || showChains) {
-            val parts = buildList {
-                if (showType) add(meta.network.uppercase())
-                if (showChains) add(conn.chains.reversed().joinToString(" → "))
-            }
-            holder.typeChain.text = parts.joinToString("  ·  ")
-            holder.typeChain.visibility = View.VISIBLE
-        } else {
-            holder.typeChain.visibility = View.GONE
-        }
+        val chain = conn.chains.reversed().joinToString(" → ")
+        holder.typeChain.text = "${meta.network.uppercase()}  ·  $chain"
 
-        // Line 3: Traffic / metadata fields
-        val trafficParts = buildList {
-            if (ConnectionsDesign.DisplayField.UPLOAD in vf)
-                add("↑ ${conn.upload.toBytesString()}")
-            if (ConnectionsDesign.DisplayField.DOWNLOAD in vf)
-                add("↓ ${conn.download.toBytesString()}")
-            if (ConnectionsDesign.DisplayField.RULE in vf && conn.rule.isNotEmpty())
-                add(conn.rule)
-            if (ConnectionsDesign.DisplayField.TIME in vf)
-                add(formatDuration(conn.start))
-            if (ConnectionsDesign.DisplayField.SOURCE_IP in vf && meta.sourceIP.isNotEmpty())
-                add(meta.sourceIP)
-        }
-        if (trafficParts.isNotEmpty()) {
-            holder.traffic.text = trafficParts.joinToString("   ")
-            holder.traffic.visibility = View.VISIBLE
-        } else {
-            holder.traffic.visibility = View.GONE
-        }
+        val up = conn.upload.toBytesString()
+        val down = conn.download.toBytesString()
+        val dur = formatDuration(conn.start)
+        holder.traffic.text = "↑ $up  ↓ $down    $dur"
 
         holder.closeBtn.setOnClickListener { onConnectionClosed(conn) }
         holder.closeBtn.isFocusable = true

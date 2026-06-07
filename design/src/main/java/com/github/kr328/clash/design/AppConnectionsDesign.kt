@@ -35,9 +35,10 @@ class AppConnectionsDesign(
         binding.self = this
         binding.activityBarLayout.applyFrom(context)
 
-        binding.activityBarLayout.findViewById<TextView>(R.id.activity_bar_title_view)
-            ?.visibility = View.GONE
+        // Hide generic title — app name is shown via app_name TextView instead
+        binding.activityBarLayout.findViewById<TextView>(R.id.activity_bar_title_view)?.visibility = View.GONE
 
+        // Dynamic paddingTop so the list doesn't go behind the toolbar
         binding.activityBarLayout.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val top = binding.activityBarLayout.height
             if (binding.recyclerList.paddingTop != top) {
@@ -52,8 +53,7 @@ class AppConnectionsDesign(
 
         val icon = group.icon ?: if (group.packageName.isNotEmpty()) {
             runCatching {
-                context.packageManager.getApplicationInfo(group.packageName, 0)
-                    .loadIcon(context.packageManager)
+                context.packageManager.getApplicationInfo(group.packageName, 0).loadIcon(context.packageManager)
             }.getOrNull()
         } else null
 
@@ -63,16 +63,12 @@ class AppConnectionsDesign(
             binding.appIcon.setImageResource(R.drawable.ic_launcher_foreground)
         }
 
-        // Apply current display and sort settings from companion object
-        adapter.visibleFields = ConnectionsDesign.visibleFields
-        adapter.connections = ConnectionsDesign.sortConnectionList(group.connections)
+        adapter.connections = group.connections
     }
 
     suspend fun updateConnections(connections: List<Connection>) {
-        val sorted = ConnectionsDesign.sortConnectionList(connections)
         withContext(Dispatchers.Main) {
-            adapter.visibleFields = ConnectionsDesign.visibleFields
-            adapter.connections = sorted
+            adapter.connections = connections
         }
     }
 }
