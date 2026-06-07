@@ -76,7 +76,8 @@
                 android:layout_weight="1"
                 android:fontFamily="monospace"
                 android:textSize="11sp"
-                android:textIsSelectable="true"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
 
             <ImageButton
@@ -113,7 +114,8 @@
                 android:layout_weight="1"
                 android:fontFamily="monospace"
                 android:textSize="11sp"
-                android:textIsSelectable="true"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
 
             <ImageButton
