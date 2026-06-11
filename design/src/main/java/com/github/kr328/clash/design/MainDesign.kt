@@ -436,9 +436,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         if (!visited.add(groupName)) return 0
         val currentGroup = groupMap[groupName] ?: return 0
         val selected = currentGroup.proxies.find { it.name == now } ?: return 0
-        if (!selected.type.group) return selected.delay
+        if (!selected.isGroup) return selected.delay
         val nestedGroup = groupMap[selected.name] ?: return selected.delay
-        if (nestedGroup.type == com.github.kr328.clash.core.model.Proxy.Type.LoadBalance) {
+        if (nestedGroup.type == "LoadBalance") {
             return nestedGroup.proxies.filter { it.delay in 1..65534 }
                 .minOfOrNull { it.delay } ?: 0
         }
@@ -456,7 +456,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
         val selectedDisplayName = selected.title.ifEmpty { selected.name }
 
-        if (!selected.type.group) {
+        if (!selected.isGroup) {
             return selectedDisplayName to selected.delay
         }
 
@@ -531,8 +531,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         proxyDelayUpdaters.clear()
         lastOpenedGroupNow = group.now
 
-        val isSelectorGroup = group.type == com.github.kr328.clash.core.model.Proxy.Type.Selector
-        val isSmartGroup = group.type == com.github.kr328.clash.core.model.Proxy.Type.Smart
+        val isSelectorGroup = group.type == "Selector"
+        val isSmartGroup = group.type == "Smart"
 
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -604,10 +604,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             fun buildProxyRow(proxy: com.github.kr328.clash.core.model.Proxy): View {
                 val isSelected = proxy.name == group.now
                 val proxyDisplayName = proxy.title.ifEmpty { proxy.name }
-                val proxyDelay = if (proxy.type.group) {
+                val proxyDelay = if (proxy.isGroup) {
                     val nestedGroup = groupMap[proxy.name]
                     if (nestedGroup != null) {
-                        if (proxy.type == com.github.kr328.clash.core.model.Proxy.Type.LoadBalance) {
+                        if (proxy.type == "LoadBalance") {
                             nestedGroup.proxies.filter { it.delay in 1..65534 }
                                 .minOfOrNull { it.delay } ?: 0
                         } else {
@@ -621,7 +621,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
 
                 val nestedSmartGroup62 =
-                    if (!isSmartGroup && proxy.type == com.github.kr328.clash.core.model.Proxy.Type.Smart)
+                    if (!isSmartGroup && proxy.type == "Smart")
                         groupMap[proxy.name] else null
                 val hasSmartData62 = nestedSmartGroup62?.proxies?.any { it.rank.isNotEmpty() && it.weight > 0.0 } == true
 
@@ -730,7 +730,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
 
                 val subtitleView = TextView(context).apply {
-                    text = proxy.subtitle.ifEmpty { proxy.type.name }
+                    text = proxy.subtitle.ifEmpty { proxy.type }
                     textSize = 12f
                     setTextColor(if (isSelected) onSecondaryContainerColor else onSurfaceVariantColor)
                     alpha = if (isSelected) 0.85f else 1f
@@ -805,10 +805,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     val updatedProxy = latestProxyGroups[groupName]?.proxies?.find { p -> p.name == proxy.name }
                     val newDelay: Int = when {
                         updatedProxy == null -> 0
-                        updatedProxy.type.group -> {
+                        updatedProxy.isGroup -> {
                             val nested = latestProxyGroups[updatedProxy.name]
                             if (nested != null) {
-                                if (updatedProxy.type == com.github.kr328.clash.core.model.Proxy.Type.LoadBalance)
+                                if (updatedProxy.type == "LoadBalance")
                                     nested.proxies.filter { it.delay in 1..65534 }.minOfOrNull { it.delay } ?: 0
                                 else
                                     resolveDelay(latestProxyGroups, updatedProxy.name, nested.now)

@@ -33,6 +33,7 @@ type Proxy struct {
 	Title    string  `json:"title"`
 	Subtitle string  `json:"subtitle"`
 	Type     string  `json:"type"`
+	IsGroup  bool    `json:"isGroup"`
 	Delay    int     `json:"delay"`
 	Weight   float64 `json:"weight"` // smart group weight; 0 if not applicable
 	Rank     string  `json:"rank"`   // smart group rank: MostUsed / OccasionalUsed / RarelyUsed
@@ -395,11 +396,14 @@ func convertProxies(proxies []C.Proxy, uiSubtitlePattern *regexp2.Regexp) []*Pro
 			}
 		}
 
+		_, isGroup := p.Adapter().(outboundgroup.ProxyGroup)
+
 		result = append(result, &Proxy{
 			Name:     name,
 			Title:    strings.TrimSpace(title),
 			Subtitle: strings.TrimSpace(subtitle),
 			Type:     p.Type().String(),
+			IsGroup:  isGroup,
 			Delay:    int(p.LastDelayForTestUrl(testURL)),
 		})
 	}
@@ -434,11 +438,14 @@ func collectProviders(providers []provider.ProxyProvider, uiSubtitlePattern *reg
 				}
 			}
 
+			_, isGroup := px.Adapter().(outboundgroup.ProxyGroup)
+
 			result = append(result, &Proxy{
 				Name:     name,
 				Title:    strings.TrimSpace(title),
 				Subtitle: strings.TrimSpace(subtitle),
 				Type:     px.Type().String(),
+				IsGroup:  isGroup,
 				Delay:    int(px.LastDelayForTestUrl(testURL)),
 			})
 		}
