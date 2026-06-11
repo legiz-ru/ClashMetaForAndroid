@@ -39,6 +39,7 @@ data class Profile(
     val globalModeMp: Boolean = false,
     val connsViewMp: Boolean = false,
     val rpMp: Boolean = false,
+    val simpleMode: Boolean = false,
     val ageSecretKey: String = "",
 ) : Parcelable {
     enum class Type {

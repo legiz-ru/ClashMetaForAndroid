@@ -68,6 +68,9 @@
         <variable
             name="profileRpMp"
             type="boolean" />
+        <variable
+            name="profileSimpleMode"
+            type="boolean" />
 
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
@@ -543,6 +546,23 @@
                 app:labelVisibilityMode="labeled" />
 
         </LinearLayout>
+
+        <!-- ========== LATENCY TEST FAB (simple mode, anchored left of disconnect fab) ========== -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/latency_test_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="72dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="@string/delay_test"
+            android:focusable="true"
+            android:visibility="@{clashRunning &amp;&amp; profileSimpleMode ? View.VISIBLE : View.GONE}"
+            app:layout_anchor="@id/disconnect_fab"
+            app:layout_anchorGravity="start|center_vertical"
+            app:srcCompat="@drawable/ic_baseline_speed"
+            app:tint="?attr/colorOnPrimaryContainer"
+            app:backgroundTint="?attr/colorPrimaryContainer" />
 
         <!-- ========== DISCONNECT FAB (connected state, above bottom nav, right-aligned) ========== -->
         <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton

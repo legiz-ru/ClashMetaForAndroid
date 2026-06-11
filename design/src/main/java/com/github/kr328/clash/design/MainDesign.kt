@@ -78,6 +78,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         UrlTest,
         OpenConnections,
         OpenModeSelector,
+        UrlTestSimpleMode,
     }
 
     private val binding = DesignMainBinding
@@ -107,11 +108,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     } else null
 
     private val rootView: View = if (useDrawerNav) {
-        // Drawer layout: hide bottom nav and FAB — drawer provides navigation and toggle
+        // Drawer layout: hide bottom nav and FABs — drawer provides navigation and toggle
         binding.bottomNav.visibility = View.GONE
         binding.disconnectFab.visibility = View.GONE
+        binding.latencyTestFab.visibility = View.GONE
         tvDrawer!!.wrapContent(binding.root)
     } else {
+        // Phone: wire latency test FAB click
+        binding.latencyTestFab.setOnClickListener { requests.trySend(Request.UrlTestSimpleMode) }
         binding.root
     }
 
@@ -138,6 +142,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     var pendingUpdateTag: String? = null
     var pendingUpdateUrl: String? = null
 
+    private var profileSimpleMode: Boolean = false
     private var latestProxyGroups: Map<String, ProxyGroup> = emptyMap()
     private var latestUseDots: Boolean = true
     private var openedProxyGroupName: String? = null
@@ -203,6 +208,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
             binding.clashRunning = running
             tvDrawer?.isClashRunning = running
+            if (useDrawerNav) {
+                binding.disconnectFab.visibility = View.GONE
+                binding.latencyTestFab.visibility = View.GONE
+            }
         }
     }
 
@@ -260,6 +269,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileGlobalModeMp = profile.globalModeMp
                 binding.profileConnsViewMp = profile.connsViewMp
                 binding.profileRpMp = profile.rpMp
+                binding.profileSimpleMode = profile.simpleMode
+                profileSimpleMode = profile.simpleMode
+                tvDrawer?.isSimpleMode = profile.simpleMode
 
                 // Wire click listeners for shortcut icons
                 binding.btnModeSelector?.setOnClickListener { requests.trySend(Request.OpenModeSelector) }
@@ -311,6 +323,9 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 binding.profileGlobalModeMp = false
                 binding.profileConnsViewMp = false
                 binding.profileRpMp = false
+                binding.profileSimpleMode = false
+                profileSimpleMode = false
+                tvDrawer?.isSimpleMode = false
                 // Reset logo and title to defaults
                 binding.appLogo.setImageResource(R.drawable.ic_clash)
                 binding.appLogo.imageTintList = null
@@ -425,6 +440,112 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
             }
         }
+    }
+
+    suspend fun setLatencyTestRunning(running: Boolean) {
+        withContext(Dispatchers.Main) {
+            binding.latencyTestFab.isEnabled = !running
+            binding.latencyTestFab.alpha = if (running) 0.5f else 1f
+            tvDrawer?.isLatencyTesting = running
+        }
+    }
+
+    private fun renderSimpleModeGroup(
+        pair: Pair<String, ProxyGroup>,
+        container: LinearLayout,
+    ) {
+        val (_, group) = pair
+        val dp = context.resources.displayMetrics.density
+        val isDarkTheme =
+            (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val surfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurfaceVariant)
+        val surfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorSurface)
+        val onSurfaceColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurface)
+        val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
+        val isSelector = group.type == "Selector"
+
+        val card = MaterialCardView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = (8 * dp).toInt() }
+            radius = 16 * dp
+            cardElevation = if (isDarkTheme) 0f else 2 * dp
+            setCardBackgroundColor(if (isDarkTheme) surfaceVariantColor else surfaceColor)
+            isFocusable = false
+            isClickable = false
+        }
+
+        val innerLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        group.proxies.forEachIndexed { index, proxy ->
+            val isSelected = proxy.name == group.now
+
+            if (index > 0) {
+                innerLayout.addView(View(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        (1 * dp).toInt(),
+                    ).apply {
+                        marginStart = (16 * dp).toInt()
+                        marginEnd = (16 * dp).toInt()
+                    }
+                    setBackgroundColor(onSurfaceVariantColor and 0x00FFFFFF or 0x1A000000)
+                })
+            }
+
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
+                isClickable = isSelector
+                isFocusable = isSelector
+                if (isSelector) {
+                    background = context.getDrawable(R.drawable.bg_proxy_group_card_ripple)
+                    setOnClickListener {
+                        pendingSelectGroup = pair.first
+                        pendingSelectName = proxy.name
+                        requests.trySend(Request.SelectProxy)
+                    }
+                }
+            }
+
+            // Node name
+            val nameView = TextView(context).apply {
+                text = proxy.title.ifEmpty { proxy.name }
+                setTextColor(if (isSelected) primaryColor else onSurfaceColor)
+                textSize = 14f
+                if (isSelected) setTypeface(typeface, android.graphics.Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            row.addView(nameView)
+
+            // Delay badge
+            val delay = proxy.delay
+            val delayView = createDelayText(dp, delay, latestUseDots)
+            row.addView(delayView)
+
+            // Checkmark for selected proxy
+            if (isSelected) {
+                row.addView(ImageView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
+                        marginStart = (8 * dp).toInt()
+                    }
+                    setImageResource(R.drawable.ic_baseline_check)
+                    imageTintList = ColorStateList.valueOf(primaryColor)
+                })
+            }
+
+            innerLayout.addView(row)
+        }
+
+        card.addView(innerLayout)
+        container.addView(card)
     }
 
     private fun resolveDelay(
@@ -1026,6 +1147,17 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
 
             val visibleGroups = groups.filter { !it.second.hidden }
             val groupMap = visibleGroups.toMap()
+
+            // Simple mode: show nodes of the first group inline, skip group cards
+            if (profileSimpleMode && visibleGroups.isNotEmpty()) {
+                latestProxyGroups = groupMap
+                latestUseDots = useDots
+                groupInfoViews.clear()
+                container.removeAllViews()
+                container.gravity = Gravity.TOP
+                renderSimpleModeGroup(visibleGroups.first(), container)
+                return@withContext
+            }
 
             // In-place update: if the set and order of groups is unchanged, only update
             // the subtitle text (selected proxy name + delay) without rebuilding any views.

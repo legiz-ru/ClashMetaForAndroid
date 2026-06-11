@@ -189,6 +189,23 @@ class MainActivity : BaseActivity<MainDesign>() {
                                 design.fetchProxyGroups()
                             }
                         }
+                        MainDesign.Request.UrlTestSimpleMode -> {
+                            val firstName = withClash {
+                                queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
+                                    .firstOrNull()
+                            }
+                            if (firstName != null) {
+                                launch {
+                                    design.setLatencyTestRunning(true)
+                                    try {
+                                        withClash { healthCheck(firstName) }
+                                    } finally {
+                                        design.setLatencyTestRunning(false)
+                                    }
+                                    design.fetchProxyGroups()
+                                }
+                            }
+                        }
                         MainDesign.Request.OpenConnections ->
                             startActivity(ConnectionsActivity::class.intent)
                         MainDesign.Request.OpenModeSelector -> {
