@@ -66,6 +66,15 @@ class TvNavigationDrawer(
      */
     var dialogFocusTarget: (() -> View?)? = null
 
+    fun withSuppressedFocusRedirect(block: () -> Unit) {
+        isRedirectingFocus = true
+        try {
+            block()
+        } finally {
+            isRedirectingFocus = false
+        }
+    }
+
     fun wrapContent(contentView: View): View {
         this.contentView = contentView
         val dp = context.resources.displayMetrics.density

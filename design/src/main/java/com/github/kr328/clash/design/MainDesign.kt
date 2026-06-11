@@ -9,6 +9,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
@@ -471,10 +472,19 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val onSurfaceVariantColor = context.resolveThemedColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
         val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         val isSelector = group.type == "Selector"
-
-        // While the freshly-started profile hasn't produced any latency result yet,
-        // show a loading spinner per node instead of an empty/zero delay badge.
         val awaitingDelays = group.proxies.none { it.delay > 0 }
+
+        // Save which proxy row has D-pad focus so we can restore it after the view rebuild.
+        // Row views are tagged with the proxy name string.
+        val focusedProxyName: String? = run {
+            var v: View? = container.findFocus() ?: return@run null
+            while (v != null) {
+                val t = v.tag
+                if (t is String) return@run t
+                v = v.parent as? View
+            }
+            null
+        }
 
         val card = MaterialCardView(context).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -492,6 +502,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             orientation = LinearLayout.VERTICAL
         }
 
+        var focusTargetView: View? = null
+
         group.proxies.forEachIndexed { index, proxy ->
             val isSelected = proxy.name == group.now
 
@@ -508,14 +520,38 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 })
             }
 
+            // All rows are focusable for D-pad navigation.
+            // The focus ring is drawn via a StateListDrawable; click only fires for Selector groups.
+            val rowBg = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 8 * dp
+                    setColor(0x00000000)
+                    setStroke((2 * dp).toInt(), primaryColor)
+                })
+                if (isSelector) {
+                    addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 8 * dp
+                        setColor(primaryColor and 0x00FFFFFF or 0x1A000000)
+                    })
+                }
+                addState(intArrayOf(), GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 8 * dp
+                    setColor(0x00000000)
+                })
+            }
+
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
+                isFocusable = true
                 isClickable = isSelector
-                isFocusable = isSelector
+                tag = proxy.name
+                background = rowBg
                 if (isSelector) {
-                    background = context.getDrawable(R.drawable.bg_proxy_group_card_ripple)
                     setOnClickListener {
                         pendingSelectGroup = pair.first
                         pendingSelectName = proxy.name
@@ -523,6 +559,8 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                     }
                 }
             }
+
+            if (proxy.name == focusedProxyName) focusTargetView = row
 
             // Node name
             val nameView = TextView(context).apply {
@@ -536,7 +574,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
             row.addView(nameView)
 
-            // Checkmark for selected proxy (placed to the left of the delay badge)
+            // Checkmark for selected proxy (left of delay badge)
             if (isSelected) {
                 row.addView(ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
@@ -559,7 +597,22 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
 
         card.addView(innerLayout)
-        container.addView(card)
+
+        // Swap the container contents. Suppress the drawer's focus-redirect logic during the swap
+        // so that removeAllViews() detaching the focused view doesn't cause focus to jump elsewhere.
+        val doSwap = {
+            container.removeAllViews()
+            container.gravity = Gravity.TOP
+            container.addView(card)
+        }
+        if (tvDrawer != null) {
+            tvDrawer.withSuppressedFocusRedirect(doSwap)
+        } else {
+            doSwap()
+        }
+
+        // Restore D-pad focus to the previously focused row
+        focusTargetView?.requestFocus()
     }
 
     private fun resolveDelay(
@@ -1167,8 +1220,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 latestProxyGroups = groupMap
                 latestUseDots = useDots
                 groupInfoViews.clear()
-                container.removeAllViews()
-                container.gravity = Gravity.TOP
                 renderSimpleModeGroup(visibleGroups.first(), container)
                 return@withContext
             }
