@@ -32,6 +32,11 @@ class TvNavigationDrawer(
             updateToggleButton()
             updateLatencyTestButton()
         }
+    var hasProfiles: Boolean = true
+        set(value) {
+            field = value
+            updateToggleButton()
+        }
     var isSimpleMode: Boolean = false
         set(value) {
             field = value
@@ -396,6 +401,8 @@ class TvNavigationDrawer(
     }
 
     private fun updateToggleButton() {
+        // Hide the Start/Stop control until at least one profile exists.
+        toggleButton?.visibility = if (hasProfiles) View.VISIBLE else View.GONE
         toggleText?.text = if (isClashRunning) {
             context.getString(R.string.stop)
         } else {

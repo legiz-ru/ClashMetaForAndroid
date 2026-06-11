@@ -43,7 +43,6 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.databinding.OnRebindCallback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -108,13 +107,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
     } else null
 
     private val rootView: View = if (useDrawerNav) {
-        // Drawer layout: hide bottom nav and FABs — drawer provides navigation and toggle
+        // Drawer layout: hide bottom nav and FABs — drawer provides navigation and toggle.
+        // The FAB visibility bindings also guard on useDrawerNav so they never re-appear.
+        binding.useDrawerNav = true
         binding.bottomNav.visibility = View.GONE
-        binding.disconnectFab.visibility = View.GONE
-        binding.latencyTestFab.visibility = View.GONE
         tvDrawer!!.wrapContent(binding.root)
     } else {
         // Phone: wire latency test FAB click
+        binding.useDrawerNav = false
         binding.latencyTestFab.setOnClickListener { requests.trySend(Request.UrlTestSimpleMode) }
         binding.root
     }
@@ -208,10 +208,6 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
             binding.clashRunning = running
             tvDrawer?.isClashRunning = running
-            if (useDrawerNav) {
-                binding.disconnectFab.visibility = View.GONE
-                binding.latencyTestFab.visibility = View.GONE
-            }
         }
     }
 
@@ -219,6 +215,7 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         withContext(Dispatchers.Main) {
             binding.hasProfiles = has
             binding.isLoading = false
+            tvDrawer?.hasProfiles = has
         }
     }
 
@@ -393,6 +390,16 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         }
     }
 
+    /** Small indeterminate spinner shown in place of a delay badge while a test is pending. */
+    private fun createDelaySpinner(dp: Float): View {
+        return android.widget.ProgressBar(context).apply {
+            isIndeterminate = true
+            layoutParams = LinearLayout.LayoutParams((16 * dp).toInt(), (16 * dp).toInt()).apply {
+                marginStart = (4 * dp).toInt()
+            }
+        }
+    }
+
     private fun createDelayText(dp: Float, delay: Int, useDots: Boolean): View {
         if (useDots) return createDelayDot(dp, delay)
         return TextView(context).apply {
@@ -465,6 +472,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         val primaryColor = context.resolveThemedColor(com.google.android.material.R.attr.colorPrimary)
         val isSelector = group.type == "Selector"
 
+        // While the freshly-started profile hasn't produced any latency result yet,
+        // show a loading spinner per node instead of an empty/zero delay badge.
+        val awaitingDelays = group.proxies.none { it.delay > 0 }
+
         val card = MaterialCardView(context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -525,20 +536,23 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             }
             row.addView(nameView)
 
-            // Delay badge
-            val delay = proxy.delay
-            val delayView = createDelayText(dp, delay, latestUseDots)
-            row.addView(delayView)
-
-            // Checkmark for selected proxy
+            // Checkmark for selected proxy (placed to the left of the delay badge)
             if (isSelected) {
                 row.addView(ImageView(context).apply {
                     layoutParams = LinearLayout.LayoutParams((20 * dp).toInt(), (20 * dp).toInt()).apply {
                         marginStart = (8 * dp).toInt()
+                        marginEnd = (8 * dp).toInt()
                     }
                     setImageResource(R.drawable.ic_baseline_check)
                     imageTintList = ColorStateList.valueOf(primaryColor)
                 })
+            }
+
+            // Delay badge, or a loading spinner while results are pending
+            if (awaitingDelays) {
+                row.addView(createDelaySpinner(dp))
+            } else {
+                row.addView(createDelayText(dp, proxy.delay, latestUseDots))
             }
 
             innerLayout.addView(row)
@@ -1513,16 +1527,10 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
         binding.hasTrafficInfo = false
         binding.hasExpireInfo = false
 
-        // Drawer layout (TV or tablet/foldable landscape): D-pad focus + hide FAB on rebind
+        // Drawer layout (TV or tablet/foldable landscape): D-pad focus.
+        // FAB visibility is guarded by the useDrawerNav binding flag, so no rebind hook is needed.
         if (useDrawerNav) {
             (binding.profileCard as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-
-            // Prevent data binding from re-showing the FAB after rebind
-            binding.addOnRebindCallback(object : OnRebindCallback<DesignMainBinding>() {
-                override fun onBound(binding: DesignMainBinding?) {
-                    binding?.disconnectFab?.visibility = View.GONE
-                }
-            })
         }
 
         if (!useDrawerNav) {
@@ -1537,14 +1545,14 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
                 }
             }
 
-            // Position disconnect FAB above bottom nav dynamically after layout
+            // Position the FAB row above bottom nav dynamically after layout
             binding.bottomNav.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
                     binding.bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
                     val dp = context.resources.displayMetrics.density
-                    val params = binding.disconnectFab.layoutParams as CoordinatorLayout.LayoutParams
+                    val params = binding.fabRow.layoutParams as CoordinatorLayout.LayoutParams
                     params.bottomMargin = binding.bottomNav.height + (12 * dp).toInt()
-                    binding.disconnectFab.layoutParams = params
+                    binding.fabRow.layoutParams = params
                 }
             })
         }

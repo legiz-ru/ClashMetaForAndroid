@@ -71,6 +71,9 @@
         <variable
             name="profileSimpleMode"
             type="boolean" />
+        <variable
+            name="useDrawerNav"
+            type="boolean" />
 
         <import type="android.view.View" />
         <import type="android.text.TextUtils" />
@@ -547,35 +550,42 @@
 
         </LinearLayout>
 
-        <!-- ========== LATENCY TEST FAB (simple mode, anchored left of disconnect fab) ========== -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/latency_test_fab"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginBottom="72dp"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="@string/delay_test"
-            android:focusable="true"
-            android:visibility="@{clashRunning &amp;&amp; profileSimpleMode ? View.VISIBLE : View.GONE}"
-            app:layout_anchor="@id/disconnect_fab"
-            app:layout_anchorGravity="start|center_vertical"
-            app:srcCompat="@drawable/ic_baseline_speed"
-            app:tint="?attr/colorOnPrimaryContainer"
-            app:backgroundTint="?attr/colorPrimaryContainer" />
-
-        <!-- ========== DISCONNECT FAB (connected state, above bottom nav, right-aligned) ========== -->
-        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-            android:id="@+id/disconnect_fab"
+        <!-- ========== FAB ROW (latency test + disconnect, above bottom nav, right-aligned) ========== -->
+        <LinearLayout
+            android:id="@+id/fab_row"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="72dp"
-            android:onClick="@{() -> self.request(Request.ToggleStatus)}"
-            android:text="@string/disconnect"
-            android:visibility="@{clashRunning ? View.VISIBLE : View.GONE}"
-            app:icon="@drawable/ic_mdi_power" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Latency test FAB (simple mode only) -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/latency_test_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="@string/delay_test"
+                android:focusable="true"
+                android:visibility="@{!useDrawerNav &amp;&amp; clashRunning &amp;&amp; profileSimpleMode ? View.VISIBLE : View.GONE}"
+                app:fabSize="mini"
+                app:srcCompat="@drawable/ic_baseline_speed"
+                app:tint="?attr/colorOnPrimaryContainer"
+                app:backgroundTint="?attr/colorPrimaryContainer" />
+
+            <!-- Disconnect FAB -->
+            <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+                android:id="@+id/disconnect_fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="@{() -> self.request(Request.ToggleStatus)}"
+                android:text="@string/disconnect"
+                android:visibility="@{!useDrawerNav &amp;&amp; clashRunning ? View.VISIBLE : View.GONE}"
+                app:icon="@drawable/ic_mdi_power" />
+
+        </LinearLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
