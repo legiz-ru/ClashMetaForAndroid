@@ -1213,7 +1213,11 @@ class MainDesign(context: Context) : Design<MainDesign.Request>(context) {
             val container = binding.proxyGroupsContainer
 
             val visibleGroups = groups.filter { !it.second.hidden }
-            val groupMap = visibleGroups.toMap()
+            // Build the lookup map from ALL groups, including hidden ones. Hidden
+            // smart subgroups (referenced inside visible groups) are never rendered
+            // as cards, but their per-proxy weight/rank data must be reachable so the
+            // weight shield on a nested row can be drawn and its dialog populated.
+            val groupMap = groups.toMap()
 
             // Simple mode: show nodes of the first group inline, skip group cards
             if (profileSimpleMode && visibleGroups.isNotEmpty()) {

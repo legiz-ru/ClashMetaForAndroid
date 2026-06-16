@@ -271,10 +271,29 @@ class MainActivity : BaseActivity<MainDesign>() {
             }
             withClash {
                 val names = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
-                val groups = names.map { name ->
+                val visibleGroups = names.map { name ->
                     name to queryProxyGroup(name, uiStore.proxySort)
                 }.filter { !it.second.hidden }
-                setProxyGroups(groups, effectiveDots)
+
+                // Smart subgroups referenced inside visible groups may themselves be
+                // hidden (or excluded as not-selectable), so they don't appear in
+                // `names`. Their per-proxy weight data is needed to render the weight
+                // shield on the nested row. Query them explicitly so the data is
+                // available — they are NOT added as visible cards, only as a data
+                // source for setProxyGroups' lookup map.
+                val knownNames = visibleGroups.map { it.first }.toHashSet()
+                val nestedSmartNames = visibleGroups
+                    .flatMap { it.second.proxies }
+                    .filter { it.type == "Smart" && it.name !in knownNames }
+                    .map { it.name }
+                    .distinct()
+                val nestedSmartGroups = nestedSmartNames.map { name ->
+                    // Force hidden = true so these never render as standalone cards;
+                    // they only feed the weight-lookup map in setProxyGroups.
+                    name to queryProxyGroup(name, uiStore.proxySort).copy(hidden = true)
+                }
+
+                setProxyGroups(visibleGroups + nestedSmartGroups, effectiveDots)
             }
         } catch (_: Exception) {
             // Proxy groups may not be available yet
