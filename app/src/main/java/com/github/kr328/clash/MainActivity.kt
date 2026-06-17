@@ -287,6 +287,9 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
                                 o.mode = newMode
                                 patchOverride(Clash.OverrideSlot.Session, o)
                             }
+                            // Reflect the new mode immediately (prizrak parity:
+                            // the proxy view depends on the active routing mode).
+                            fetchProxyGroups()
                         }
                     }
                 }

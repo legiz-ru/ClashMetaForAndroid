@@ -107,6 +107,11 @@ private fun SettingsList(
         SettingsItem(R.drawable.ic_baseline_settings, stringResource(R.string.app)) {
             onOpen(SettingsDestination.App)
         }
+        SettingsItem(R.drawable.ic_baseline_info, stringResource(R.string.about)) {
+            onOpen(SettingsDestination.About)
+        }
+
+        SettingsCategory(stringResource(R.string.settings_core))
         SettingsItem(R.drawable.ic_baseline_dns, stringResource(R.string.network)) {
             onOpen(SettingsDestination.Network)
         }
@@ -115,6 +120,9 @@ private fun SettingsList(
         }
         SettingsItem(R.drawable.ic_baseline_meta, stringResource(R.string.meta_features)) {
             onOpen(SettingsDestination.MetaFeature)
+        }
+        SettingsItem(R.drawable.ic_baseline_assignment, stringResource(R.string.logs)) {
+            onOpen(SettingsDestination.Logs)
         }
 
         // Only available while a profile is running.
@@ -134,14 +142,6 @@ private fun SettingsList(
                     onOpen(SettingsDestination.Connections)
                 }
             }
-        }
-
-        SettingsCategory(stringResource(R.string.logs))
-        SettingsItem(R.drawable.ic_baseline_assignment, stringResource(R.string.logs)) {
-            onOpen(SettingsDestination.Logs)
-        }
-        SettingsItem(R.drawable.ic_baseline_info, stringResource(R.string.about)) {
-            onOpen(SettingsDestination.About)
         }
     }
 }

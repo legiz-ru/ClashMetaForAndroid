@@ -17,6 +17,7 @@
     <string name="logs">Логи</string>
     <string name="settings">Настройки</string>
     <string name="settings_general">Общие</string>
+    <string name="settings_core">Ядро</string>
     <string name="settings_active_profile">Активный профиль</string>
     <string name="proxy_group_auto_no_select">Данная группа является автоматической, в ней запрещён ручной выбор</string>
     <string name="profile_delete_confirm">Удалить профиль «%s»?</string>
