@@ -1,14 +1,17 @@
 package com.github.kr328.clash
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
-import com.google.android.material.card.MaterialCardView
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
-import com.github.kr328.clash.design.Design
+import com.github.kr328.clash.design.compose.screen.TvImportScreen
+import com.github.kr328.clash.design.compose.theme.ClashTheme
+import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
+import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.tv.TvImportServer
 import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.withProfile
@@ -17,6 +20,7 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.Inet4Address
@@ -26,21 +30,32 @@ import java.net.NetworkInterface
  * Displays a QR code pointing at the local TvImportServer so the user can
  * import a profile from a phone or browser over Wi-Fi – no keyboard needed.
  */
-class TvImportActivity : BaseActivity<TvImportActivity.EmptyDesign>() {
-
-    /** Placeholder design – we manage the view directly via setContentView. */
-    class EmptyDesign(context: android.content.Context) : Design<Nothing>(context) {
-        override val root: View = View(context)
-    }
+class TvImportActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
+    private val qrFlow = MutableStateFlow<Bitmap?>(null)
+    private val ipFlow = MutableStateFlow("")
+    private val portFlow = MutableStateFlow("")
+    private val urlFlow = MutableStateFlow("")
+    private val statusFlow = MutableStateFlow<String?>(null)
 
     private var server: TvImportServer? = null
 
     override suspend fun main() {
-        // Set content view on the main thread
-        withContext(Dispatchers.Main) {
-            setContentView(com.github.kr328.clash.design.R.layout.activity_tv_import)
-            findViewById<View>(com.github.kr328.clash.design.R.id.cancel_button)
-                .setOnClickListener { finish() }
+        setContent {
+            ClashTheme(variant = currentThemeVariant()) {
+                val qr by qrFlow.collectAsStateWithLifecycle()
+                val ip by ipFlow.collectAsStateWithLifecycle()
+                val port by portFlow.collectAsStateWithLifecycle()
+                val url by urlFlow.collectAsStateWithLifecycle()
+                val status by statusFlow.collectAsStateWithLifecycle()
+                TvImportScreen(
+                    qr = qr,
+                    ip = ip,
+                    port = port,
+                    url = url,
+                    status = status,
+                    onCancel = { finish() },
+                )
+            }
         }
 
         setupServer()
@@ -51,19 +66,11 @@ class TvImportActivity : BaseActivity<TvImportActivity.EmptyDesign>() {
         super.onDestroy()
     }
 
-    // ── Setup ──────────────────────────────────────────────────────────────
-
     private suspend fun setupServer() {
         val localIp = withContext(Dispatchers.IO) { getLocalIpAddress() }
 
         if (localIp == null) {
-            withContext(Dispatchers.Main) {
-                statusText().apply {
-                    text = getString(com.github.kr328.clash.design.R.string.tv_import_no_wifi)
-                    visibility = View.VISIBLE
-                }
-                instructionText().visibility = View.GONE
-            }
+            statusFlow.value = getString(com.github.kr328.clash.design.R.string.tv_import_no_wifi)
             return
         }
 
@@ -79,33 +86,21 @@ class TvImportActivity : BaseActivity<TvImportActivity.EmptyDesign>() {
         val url = "http://$localIp:$port/Prizrak-BoxTVimport"
         val qrBitmap = withContext(Dispatchers.Default) { generateQrCode(url, 512) }
 
-        withContext(Dispatchers.Main) {
-            qrImage().setImageBitmap(qrBitmap)
-            ipValueText().text = localIp
-            portValueText().text = port.toString()
-            ipPortCard().visibility = View.VISIBLE
-            urlText().text = url
-            instructionText().text =
-                getString(com.github.kr328.clash.design.R.string.tv_import_instruction)
-        }
+        ipFlow.value = localIp
+        portFlow.value = port.toString()
+        urlFlow.value = url
+        qrFlow.value = qrBitmap
 
         // Wait for profile data – suspends until the server receives something
         val importData = tvServer.imports.receive()
         tvServer.stop()
 
-        withContext(Dispatchers.Main) {
-            statusText().apply {
-                text = getString(com.github.kr328.clash.design.R.string.tv_import_received)
-                visibility = View.VISIBLE
-            }
-        }
+        statusFlow.value = getString(com.github.kr328.clash.design.R.string.tv_import_received)
 
         delay(1500)
         processImport(importData)
         finish()
     }
-
-    // ── Import routing ─────────────────────────────────────────────────────
 
     private suspend fun processImport(data: TvImportServer.ImportData) {
         when (data.type) {
@@ -137,8 +132,6 @@ class TvImportActivity : BaseActivity<TvImportActivity.EmptyDesign>() {
         }
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────
-
     private fun getLocalIpAddress(): String? =
         NetworkInterface.getNetworkInterfaces()
             ?.asSequence()
@@ -160,11 +153,18 @@ class TvImportActivity : BaseActivity<TvImportActivity.EmptyDesign>() {
         return bmp
     }
 
-    private fun qrImage() = findViewById<ImageView>(com.github.kr328.clash.design.R.id.qr_image)
-    private fun urlText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.url_text)
-    private fun statusText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.status_text)
-    private fun instructionText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.instruction_text)
-    private fun ipPortCard() = findViewById<MaterialCardView>(com.github.kr328.clash.design.R.id.ip_port_card)
-    private fun ipValueText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.ip_value_text)
-    private fun portValueText() = findViewById<TextView>(com.github.kr328.clash.design.R.id.port_value_text)
+    private fun currentThemeVariant(): ClashThemeVariant {
+        val cfg = resources.configuration
+        return when (uiStore.darkMode) {
+            DarkMode.Auto ->
+                if (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+                    ClashThemeVariant.Dark
+                } else {
+                    ClashThemeVariant.Light
+                }
+            DarkMode.ForceLight -> ClashThemeVariant.Light
+            DarkMode.ForceDark -> ClashThemeVariant.Dark
+            DarkMode.AlwaysSummer -> ClashThemeVariant.Summer
+        }
+    }
 }
