@@ -48,10 +48,10 @@ fun SettingsCategory(
 fun SettingsItem(
     @DrawableRes icon: Int,
     title: String,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     showChevron: Boolean = true,
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = modifier
