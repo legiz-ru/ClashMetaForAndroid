@@ -87,7 +87,7 @@ fun selectedProxyName(groupMap: Map<String, ProxyGroup>, groupName: String, now:
     return selected.title.ifEmpty { selected.name }
 }
 
-private fun rowDelay(groupMap: Map<String, ProxyGroup>, proxy: Proxy): Int {
+internal fun rowDelay(groupMap: Map<String, ProxyGroup>, proxy: Proxy): Int {
     if (!proxy.isGroup) return proxy.delay
     val nested = groupMap[proxy.name] ?: return proxy.delay
     return if (proxy.type == "LoadBalance") {
@@ -368,7 +368,7 @@ private fun SortOption(
 }
 
 @Composable
-private fun ProxyRow(
+internal fun ProxyRow(
     proxy: Proxy,
     selected: Boolean,
     delay: Int,
