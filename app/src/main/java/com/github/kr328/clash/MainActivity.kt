@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import java.util.concurrent.TimeUnit
 
-class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
+class MainActivity : BaseActivity() {
     private val isLoadingFlow = MutableStateFlow(true)
     private val runningFlow = MutableStateFlow(false)
     private val hasProfilesFlow = MutableStateFlow(false)

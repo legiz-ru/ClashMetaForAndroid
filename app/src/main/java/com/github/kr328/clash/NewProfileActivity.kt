@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 
-class NewProfileActivity : BaseActivity<NewProfileDesign>() {
+class NewProfileActivity : BaseActivity() {
     private val self: NewProfileActivity
         get() = this
 

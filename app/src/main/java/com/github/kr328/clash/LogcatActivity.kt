@@ -42,7 +42,7 @@ import java.io.OutputStreamWriter
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-class LogcatActivity : BaseActivity<LogcatDesign>() {
+class LogcatActivity : BaseActivity() {
     private var conn: ServiceConnection? = null
     private val messagesFlow = MutableStateFlow<List<LogMessage>>(emptyList())
 

@@ -30,7 +30,7 @@ import java.net.NetworkInterface
  * Displays a QR code pointing at the local TvImportServer so the user can
  * import a profile from a phone or browser over Wi-Fi – no keyboard needed.
  */
-class TvImportActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
+class TvImportActivity : BaseActivity() {
     private val qrFlow = MutableStateFlow<Bitmap?>(null)
     private val ipFlow = MutableStateFlow("")
     private val portFlow = MutableStateFlow("")

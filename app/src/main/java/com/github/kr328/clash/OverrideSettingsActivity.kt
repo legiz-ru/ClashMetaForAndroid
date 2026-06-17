@@ -17,7 +17,7 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
-class OverrideSettingsActivity : BaseActivity<OverrideSettingsDesign>() {
+class OverrideSettingsActivity : BaseActivity() {
     private val resetRequests = Channel<Unit>(Channel.CONFLATED)
 
     override suspend fun main() {

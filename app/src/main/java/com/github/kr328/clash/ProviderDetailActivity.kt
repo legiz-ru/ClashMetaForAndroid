@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class ProviderDetailActivity : BaseActivity<ProviderDetailDesign>() {
+class ProviderDetailActivity : BaseActivity() {
     companion object {
         const val EXTRA_PROVIDER = "provider"
     }

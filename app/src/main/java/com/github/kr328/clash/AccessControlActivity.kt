@@ -29,7 +29,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AccessControlActivity : BaseActivity<AccessControlDesign>() {
+class AccessControlActivity : BaseActivity() {
     private val appsFlow = MutableStateFlow<List<AppInfo>>(emptyList())
     private val selectedFlow = MutableStateFlow<Set<String>>(emptySet())
     private val sortFlow = MutableStateFlow(AppInfoSort.Label)

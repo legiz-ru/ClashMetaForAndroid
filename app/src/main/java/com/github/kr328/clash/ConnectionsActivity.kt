@@ -27,7 +27,7 @@ import kotlinx.serialization.json.Json
 
 private val ConnectionsJson = Json { coerceInputValues = true; ignoreUnknownKeys = true }
 
-class ConnectionsActivity : BaseActivity<ConnectionsDesign>() {
+class ConnectionsActivity : BaseActivity() {
     companion object {
         const val EXTRA_PACKAGE = "extra_package"
     }

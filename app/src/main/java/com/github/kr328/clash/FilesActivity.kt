@@ -33,7 +33,7 @@ import kotlinx.coroutines.selects.select
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class FilesActivity : BaseActivity<FilesDesign>() {
+class FilesActivity : BaseActivity() {
     private val filesFlow = MutableStateFlow<List<File>>(emptyList())
     private val inBaseFlow = MutableStateFlow(true)
     private val nowFlow = MutableStateFlow(System.currentTimeMillis())

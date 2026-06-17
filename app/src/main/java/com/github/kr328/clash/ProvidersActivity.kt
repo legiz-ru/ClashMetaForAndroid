@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import java.util.concurrent.TimeUnit
 
-class ProvidersActivity : BaseActivity<ProvidersDesign>() {
+class ProvidersActivity : BaseActivity() {
     private val providersFlow = MutableStateFlow<List<ProviderItem>>(emptyList())
     private val tickFlow = MutableStateFlow(0)
 

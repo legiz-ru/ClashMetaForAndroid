@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class SettingsActivity : BaseActivity<SettingsDesign>() {
+class SettingsActivity : BaseActivity() {
     override suspend fun main() {
         val running = MutableStateFlow(clashRunning)
 

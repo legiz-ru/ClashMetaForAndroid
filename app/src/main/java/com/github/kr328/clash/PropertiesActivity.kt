@@ -44,7 +44,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
-class PropertiesActivity : BaseActivity<PropertiesDesign>() {
+class PropertiesActivity : BaseActivity() {
     private var canceled: Boolean = false
     private lateinit var original: Profile
 

@@ -34,7 +34,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.coroutines.resume
 
-class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
+class MetaFeatureSettingsActivity : BaseActivity() {
     private val resetRequests = Channel<Unit>(Channel.CONFLATED)
 
     override suspend fun main() {

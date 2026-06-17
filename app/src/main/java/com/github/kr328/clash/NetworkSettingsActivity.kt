@@ -13,7 +13,7 @@ import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.service.store.ServiceStore
 import kotlinx.coroutines.isActive
 
-class NetworkSettingsActivity : BaseActivity<NetworkSettingsDesign>() {
+class NetworkSettingsActivity : BaseActivity() {
     override suspend fun main() {
         val srvStore = ServiceStore(this)
 

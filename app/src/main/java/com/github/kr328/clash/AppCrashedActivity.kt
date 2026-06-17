@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
-class AppCrashedActivity : BaseActivity<AppCrashedDesign>() {
+class AppCrashedActivity : BaseActivity() {
     private val logsFlow = MutableStateFlow("")
 
     override suspend fun main() {

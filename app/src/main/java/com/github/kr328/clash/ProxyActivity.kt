@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
-class ProxyActivity : BaseActivity<ProxyDesign>() {
+class ProxyActivity : BaseActivity() {
     private val groupMapFlow = MutableStateFlow<Map<String, ProxyGroup>>(emptyMap())
     private val testingFlow = MutableStateFlow<Set<String>>(emptySet())
 

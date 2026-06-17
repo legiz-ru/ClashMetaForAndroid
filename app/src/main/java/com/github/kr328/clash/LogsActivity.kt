@@ -24,7 +24,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
-class LogsActivity : BaseActivity<LogsDesign>() {
+class LogsActivity : BaseActivity() {
     private val filesFlow = MutableStateFlow<List<LogFile>>(emptyList())
     private val deleteRequests = Channel<Unit>(Channel.CONFLATED)
 

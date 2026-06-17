@@ -25,7 +25,7 @@ import kotlinx.serialization.json.Json
 
 private val ConnectionsJson = Json { coerceInputValues = true; ignoreUnknownKeys = true }
 
-class AppConnectionsActivity : BaseActivity<AppConnectionsDesign>() {
+class AppConnectionsActivity : BaseActivity() {
     companion object {
         const val EXTRA_APP_NAME = "extra_app_name"
         const val EXTRA_CLOSED_JSON = "extra_closed_json"

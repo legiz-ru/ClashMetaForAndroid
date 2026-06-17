@@ -4,7 +4,6 @@ import android.app.ActivityManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
@@ -13,13 +12,11 @@ import com.github.kr328.clash.common.compat.isLightNavigationBarCompat
 import com.github.kr328.clash.common.compat.isLightStatusBarsCompat
 import com.github.kr328.clash.common.compat.isSystemBarsTranslucentCompat
 import com.github.kr328.clash.core.bridge.ClashException
-import com.github.kr328.clash.design.Design
 import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.store.UiStore
 import com.github.kr328.clash.design.ui.DayNight
 import com.github.kr328.clash.design.util.resolveThemedBoolean
 import com.github.kr328.clash.design.util.resolveThemedColor
-import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.remote.Broadcasts
 import com.github.kr328.clash.remote.Remote
 import com.github.kr328.clash.util.ActivityResultLifecycle
@@ -32,24 +29,15 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import com.github.kr328.clash.design.R
 
-abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
+abstract class BaseActivity : AppCompatActivity(),
     CoroutineScope by MainScope(),
     Broadcasts.Observer {
-    
+
     protected val uiStore by lazy { UiStore(this) }
     protected val events = Channel<Event>(Channel.UNLIMITED)
     protected var activityStarted: Boolean = false
     protected val clashRunning: Boolean
         get() = Remote.broadcasts.clashRunning
-    protected var design: D? = null
-        set(value) {
-            field = value
-            if (value != null) {
-                setContentView(value.root)
-            } else {
-                setContentView(View(this))
-            }
-        }
 
     private var defer: suspend () -> Unit = {}
     private var deferRunning = false
@@ -73,15 +61,6 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
                 activityResultRegistry.register(requestKey, lifecycle, contracts) {
                     c.resume(it)
                 }.apply { start() }.launch(input)
-            }
-        }
-    }
-
-    suspend fun setContentDesign(design: D) {
-        suspendCoroutine<Unit> {
-            window.decorView.post {
-                this.design = design
-                it.resume(Unit)
             }
         }
     }
@@ -115,7 +94,6 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
     }
 
     override fun onDestroy() {
-        design?.cancel()
         cancel()
         super.onDestroy()
     }
@@ -182,9 +160,11 @@ abstract class BaseActivity<D : Design<*>> : AppCompatActivity(),
         events.trySend(Event.ClashStop)
 
         if (cause != null && activityStarted) {
-            launch {
-                design?.showExceptionToast(ClashException(cause))
-            }
+            android.widget.Toast.makeText(
+                this,
+                ClashException(cause).message ?: cause,
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
         }
     }
 

@@ -35,7 +35,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AppSettingsActivity : BaseActivity<AppSettingsDesign>(), Behavior {
+class AppSettingsActivity : BaseActivity(), Behavior {
     private val srvStore by lazy { ServiceStore(this) }
 
     private val autoRestartFlow = MutableStateFlow(false)

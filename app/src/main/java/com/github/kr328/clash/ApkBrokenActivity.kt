@@ -12,7 +12,7 @@ import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
 import com.github.kr328.clash.design.model.DarkMode
 import kotlinx.coroutines.isActive
 
-class ApkBrokenActivity : BaseActivity<ApkBrokenDesign>() {
+class ApkBrokenActivity : BaseActivity() {
     override suspend fun main() {
         setContent {
             ClashTheme(variant = currentThemeVariant()) {

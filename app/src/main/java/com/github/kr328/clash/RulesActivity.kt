@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 
 private val RulesJson = Json { ignoreUnknownKeys = true }
 
-class RulesActivity : BaseActivity<RulesDesign>() {
+class RulesActivity : BaseActivity() {
     private val rulesFlow = MutableStateFlow<List<Rule>>(emptyList())
     private val loadingFlow = MutableStateFlow(true)
     private val errorFlow = MutableStateFlow<Pair<String, String>?>(null)

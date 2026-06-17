@@ -11,7 +11,7 @@ import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
 import com.github.kr328.clash.design.model.DarkMode
 import kotlinx.coroutines.isActive
 
-class HelpActivity : BaseActivity<HelpDesign>() {
+class HelpActivity : BaseActivity() {
     override suspend fun main() {
         setContent {
             ClashTheme(variant = currentThemeVariant()) {

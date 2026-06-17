@@ -36,7 +36,7 @@ import kotlinx.coroutines.selects.select
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-class ProfilesActivity : BaseActivity<com.github.kr328.clash.design.ProfilesDesign>() {
+class ProfilesActivity : BaseActivity() {
     companion object {
         const val EXTRA_SCAN_QR_ON_START = "scan_qr_on_start"
     }
