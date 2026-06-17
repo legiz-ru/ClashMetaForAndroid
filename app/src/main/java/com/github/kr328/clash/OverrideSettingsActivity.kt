@@ -1,23 +1,27 @@
 package com.github.kr328.clash
 
-import android.content.pm.PackageManager
-import com.github.kr328.clash.common.compat.getDrawableCompat
-import com.github.kr328.clash.common.constants.Metadata
+import android.content.res.Configuration
+import androidx.activity.compose.setContent
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.design.OverrideSettingsDesign
-import com.github.kr328.clash.design.model.AppInfo
-import com.github.kr328.clash.design.util.toAppInfo
-import com.github.kr328.clash.service.store.ServiceStore
+import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.compose.screen.OverrideSettingsScreen
+import com.github.kr328.clash.design.compose.theme.ClashTheme
+import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
+import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.util.withClash
-import kotlinx.coroutines.Dispatchers
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class OverrideSettingsActivity : BaseActivity<OverrideSettingsDesign>() {
+    private val resetRequests = Channel<Unit>(Channel.CONFLATED)
+
     override suspend fun main() {
         val configuration = withClash { queryOverride(Clash.OverrideSlot.Persist) }
-        val service = ServiceStore(this)
 
         defer {
             withClash {
@@ -25,34 +29,62 @@ class OverrideSettingsActivity : BaseActivity<OverrideSettingsDesign>() {
             }
         }
 
-        val design = OverrideSettingsDesign(
-            this,
-            configuration
-        )
-
-        setContentDesign(design)
+        setContent {
+            ClashTheme(variant = currentThemeVariant()) {
+                OverrideSettingsScreen(
+                    configuration = configuration,
+                    onBack = { finish() },
+                    onReset = { resetRequests.trySend(Unit) },
+                )
+            }
+        }
 
         while (isActive) {
             select<Unit> {
-                events.onReceive {
-
-                }
-                design.requests.onReceive {
-                    when (it) {
-                        OverrideSettingsDesign.Request.ResetOverride -> {
-                            if (design.requestResetConfirm()) {
-                                defer {
-                                    withClash {
-                                        clearOverride(Clash.OverrideSlot.Persist)
-                                    }
-                                }
-
-                                finish()
+                events.onReceive { }
+                resetRequests.onReceive {
+                    if (requestResetConfirm()) {
+                        defer {
+                            withClash {
+                                clearOverride(Clash.OverrideSlot.Persist)
                             }
                         }
+                        finish()
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun requestResetConfirm(): Boolean {
+        return suspendCancellableCoroutine { ctx ->
+            val dialog = MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.reset_override_settings)
+                .setMessage(R.string.reset_override_settings_message)
+                .setPositiveButton(R.string.ok) { _, _ -> ctx.resume(true) }
+                .setNegativeButton(R.string.cancel) { _, _ -> }
+                .show()
+
+            dialog.setOnDismissListener {
+                if (!ctx.isCompleted) ctx.resume(false)
+            }
+
+            ctx.invokeOnCancellation { dialog.dismiss() }
+        }
+    }
+
+    private fun currentThemeVariant(): ClashThemeVariant {
+        val cfg = resources.configuration
+        return when (uiStore.darkMode) {
+            DarkMode.Auto ->
+                if (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+                    ClashThemeVariant.Dark
+                } else {
+                    ClashThemeVariant.Light
+                }
+            DarkMode.ForceLight -> ClashThemeVariant.Light
+            DarkMode.ForceDark -> ClashThemeVariant.Dark
+            DarkMode.AlwaysSummer -> ClashThemeVariant.Summer
         }
     }
 }

@@ -48,6 +48,7 @@ import com.github.kr328.clash.design.R
 fun PreferenceScaffold(
     title: String,
     onBack: () -> Unit,
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scroll = rememberScrollState()
@@ -65,6 +66,7 @@ fun PreferenceScaffold(
                             )
                         }
                     },
+                    actions = actions,
                 )
             },
         ) { inner ->

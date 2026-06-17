@@ -1,39 +1,60 @@
 package com.github.kr328.clash
 
+import android.content.res.Configuration
+import android.widget.Toast
+import androidx.activity.compose.setContent
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.NetworkSettingsDesign
+import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.compose.screen.NetworkSettingsScreen
+import com.github.kr328.clash.design.compose.theme.ClashTheme
+import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
+import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.service.store.ServiceStore
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.selects.select
 
 class NetworkSettingsActivity : BaseActivity<NetworkSettingsDesign>() {
     override suspend fun main() {
-        val design = NetworkSettingsDesign(
-            this,
-            uiStore,
-            ServiceStore(this),
-            clashRunning,
-        )
+        val srvStore = ServiceStore(this)
 
-        setContentDesign(design)
+        if (clashRunning) {
+            Toast.makeText(this, R.string.options_unavailable, Toast.LENGTH_LONG).show()
+        }
+
+        setContent {
+            ClashTheme(variant = currentThemeVariant()) {
+                NetworkSettingsScreen(
+                    uiStore = uiStore,
+                    srvStore = srvStore,
+                    running = clashRunning,
+                    onBack = { finish() },
+                    onAccessControlPackages = {
+                        startActivity(AccessControlActivity::class.intent)
+                    },
+                )
+            }
+        }
 
         while (isActive) {
-            select<Unit> {
-                events.onReceive {
-                    when (it) {
-                        Event.ClashStart, Event.ClashStop, Event.ServiceRecreated ->
-                            recreate()
-                        else -> Unit
-                    }
-                }
-                design.requests.onReceive {
-                    when (it) {
-                        NetworkSettingsDesign.Request.StartAccessControlList ->
-                            startActivity(AccessControlActivity::class.intent)
-                    }
-                }
+            when (events.receive()) {
+                Event.ClashStart, Event.ClashStop, Event.ServiceRecreated -> recreate()
+                else -> Unit
             }
         }
     }
 
+    private fun currentThemeVariant(): ClashThemeVariant {
+        val cfg = resources.configuration
+        return when (uiStore.darkMode) {
+            DarkMode.Auto ->
+                if (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+                    ClashThemeVariant.Dark
+                } else {
+                    ClashThemeVariant.Light
+                }
+            DarkMode.ForceLight -> ClashThemeVariant.Light
+            DarkMode.ForceDark -> ClashThemeVariant.Dark
+            DarkMode.AlwaysSummer -> ClashThemeVariant.Summer
+        }
+    }
 }

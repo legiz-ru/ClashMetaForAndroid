@@ -3,6 +3,7 @@ package com.github.kr328.clash
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.Configuration
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -10,22 +11,32 @@ import android.view.LayoutInflater
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
-import com.github.kr328.clash.util.GetContentCompat
+import androidx.activity.compose.setContent
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.design.MetaFeatureSettingsDesign
+import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.compose.screen.MetaFeatureSettingsScreen
+import com.github.kr328.clash.design.compose.theme.ClashTheme
+import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
+import com.github.kr328.clash.design.model.DarkMode
+import com.github.kr328.clash.util.GetContentCompat
 import com.github.kr328.clash.util.clashDir
 import com.github.kr328.clash.util.withClash
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import com.github.kr328.clash.design.R
-
+import kotlin.coroutines.resume
 
 class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
+    private val resetRequests = Channel<Unit>(Channel.CONFLATED)
+
     override suspend fun main() {
         val configuration = withClash { queryOverride(Clash.OverrideSlot.Persist) }
 
@@ -35,62 +46,59 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
             }
         }
 
-        val design = MetaFeatureSettingsDesign(
-            this,
-            configuration
-        )
-
-        setContentDesign(design)
+        setContent {
+            ClashTheme(variant = currentThemeVariant()) {
+                MetaFeatureSettingsScreen(
+                    configuration = configuration,
+                    onBack = { finish() },
+                    onReset = { resetRequests.trySend(Unit) },
+                    onImportGeoIp = { launchImport(MetaFeatureSettingsDesign.Request.ImportGeoIp) },
+                    onImportGeoSite = { launchImport(MetaFeatureSettingsDesign.Request.ImportGeoSite) },
+                    onImportCountry = { launchImport(MetaFeatureSettingsDesign.Request.ImportCountry) },
+                    onImportASN = { launchImport(MetaFeatureSettingsDesign.Request.ImportASN) },
+                    onGenerateAgeKeyPair = { showAgeKeypairDialog() },
+                )
+            }
+        }
 
         while (isActive) {
             select<Unit> {
-                events.onReceive {
-
-                }
-                design.requests.onReceive {
-                    when (it) {
-                        MetaFeatureSettingsDesign.Request.ResetOverride -> {
-                            if (design.requestResetConfirm()) {
-                                defer {
-                                    withClash {
-                                        clearOverride(Clash.OverrideSlot.Persist)
-                                    }
-                                }
-                                finish()
+                events.onReceive { }
+                resetRequests.onReceive {
+                    if (requestResetConfirm()) {
+                        defer {
+                            withClash {
+                                clearOverride(Clash.OverrideSlot.Persist)
                             }
                         }
-                        MetaFeatureSettingsDesign.Request.ImportGeoIp -> {
-                            val uri = startActivityForResult(
-                                GetContentCompat(),
-                                "*/*")
-                            importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportGeoIp)
-                        }
-                        MetaFeatureSettingsDesign.Request.ImportGeoSite -> {
-                            val uri = startActivityForResult(
-                                GetContentCompat(),
-                                "*/*")
-                            importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportGeoSite)
-                        }
-                        MetaFeatureSettingsDesign.Request.ImportCountry -> {
-                            val uri = startActivityForResult(
-                                GetContentCompat(),
-                                "*/*")
-                            importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportCountry)
-                        }
-                        MetaFeatureSettingsDesign.Request.ImportASN -> {
-                            val uri = startActivityForResult(
-                                GetContentCompat(),
-                                "*/*")
-                            importGeoFile(uri, MetaFeatureSettingsDesign.Request.ImportASN)
-                        }
-                        MetaFeatureSettingsDesign.Request.GenerateAgeKeyPair -> {
-                            withContext(Dispatchers.Main) {
-                                showAgeKeypairDialog()
-                            }
-                        }
+                        finish()
                     }
                 }
             }
+        }
+    }
+
+    private fun launchImport(type: MetaFeatureSettingsDesign.Request) {
+        launch {
+            val uri = startActivityForResult(GetContentCompat(), "*/*")
+            importGeoFile(uri, type)
+        }
+    }
+
+    private suspend fun requestResetConfirm(): Boolean {
+        return suspendCancellableCoroutine { ctx ->
+            val dialog = MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.reset_override_settings)
+                .setMessage(R.string.reset_override_settings_message)
+                .setPositiveButton(R.string.ok) { _, _ -> ctx.resume(true) }
+                .setNegativeButton(R.string.cancel) { _, _ -> }
+                .show()
+
+            dialog.setOnDismissListener {
+                if (!ctx.isCompleted) ctx.resume(false)
+            }
+
+            ctx.invokeOnCancellation { dialog.dismiss() }
         }
     }
 
@@ -129,7 +137,6 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
             }
         }
 
-        // Initial generation
         regenerate()
 
         val dialog = MaterialAlertDialogBuilder(this)
@@ -170,43 +177,60 @@ class MetaFeatureSettingsActivity : BaseActivity<MetaFeatureSettingsDesign>() {
             if (it.moveToFirst()) {
                 val columnIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 val displayName: String =
-                    if (columnIndex != -1) it.getString(columnIndex) else "";
+                    if (columnIndex != -1) it.getString(columnIndex) else ""
                 val ext = "." + displayName.substringAfterLast(".")
 
                 if (!validDatabaseExtensions.contains(ext)) {
                     MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.geofile_unknown_db_format)
-                        .setMessage(getString(R.string.geofile_unknown_db_format_message,
-                            validDatabaseExtensions.joinToString("/")))
+                        .setMessage(
+                            getString(
+                                R.string.geofile_unknown_db_format_message,
+                                validDatabaseExtensions.joinToString("/")
+                            )
+                        )
                         .setPositiveButton("OK") { _, _ -> }
                         .show()
                     return
                 }
                 val outputFileName = when (importType) {
-                    MetaFeatureSettingsDesign.Request.ImportGeoIp ->
-                        "geoip$ext"
-                    MetaFeatureSettingsDesign.Request.ImportGeoSite ->
-                        "geosite$ext"
-                    MetaFeatureSettingsDesign.Request.ImportCountry ->
-                        "country$ext"
-                    MetaFeatureSettingsDesign.Request.ImportASN ->
-                        "ASN$ext"
+                    MetaFeatureSettingsDesign.Request.ImportGeoIp -> "geoip$ext"
+                    MetaFeatureSettingsDesign.Request.ImportGeoSite -> "geosite$ext"
+                    MetaFeatureSettingsDesign.Request.ImportCountry -> "country$ext"
+                    MetaFeatureSettingsDesign.Request.ImportASN -> "ASN$ext"
                     else -> ""
                 }
 
                 withContext(Dispatchers.IO) {
-                    val outputFile = File(clashDir, outputFileName);
+                    val outputFile = File(clashDir, outputFileName)
                     contentResolver.openInputStream(uri).use { ins ->
                         FileOutputStream(outputFile).use { outs ->
                             ins?.copyTo(outs)
                         }
                     }
                 }
-                Toast.makeText(this, getString(R.string.geofile_imported, displayName),
-                    Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this, getString(R.string.geofile_imported, displayName),
+                    Toast.LENGTH_LONG
+                ).show()
                 return
             }
         }
         Toast.makeText(this, R.string.geofile_import_failed, Toast.LENGTH_LONG).show()
+    }
+
+    private fun currentThemeVariant(): ClashThemeVariant {
+        val cfg = resources.configuration
+        return when (uiStore.darkMode) {
+            DarkMode.Auto ->
+                if (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+                    ClashThemeVariant.Dark
+                } else {
+                    ClashThemeVariant.Light
+                }
+            DarkMode.ForceLight -> ClashThemeVariant.Light
+            DarkMode.ForceDark -> ClashThemeVariant.Dark
+            DarkMode.AlwaysSummer -> ClashThemeVariant.Summer
+        }
     }
 }
