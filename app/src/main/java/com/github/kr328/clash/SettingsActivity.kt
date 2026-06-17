@@ -20,6 +20,7 @@ import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class SettingsActivity : BaseActivity<SettingsDesign>() {
     override suspend fun main() {
