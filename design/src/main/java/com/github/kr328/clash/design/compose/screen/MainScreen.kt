@@ -1,0 +1,518 @@
+package com.github.kr328.clash.design.compose.screen
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.compose.component.AddProfileAction
+import com.github.kr328.clash.design.compose.component.AddProfileSheet
+import com.github.kr328.clash.design.compose.component.AppNavigationRail
+import com.github.kr328.clash.design.compose.component.ConnectionToolbar
+import com.github.kr328.clash.design.compose.component.GhostPowerButton
+import com.github.kr328.clash.design.util.elapsedIntervalString
+import com.github.kr328.clash.design.util.toBytesString
+import com.github.kr328.clash.service.model.Profile
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Home screen (stage 5a). Mirrors the static `design_main.xml`: header, loading,
+ * onboarding, the active-profile card, the ghost power button (disconnected) and,
+ * while running, a floating toolbar (disconnect + latency test) plus an entry to
+ * the proxy selector. The inline proxy-group accordion is handled in a follow-up.
+ */
+@Composable
+fun MainScreen(
+    expanded: Boolean,
+    clashRunning: Boolean,
+    isLoading: Boolean,
+    hasProfiles: Boolean,
+    activeProfile: Profile?,
+    appTitle: String,
+    latencyTesting: Boolean,
+    onPowerToggle: () -> Unit,
+    onUpdateProfile: () -> Unit,
+    onManageProfiles: () -> Unit,
+    onModeSelector: () -> Unit,
+    onOpenConnections: () -> Unit,
+    onOpenProviders: () -> Unit,
+    onOpenSupport: (String) -> Unit,
+    onOpenWebPage: (String) -> Unit,
+    onOpenProxies: () -> Unit,
+    onAdd: (AddProfileAction) -> Unit,
+    onNavigate: (SettingsNavTarget) -> Unit,
+    onLatencyTest: () -> Unit,
+    onDisconnect: () -> Unit,
+    isTv: Boolean = false,
+) {
+    var showAddSheet by remember { mutableStateOf(false) }
+    val simpleMode = activeProfile?.simpleMode == true
+
+    val body: @Composable (Modifier) -> Unit = { contentModifier ->
+        Scaffold(
+            modifier = contentModifier,
+            bottomBar = {
+                if (!expanded) {
+                    MainBottomBar(onNavigate = onNavigate)
+                }
+            },
+        ) { inner ->
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(
+                            top = inner.calculateTopPadding(),
+                            bottom = inner.calculateBottomPadding(),
+                        )
+                        .padding(horizontal = 16.dp),
+                ) {
+                    Header(appTitle = appTitle)
+
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(vertical = 64.dp)
+                                .align(Alignment.CenterHorizontally)
+                                .size(48.dp),
+                        )
+                    }
+
+                    if (!hasProfiles && !clashRunning && !isLoading) {
+                        Onboarding(onAdd = { showAddSheet = true })
+                    }
+
+                    if (hasProfiles && !isLoading) {
+                        MainProfileCard(
+                            profile = activeProfile,
+                            clashRunning = clashRunning,
+                            onUpdate = onUpdateProfile,
+                            onManage = onManageProfiles,
+                            onModeSelector = onModeSelector,
+                            onConnections = onOpenConnections,
+                            onProviders = onOpenProviders,
+                            onSupport = onOpenSupport,
+                            onWebPage = onOpenWebPage,
+                        )
+                    }
+
+                    if (hasProfiles && !clashRunning) {
+                        PowerSection(onToggle = onPowerToggle)
+                    }
+
+                    if (clashRunning) {
+                        ProxiesEntryCard(onClick = onOpenProxies)
+                        Spacer(modifier = Modifier.height(72.dp))
+                    }
+                }
+
+                if (clashRunning && !expanded) {
+                    ConnectionToolbar(
+                        visible = true,
+                        showLatencyTest = simpleMode,
+                        latencyTesting = latencyTesting,
+                        onDisconnect = onDisconnect,
+                        onLatencyTest = onLatencyTest,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                    )
+                }
+            }
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        if (expanded) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                AppNavigationRail(
+                    selected = SettingsNavTarget.Home,
+                    clashRunning = clashRunning,
+                    onNavigate = onNavigate,
+                    onToggleStatus = onPowerToggle,
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .windowInsetsPadding(WindowInsets.safeDrawing),
+                ) {
+                    body(Modifier.fillMaxSize())
+                }
+            }
+        } else {
+            body(Modifier.fillMaxSize())
+        }
+    }
+
+    if (showAddSheet) {
+        AddProfileSheet(
+            isTv = isTv,
+            onAction = {
+                showAddSheet = false
+                onAdd(it)
+            },
+            onDismiss = { showAddSheet = false },
+        )
+    }
+}
+
+@Composable
+private fun Header(appTitle: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_clash),
+            contentDescription = null,
+            tint = androidx.compose.ui.graphics.Color.Unspecified,
+            modifier = Modifier.size(64.dp),
+        )
+        Text(
+            text = appTitle,
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(start = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun Onboarding(onAdd: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.welcome),
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = stringResource(R.string.add_first_profile),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        Box(
+            modifier = Modifier
+                .padding(top = 48.dp)
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+                .clickable(onClick = onAdd),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_baseline_add),
+                contentDescription = stringResource(R.string.add_profile),
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(48.dp),
+            )
+        }
+        Text(
+            text = stringResource(R.string.add_profile),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 16.dp),
+        )
+    }
+}
+
+@Composable
+private fun PowerSection(onToggle: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 24.dp, bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        GhostPowerButton(running = false, onClick = onToggle, size = 100.dp)
+        Text(
+            text = stringResource(R.string.tap_to_start),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 12.dp),
+        )
+    }
+}
+
+@Composable
+private fun ProxiesEntryCard(onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = scheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_mdi_earth),
+                contentDescription = null,
+                tint = scheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+            Text(
+                text = stringResource(R.string.proxy_groups),
+                style = MaterialTheme.typography.titleMedium,
+                color = scheme.onSurface,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp),
+            )
+            Icon(
+                painter = painterResource(R.drawable.ic_baseline_chevron_right),
+                contentDescription = null,
+                tint = scheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainBottomBar(onNavigate: (SettingsNavTarget) -> Unit) {
+    NavigationBar {
+        NavigationBarItem(
+            selected = true,
+            onClick = { onNavigate(SettingsNavTarget.Home) },
+            icon = { Icon(painterResource(R.drawable.ic_mdi_home), contentDescription = null) },
+            label = { Text(stringResource(R.string.home)) },
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = { onNavigate(SettingsNavTarget.Settings) },
+            icon = { Icon(painterResource(R.drawable.ic_mdi_cog), contentDescription = null) },
+            label = { Text(stringResource(R.string.settings)) },
+        )
+    }
+}
+
+@Composable
+private fun MainProfileCard(
+    profile: Profile?,
+    clashRunning: Boolean,
+    onUpdate: () -> Unit,
+    onManage: () -> Unit,
+    onModeSelector: () -> Unit,
+    onConnections: () -> Unit,
+    onProviders: () -> Unit,
+    onSupport: (String) -> Unit,
+    onWebPage: (String) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = scheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header: sync + name + manage
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MainCardIcon(R.drawable.ic_baseline_sync, stringResource(R.string.update), onUpdate)
+                Text(
+                    text = profile?.name ?: stringResource(R.string.profile),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp),
+                )
+                MainCardIcon(
+                    R.drawable.ic_mdi_account_cog_outline,
+                    stringResource(R.string.manage_profiles),
+                    onManage,
+                )
+            }
+
+            val hasTraffic = profile != null && profile.total > 1
+            val hasExpire = profile != null && profile.expire > 0
+
+            if (hasTraffic && profile != null) {
+                MainInfoRow(
+                    R.drawable.ic_mdi_chart_timeline_variant,
+                    stringResource(R.string.traffic_used),
+                    (profile.download + profile.upload).toBytesString(),
+                    topMargin = 16.dp,
+                )
+                MainInfoRow(
+                    R.drawable.ic_mdi_database_check,
+                    stringResource(R.string.traffic_available),
+                    profile.total.toBytesString(),
+                )
+            }
+            if (hasExpire && profile != null) {
+                val expireText = remember(profile.expire) {
+                    SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(profile.expire))
+                }
+                MainInfoRow(R.drawable.ic_mdi_calendar_alert, stringResource(R.string.expires), expireText)
+            }
+            if (profile != null) {
+                val updatedText = (System.currentTimeMillis() - profile.updatedAt)
+                    .elapsedIntervalString(androidx.compose.ui.platform.LocalContext.current)
+                MainInfoRow(R.drawable.ic_mdi_update, stringResource(R.string.updated), updatedText)
+            }
+
+            // Link icons row
+            val supportUrl = profile?.supportUrl.orEmpty()
+            val webPageUrl = profile?.profileWebPageUrl.orEmpty()
+            val showShortcuts = clashRunning &&
+                (profile?.globalModeMp == true || profile?.connsViewMp == true || profile?.rpMp == true)
+            if (supportUrl.isNotEmpty() || webPageUrl.isNotEmpty() || showShortcuts) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (clashRunning && profile?.globalModeMp == true) {
+                        MainCardIcon(R.drawable.ic_mdi_earth, null, onModeSelector)
+                    }
+                    if (clashRunning && profile?.connsViewMp == true) {
+                        MainCardIcon(R.drawable.ic_mdi_transit_connection_variant, null, onConnections)
+                    }
+                    if (clashRunning && profile?.rpMp == true) {
+                        MainCardIcon(R.drawable.ic_mdi_database, null, onProviders)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (supportUrl.isNotEmpty()) {
+                        MainCardIcon(R.drawable.ic_mdi_face_agent, null, { onSupport(supportUrl) })
+                    }
+                    if (webPageUrl.isNotEmpty()) {
+                        MainCardIcon(R.drawable.ic_mdi_home_import_outline, null, { onWebPage(webPageUrl) })
+                    }
+                }
+            }
+
+            val announce = profile?.announce.orEmpty().replace("\\n", "\n")
+            if (announce.isNotEmpty()) {
+                Text(
+                    text = announce,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurface.copy(alpha = 0.8f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainInfoRow(
+    icon: Int,
+    label: String,
+    value: String,
+    topMargin: androidx.compose.ui.unit.Dp = 8.dp,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = topMargin),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = scheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 8.dp),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun MainCardIcon(
+    icon: Int,
+    contentDescription: String?,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
