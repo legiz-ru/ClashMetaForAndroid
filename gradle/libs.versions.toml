@@ -18,7 +18,9 @@ room = "2.4.2"
 multiprocess = "1.0.0"
 quickie = "1.11.0"
 androidx-activity-ktx = "1.9.0"
-composeBom = "2024.12.01"
+# Alpha BOM — pulls Material 3 1.4.x (Expressive: MaterialExpressiveTheme,
+# FloatingToolbar, LoadingIndicator). Bump to the latest alpha as it advances.
+composeBom = "2025.04.01"
 activityCompose = "1.9.3"
 lifecycleCompose = "2.8.7"
 navigationCompose = "2.8.5"
@@ -50,7 +52,8 @@ quickie-bundled = { group = "io.github.g00fy2.quickie", name = "quickie-bundled"
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "androidx-activity-ktx" }
 
 # Jetpack Compose (versions aligned by the BOM unless explicitly referenced)
-androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom-alpha", version.ref = "composeBom" }
+androidx-compose-runtime = { module = "androidx.compose.runtime:runtime" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }

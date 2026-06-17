@@ -16,6 +16,8 @@
 
     <string name="logs">Логи</string>
     <string name="settings">Настройки</string>
+    <string name="settings_general">Общие</string>
+    <string name="settings_active_profile">Активный профиль</string>
     <string name="help">Помощь</string>
     <string name="about">О программе</string>
 

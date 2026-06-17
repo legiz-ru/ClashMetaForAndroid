@@ -1,88 +1,101 @@
 package com.github.kr328.clash
 
+import android.content.res.Configuration
+import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.SettingsDesign
-import com.github.kr328.clash.design.ui.ToastDuration
+import com.github.kr328.clash.design.compose.screen.SettingsDestination
+import com.github.kr328.clash.design.compose.screen.SettingsNavTarget
+import com.github.kr328.clash.design.compose.screen.SettingsScreen
+import com.github.kr328.clash.design.compose.theme.ClashTheme
+import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
+import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import com.github.kr328.clash.util.withProfile
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.selects.select
 
 class SettingsActivity : BaseActivity<SettingsDesign>() {
     override suspend fun main() {
-        val design = SettingsDesign(this)
+        val running = MutableStateFlow(clashRunning)
 
-        setContentDesign(design)
+        setContent {
+            val isRunning by running.collectAsStateWithLifecycle()
 
-        design.setClashRunning(clashRunning)
+            ClashTheme(variant = currentThemeVariant()) {
+                SettingsScreen(
+                    expanded = useDrawerNav(),
+                    clashRunning = isRunning,
+                    onOpen = ::openDestination,
+                    onNavigate = ::navigate,
+                    onToggleStatus = { toggleStatus() },
+                )
+            }
+        }
 
         while (isActive) {
-            select<Unit> {
-                events.onReceive {
-                    when (it) {
-                        Event.ClashStart, Event.ClashStop -> {
-                            design.setClashRunning(clashRunning)
-                        }
-                        else -> Unit
-                    }
-                }
-                design.requests.onReceive {
-                    when (it) {
-                        SettingsDesign.Request.StartApp ->
-                            startActivity(AppSettingsActivity::class.intent)
-                        SettingsDesign.Request.StartNetwork ->
-                            startActivity(NetworkSettingsActivity::class.intent)
-                        SettingsDesign.Request.StartOverride ->
-                            startActivity(OverrideSettingsActivity::class.intent)
-                        SettingsDesign.Request.StartMetaFeature ->
-                            startActivity(MetaFeatureSettingsActivity::class.intent)
-                        SettingsDesign.Request.StartRules ->
-                            startActivity(RulesActivity::class.intent)
-                        SettingsDesign.Request.StartProviders ->
-                            startActivity(ProvidersActivity::class.intent)
-                        SettingsDesign.Request.StartConnections ->
-                            startActivity(ConnectionsActivity::class.intent)
-                        SettingsDesign.Request.StartLogs -> {
-                            if (LogcatService.running) {
-                                startActivity(LogcatActivity::class.intent)
-                            } else {
-                                startActivity(LogsActivity::class.intent)
-                            }
-                        }
-                        SettingsDesign.Request.StartAbout -> {
-                            startActivity(HelpActivity::class.intent)
-                        }
-                        SettingsDesign.Request.GoHome -> {
-                            startActivity(
-                                MainActivity::class.intent
-                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                            )
-                            finish()
-                            overridePendingTransition(0, 0)
-                        }
-                        SettingsDesign.Request.OpenProfiles ->
-                            startActivity(ProfilesActivity::class.intent)
-                        SettingsDesign.Request.ToggleStatus -> {
-                            if (clashRunning) {
-                                stopClashService()
-                            } else {
-                                toggleClashOn(design)
-                            }
-                        }
-                    }
-                }
+            when (events.receive()) {
+                Event.ClashStart, Event.ClashStop -> running.value = clashRunning
+                else -> Unit
             }
         }
     }
 
-    private suspend fun toggleClashOn(design: SettingsDesign) {
+    private fun openDestination(destination: SettingsDestination) {
+        val target = when (destination) {
+            SettingsDestination.App -> AppSettingsActivity::class.intent
+            SettingsDestination.Network -> NetworkSettingsActivity::class.intent
+            SettingsDestination.Override -> OverrideSettingsActivity::class.intent
+            SettingsDestination.MetaFeature -> MetaFeatureSettingsActivity::class.intent
+            SettingsDestination.Rules -> RulesActivity::class.intent
+            SettingsDestination.Providers -> ProvidersActivity::class.intent
+            SettingsDestination.Connections -> ConnectionsActivity::class.intent
+            SettingsDestination.Logs ->
+                if (LogcatService.running) LogcatActivity::class.intent else LogsActivity::class.intent
+            SettingsDestination.About -> HelpActivity::class.intent
+        }
+        startActivity(target)
+    }
+
+    private fun navigate(target: SettingsNavTarget) {
+        when (target) {
+            SettingsNavTarget.Home -> {
+                startActivity(
+                    MainActivity::class.intent
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                )
+                finish()
+                overridePendingTransition(0, 0)
+            }
+            SettingsNavTarget.Profiles -> startActivity(ProfilesActivity::class.intent)
+            SettingsNavTarget.Settings -> Unit // already here
+        }
+    }
+
+    private fun toggleStatus() {
+        if (clashRunning) {
+            stopClashService()
+        } else {
+            launch { toggleClashOn() }
+        }
+    }
+
+    private suspend fun toggleClashOn() {
         val active = withProfile { queryActive() }
         if (active == null || !active.imported) {
-            design.showToast(com.github.kr328.clash.design.R.string.no_profile_selected, ToastDuration.Long)
+            Toast.makeText(
+                this,
+                com.github.kr328.clash.design.R.string.no_profile_selected,
+                Toast.LENGTH_LONG,
+            ).show()
             return
         }
         val vpnRequest = startClashService()
@@ -96,7 +109,34 @@ class SettingsActivity : BaseActivity<SettingsDesign>() {
                     startClashService()
             }
         } catch (e: Exception) {
-            design.showToast(com.github.kr328.clash.design.R.string.unable_to_start_vpn, ToastDuration.Long)
+            Toast.makeText(
+                this,
+                com.github.kr328.clash.design.R.string.unable_to_start_vpn,
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
+
+    /** Mirrors the side-drawer condition used across the View-based screens. */
+    private fun useDrawerNav(): Boolean {
+        if (TvUtils.isTv(this)) return true
+        val cfg = resources.configuration
+        return cfg.smallestScreenWidthDp >= 600 &&
+            cfg.orientation == Configuration.ORIENTATION_LANDSCAPE
+    }
+
+    private fun currentThemeVariant(): ClashThemeVariant {
+        val cfg = resources.configuration
+        return when (uiStore.darkMode) {
+            DarkMode.Auto ->
+                if (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+                    ClashThemeVariant.Dark
+                } else {
+                    ClashThemeVariant.Light
+                }
+            DarkMode.ForceLight -> ClashThemeVariant.Light
+            DarkMode.ForceDark -> ClashThemeVariant.Dark
+            DarkMode.AlwaysSummer -> ClashThemeVariant.Summer
         }
     }
 }

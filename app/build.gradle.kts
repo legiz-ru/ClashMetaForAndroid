@@ -6,7 +6,14 @@ plugins {
     kotlin("android")
     kotlin("kapt")
     kotlin("plugin.serialization")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.android.application")
+}
+
+android {
+    buildFeatures {
+        compose = true
+    }
 }
 
 dependencies {
@@ -29,6 +36,15 @@ dependencies {
     implementation(libs.quickie.bundled)
     implementation(libs.androidx.activity.ktx)
     implementation("com.google.zxing:core:3.5.3")
+
+    // Jetpack Compose — entry points host Compose screens from :design
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 }
 
 tasks.getByName("clean", type = Delete::class) {
