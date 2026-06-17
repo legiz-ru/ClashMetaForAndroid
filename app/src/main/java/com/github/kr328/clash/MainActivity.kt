@@ -22,7 +22,9 @@ import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
+import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.Clash
+import com.github.kr328.clash.core.model.ProxyGroup
 import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.component.AddProfileAction
@@ -44,6 +46,8 @@ import io.github.g00fy2.quickie.ScanQRCode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
+import java.util.concurrent.TimeUnit
 
 class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
     private val isLoadingFlow = MutableStateFlow(true)
@@ -52,6 +56,8 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
     private val activeProfileFlow = MutableStateFlow<Profile?>(null)
     private val appTitleFlow = MutableStateFlow("")
     private val latencyTestingFlow = MutableStateFlow(false)
+    private val proxyGroupsFlow = MutableStateFlow<List<Pair<String, ProxyGroup>>>(emptyList())
+    private val useDotsFlow = MutableStateFlow(true)
 
     private fun extractInstallConfigUrl(intent: Intent?): String? {
         if (intent?.action != Intent.ACTION_VIEW) return null
@@ -88,6 +94,8 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
             val activeProfile by activeProfileFlow.collectAsStateWithLifecycle()
             val appTitle by appTitleFlow.collectAsStateWithLifecycle()
             val latencyTesting by latencyTestingFlow.collectAsStateWithLifecycle()
+            val proxyGroups by proxyGroupsFlow.collectAsStateWithLifecycle()
+            val useDots by useDotsFlow.collectAsStateWithLifecycle()
 
             ClashTheme(variant = currentThemeVariant()) {
                 MainScreen(
@@ -99,6 +107,8 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
                     activeProfile = activeProfile,
                     appTitle = appTitle,
                     latencyTesting = latencyTesting,
+                    proxyGroups = proxyGroups,
+                    useDots = useDots,
                     onPowerToggle = ::toggleStatus,
                     onUpdateProfile = ::updateActiveProfile,
                     onManageProfiles = { startActivity(ProfilesActivity::class.intent) },
@@ -107,11 +117,12 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
                     onOpenProviders = { startActivity(ProvidersActivity::class.intent) },
                     onOpenSupport = ::openUrl,
                     onOpenWebPage = ::openUrl,
-                    onOpenProxies = { startActivity(ProxyActivity::class.intent) },
                     onAdd = ::add,
                     onNavigate = ::navigate,
                     onLatencyTest = ::latencyTestSimpleMode,
                     onDisconnect = { stopClashService() },
+                    onSelectProxy = ::selectProxy,
+                    onUrlTest = ::urlTestGroup,
                 )
             }
         }
@@ -126,13 +137,24 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
             launch { runUpdateCheckSilent() }
         }
 
+        val ticker = ticker(TimeUnit.SECONDS.toMillis(5))
+
         while (isActive) {
-            when (events.receive()) {
-                Event.ActivityStart,
-                Event.ServiceRecreated,
-                Event.ClashStop, Event.ClashStart,
-                Event.ProfileLoaded, Event.ProfileChanged -> fetch()
-                else -> Unit
+            select<Unit> {
+                events.onReceive {
+                    when (it) {
+                        Event.ActivityStart,
+                        Event.ServiceRecreated,
+                        Event.ClashStop, Event.ClashStart,
+                        Event.ProfileLoaded, Event.ProfileChanged -> fetch()
+                        else -> Unit
+                    }
+                }
+                if (clashRunning) {
+                    ticker.onReceive {
+                        fetchProxyGroups()
+                    }
+                }
             }
         }
     }
@@ -146,7 +168,58 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
             appTitleFlow.value = active?.profileTitle?.takeIf { it.isNotEmpty() }
                 ?: getString(R.string.application_name)
         }
+        if (clashRunning) {
+            fetchProxyGroups()
+        } else {
+            proxyGroupsFlow.value = emptyList()
+        }
         isLoadingFlow.value = false
+    }
+
+    private suspend fun fetchProxyGroups() {
+        try {
+            val activeLatencyDots = withProfile { queryActive()?.latencyDots ?: -1 }
+            val effectiveDots = when (activeLatencyDots) {
+                0 -> false
+                1 -> true
+                else -> uiStore.delayDisplayDots
+            }
+            withClash {
+                val names = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
+                val visibleGroups = names.map { name ->
+                    name to queryProxyGroup(name, uiStore.proxySort)
+                }.filter { !it.second.hidden }
+
+                val knownNames = visibleGroups.map { it.first }.toHashSet()
+                val nestedSmartNames = visibleGroups
+                    .flatMap { it.second.proxies }
+                    .filter { it.type == "Smart" && it.name !in knownNames }
+                    .map { it.name }
+                    .distinct()
+                val nestedSmartGroups = nestedSmartNames.map { name ->
+                    name to queryProxyGroup(name, uiStore.proxySort).copy(hidden = true)
+                }
+
+                proxyGroupsFlow.value = visibleGroups + nestedSmartGroups
+                useDotsFlow.value = effectiveDots
+            }
+        } catch (_: Exception) {
+            // Proxy groups may not be available yet
+        }
+    }
+
+    private fun selectProxy(group: String, proxy: String) {
+        launch {
+            withClash { patchSelector(group, proxy) }
+            fetchProxyGroups()
+        }
+    }
+
+    private fun urlTestGroup(group: String) {
+        launch {
+            withClash { healthCheck(group) }
+            fetchProxyGroups()
+        }
     }
 
     private fun toggleStatus() {

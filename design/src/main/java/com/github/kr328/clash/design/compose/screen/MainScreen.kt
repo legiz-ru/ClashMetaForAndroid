@@ -48,8 +48,12 @@ import com.github.kr328.clash.design.compose.component.AddProfileSheet
 import com.github.kr328.clash.design.compose.component.AppNavigationRail
 import com.github.kr328.clash.design.compose.component.ConnectionToolbar
 import com.github.kr328.clash.design.compose.component.GhostPowerButton
+import com.github.kr328.clash.design.compose.component.ProxyGroupCard
+import com.github.kr328.clash.design.compose.component.ProxySelectionSheet
+import com.github.kr328.clash.design.compose.component.SimpleModeProxyList
 import com.github.kr328.clash.design.util.elapsedIntervalString
 import com.github.kr328.clash.design.util.toBytesString
+import com.github.kr328.clash.core.model.ProxyGroup
 import com.github.kr328.clash.service.model.Profile
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -70,6 +74,8 @@ fun MainScreen(
     activeProfile: Profile?,
     appTitle: String,
     latencyTesting: Boolean,
+    proxyGroups: List<Pair<String, ProxyGroup>>,
+    useDots: Boolean,
     onPowerToggle: () -> Unit,
     onUpdateProfile: () -> Unit,
     onManageProfiles: () -> Unit,
@@ -78,15 +84,19 @@ fun MainScreen(
     onOpenProviders: () -> Unit,
     onOpenSupport: (String) -> Unit,
     onOpenWebPage: (String) -> Unit,
-    onOpenProxies: () -> Unit,
     onAdd: (AddProfileAction) -> Unit,
     onNavigate: (SettingsNavTarget) -> Unit,
     onLatencyTest: () -> Unit,
     onDisconnect: () -> Unit,
+    onSelectProxy: (String, String) -> Unit,
+    onUrlTest: (String) -> Unit,
     isTv: Boolean = false,
 ) {
     var showAddSheet by remember { mutableStateOf(false) }
+    var openedGroup by remember { mutableStateOf<String?>(null) }
     val simpleMode = activeProfile?.simpleMode == true
+    val groupMap = remember(proxyGroups) { proxyGroups.toMap() }
+    val visibleGroups = remember(proxyGroups) { proxyGroups.filter { !it.second.hidden } }
 
     val body: @Composable (Modifier) -> Unit = { contentModifier ->
         Scaffold(
@@ -142,7 +152,24 @@ fun MainScreen(
                     }
 
                     if (clashRunning) {
-                        ProxiesEntryCard(onClick = onOpenProxies)
+                        if (simpleMode && visibleGroups.isNotEmpty()) {
+                            val (firstName, firstGroup) = visibleGroups.first()
+                            SimpleModeProxyList(
+                                group = firstGroup,
+                                groupMap = groupMap,
+                                useDots = useDots,
+                                onSelect = { proxy -> onSelectProxy(firstName, proxy) },
+                            )
+                        } else {
+                            for ((name, group) in visibleGroups) {
+                                ProxyGroupCard(
+                                    name = name,
+                                    group = group,
+                                    groupMap = groupMap,
+                                    onClick = { openedGroup = name },
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(72.dp))
                     }
                 }
@@ -196,6 +223,20 @@ fun MainScreen(
                 onAdd(it)
             },
             onDismiss = { showAddSheet = false },
+        )
+    }
+
+    val opened = openedGroup
+    val openedData = opened?.let { groupMap[it] }
+    if (opened != null && openedData != null) {
+        ProxySelectionSheet(
+            groupName = opened,
+            group = openedData,
+            groupMap = groupMap,
+            useDots = useDots,
+            onSelect = { proxy -> onSelectProxy(opened, proxy) },
+            onUrlTest = { onUrlTest(opened) },
+            onDismiss = { openedGroup = null },
         )
     }
 }
@@ -281,46 +322,6 @@ private fun PowerSection(onToggle: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 12.dp),
         )
-    }
-}
-
-@Composable
-private fun ProxiesEntryCard(onClick: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = scheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_mdi_earth),
-                contentDescription = null,
-                tint = scheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp),
-            )
-            Text(
-                text = stringResource(R.string.proxy_groups),
-                style = MaterialTheme.typography.titleMedium,
-                color = scheme.onSurface,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp),
-            )
-            Icon(
-                painter = painterResource(R.drawable.ic_baseline_chevron_right),
-                contentDescription = null,
-                tint = scheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        }
     }
 }
 
