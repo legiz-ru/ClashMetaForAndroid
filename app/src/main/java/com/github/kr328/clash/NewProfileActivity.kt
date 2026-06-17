@@ -3,17 +3,25 @@ package com.github.kr328.clash
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.design.NewProfileDesign
 import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.compose.screen.NewProfileScreen
+import com.github.kr328.clash.design.compose.theme.ClashTheme
+import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
+import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.model.ProfileProvider
-import com.github.kr328.clash.design.util.showExceptionToast
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.util.sendProfileToTv
 import com.github.kr328.clash.util.withProfile
@@ -24,9 +32,9 @@ import io.github.g00fy2.quickie.QRResult.QRSuccess
 import io.github.g00fy2.quickie.QRResult.QRUserCanceled
 import io.github.g00fy2.quickie.ScanQRCode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import java.util.*
 
@@ -34,70 +42,61 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
     private val self: NewProfileActivity
         get() = this
 
+    private val providersFlow = MutableStateFlow<List<ProfileProvider>>(emptyList())
+
     private val scanLauncher = registerForActivityResult(ScanQRCode(), ::scanResultHandler)
 
     override suspend fun main() {
-        val design = NewProfileDesign(this)
+        providersFlow.value = queryProfileProviders()
 
-        design.patchProviders(queryProfileProviders())
-
-        setContentDesign(design)
+        setContent {
+            ClashTheme(variant = currentThemeVariant()) {
+                val providers by providersFlow.collectAsStateWithLifecycle()
+                NewProfileScreen(
+                    providers = providers,
+                    onBack = { finish() },
+                    onSelect = ::onSelect,
+                    onDetail = ::onDetail,
+                )
+            }
+        }
 
         while (isActive) {
-            select<Unit> {
-                events.onReceive {
+            events.receive()
+        }
+    }
 
-                }
-                design.requests.onReceive {
-                    when (it) {
-                        is NewProfileDesign.Request.Create -> {
-                            withProfile {
-                                val name = getString(R.string.new_profile)
+    private fun onSelect(provider: ProfileProvider) {
+        if (provider is ProfileProvider.QR) {
+            scanLauncher.launch(null)
+            return
+        }
+        launch {
+            withProfile {
+                val name = getString(R.string.new_profile)
 
-                                val uuid: UUID? = when (val p = it.provider) {
-                                    is ProfileProvider.File ->
-                                        create(Profile.Type.File, name)
-
-                                    is ProfileProvider.Url ->
-                                        create(Profile.Type.Url, name)
-
-                                    is ProfileProvider.QR -> {
-                                        null
-                                    }
-
-                                    is ProfileProvider.External -> {
-                                        val data = p.get()
-
-                                        if (data != null) {
-                                            val (uri, initialName) = data
-
-                                            create(
-                                                Profile.Type.External,
-                                                initialName ?: name,
-                                                uri.toString()
-                                            )
-                                        } else {
-                                            null
-                                        }
-                                    }
-                                }
-
-                                if (uuid != null)
-                                    launchProperties(uuid)
-                            }
-                        }
-
-                        is NewProfileDesign.Request.OpenDetail -> {
-                            launchAppDetailed(it.provider)
-                        }
-
-                        is NewProfileDesign.Request.LaunchScanner -> {
-                            scanLauncher.launch(null)
+                val uuid: UUID? = when (provider) {
+                    is ProfileProvider.File -> create(Profile.Type.File, name)
+                    is ProfileProvider.Url -> create(Profile.Type.Url, name)
+                    is ProfileProvider.QR -> null
+                    is ProfileProvider.External -> {
+                        val data = provider.get()
+                        if (data != null) {
+                            val (uri, initialName) = data
+                            create(Profile.Type.External, initialName ?: name, uri.toString())
+                        } else {
+                            null
                         }
                     }
                 }
+
+                if (uuid != null) launchProperties(uuid)
             }
         }
+    }
+
+    private fun onDetail(provider: ProfileProvider) {
+        if (provider is ProfileProvider.External) launchAppDetailed(provider)
     }
 
     private fun launchAppDetailed(provider: ProfileProvider.External) {
@@ -184,8 +183,8 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
                 }
 
                 QRUserCanceled -> {}
-                QRMissingPermission -> design?.showExceptionToast(getString(R.string.import_from_qr_no_permission))
-                is QRError -> design?.showExceptionToast(getString(R.string.import_from_qr_exception))
+                QRMissingPermission -> toast(R.string.import_from_qr_no_permission)
+                is QRError -> toast(R.string.import_from_qr_exception)
             }
         }
     }
@@ -202,4 +201,22 @@ class NewProfileActivity : BaseActivity<NewProfileDesign>() {
         }
     }
 
+    private fun toast(resId: Int) {
+        Toast.makeText(this, resId, Toast.LENGTH_LONG).show()
+    }
+
+    private fun currentThemeVariant(): ClashThemeVariant {
+        val cfg = resources.configuration
+        return when (uiStore.darkMode) {
+            DarkMode.Auto ->
+                if (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+                    ClashThemeVariant.Dark
+                } else {
+                    ClashThemeVariant.Light
+                }
+            DarkMode.ForceLight -> ClashThemeVariant.Light
+            DarkMode.ForceDark -> ClashThemeVariant.Dark
+            DarkMode.AlwaysSummer -> ClashThemeVariant.Summer
+        }
+    }
 }
