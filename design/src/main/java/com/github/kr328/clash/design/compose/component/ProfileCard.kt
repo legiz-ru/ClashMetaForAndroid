@@ -77,10 +77,14 @@ fun ProfileCard(
             // Header: sync (when updatable) + name
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (profile.imported && profile.type != Profile.Type.File) {
+                    // Keep one continuous 0..360 loop running and apply it only
+                    // while updating. Driving rotate() off a conditional target
+                    // made the icon spin *backwards* toward 0 when an update
+                    // finished mid-rotation; this avoids that.
                     val transition = rememberInfiniteTransition(label = "profileSync")
-                    val angle by transition.animateFloat(
+                    val spin by transition.animateFloat(
                         initialValue = 0f,
-                        targetValue = if (updating) 360f else 0f,
+                        targetValue = 360f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(1000, easing = LinearEasing),
                             repeatMode = RepeatMode.Restart,
@@ -91,7 +95,7 @@ fun ProfileCard(
                         icon = R.drawable.ic_baseline_sync,
                         contentDescription = stringResource(R.string.update),
                         onClick = onUpdate,
-                        modifier = Modifier.rotate(angle),
+                        modifier = Modifier.rotate(if (updating) spin else 0f),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }

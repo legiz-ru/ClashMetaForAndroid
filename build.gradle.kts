@@ -49,6 +49,10 @@ subprojects {
             if (isApp) {
                 val customApplicationId = queryConfigProperty("custom.application.id") as? String?
                 applicationId = customApplicationId.takeIf { it?.isNotBlank() == true } ?: "ru.legiz.prizrakbox"
+
+                // Ship only Russian, English and (Simplified) Chinese; strips
+                // every other locale pulled in by AndroidX/Material libraries.
+                resourceConfigurations += listOf("en", "ru", "zh")
             }
 
             project.name.let { name ->
