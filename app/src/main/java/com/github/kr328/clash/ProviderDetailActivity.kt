@@ -5,7 +5,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.core.model.Provider
-import com.github.kr328.clash.design.ProviderDetailDesign
 import com.github.kr328.clash.design.compose.screen.ProviderDetailScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 import com.github.kr328.clash.design.compose.theme.ClashThemeVariant

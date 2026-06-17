@@ -6,7 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setFileName
-import com.github.kr328.clash.design.LogsDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.LogsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme

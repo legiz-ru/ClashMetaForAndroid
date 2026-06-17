@@ -11,7 +11,6 @@ import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.core.model.FetchStatus
-import com.github.kr328.clash.design.PropertiesDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.PropertiesScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme

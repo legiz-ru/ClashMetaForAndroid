@@ -3,7 +3,6 @@ package com.github.kr328.clash
 import android.content.res.Configuration
 import androidx.activity.compose.setContent
 import com.github.kr328.clash.core.Clash
-import com.github.kr328.clash.design.OverrideSettingsDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.OverrideSettingsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme

@@ -10,7 +10,6 @@ import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.core.model.ProxyGroup
 import com.github.kr328.clash.core.model.ProxySort
 import com.github.kr328.clash.core.model.TunnelState
-import com.github.kr328.clash.design.ProxyDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.ProxyScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme

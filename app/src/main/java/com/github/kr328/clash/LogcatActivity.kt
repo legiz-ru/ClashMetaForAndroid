@@ -20,7 +20,6 @@ import com.github.kr328.clash.common.util.fileName
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.model.LogMessage
-import com.github.kr328.clash.design.LogcatDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.LogcatScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme

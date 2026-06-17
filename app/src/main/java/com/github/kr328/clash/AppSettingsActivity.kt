@@ -14,7 +14,6 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.componentName
 import com.github.kr328.clash.core.bridge.Bridge
-import com.github.kr328.clash.design.AppSettingsDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.AppSettingsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme

@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.common.util.intent
-import com.github.kr328.clash.design.SettingsDesign
 import com.github.kr328.clash.design.compose.screen.SettingsDestination
 import com.github.kr328.clash.design.compose.screen.SettingsNavTarget
 import com.github.kr328.clash.design.compose.screen.SettingsScreen

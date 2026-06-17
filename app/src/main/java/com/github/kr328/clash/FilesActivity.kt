@@ -13,7 +13,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.grantPermissions
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.common.util.uuid
-import com.github.kr328.clash.design.FilesDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.FilesScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
@@ -33,11 +32,21 @@ import kotlinx.coroutines.selects.select
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+private sealed class FilesRequest {
+    data class OpenFile(val file: File) : FilesRequest()
+    data class OpenDirectory(val file: File) : FilesRequest()
+    data class RenameFile(val file: File) : FilesRequest()
+    data class DeleteFile(val file: File) : FilesRequest()
+    data class ImportFile(val file: File?) : FilesRequest()
+    data class ExportFile(val file: File) : FilesRequest()
+    object PopStack : FilesRequest()
+}
+
 class FilesActivity : BaseActivity() {
     private val filesFlow = MutableStateFlow<List<File>>(emptyList())
     private val inBaseFlow = MutableStateFlow(true)
     private val nowFlow = MutableStateFlow(System.currentTimeMillis())
-    private val requests = Channel<FilesDesign.Request>(Channel.UNLIMITED)
+    private val requests = Channel<FilesRequest>(Channel.UNLIMITED)
 
     override suspend fun main() {
         val uuid = intent.uuid ?: return finish()
@@ -60,14 +69,14 @@ class FilesActivity : BaseActivity() {
                     inBaseDir = inBaseDir,
                     configurationEditable = configurationEditable,
                     now = now,
-                    onBack = { requests.trySend(FilesDesign.Request.PopStack) },
-                    onOpenFile = { requests.trySend(FilesDesign.Request.OpenFile(it)) },
-                    onOpenDirectory = { requests.trySend(FilesDesign.Request.OpenDirectory(it)) },
-                    onNew = { requests.trySend(FilesDesign.Request.ImportFile(null)) },
-                    onRename = { requests.trySend(FilesDesign.Request.RenameFile(it)) },
-                    onImport = { requests.trySend(FilesDesign.Request.ImportFile(it)) },
-                    onExport = { requests.trySend(FilesDesign.Request.ExportFile(it)) },
-                    onDelete = { requests.trySend(FilesDesign.Request.DeleteFile(it)) },
+                    onBack = { requests.trySend(FilesRequest.PopStack) },
+                    onOpenFile = { requests.trySend(FilesRequest.OpenFile(it)) },
+                    onOpenDirectory = { requests.trySend(FilesRequest.OpenDirectory(it)) },
+                    onNew = { requests.trySend(FilesRequest.ImportFile(null)) },
+                    onRename = { requests.trySend(FilesRequest.RenameFile(it)) },
+                    onImport = { requests.trySend(FilesRequest.ImportFile(it)) },
+                    onExport = { requests.trySend(FilesRequest.ExportFile(it)) },
+                    onDelete = { requests.trySend(FilesRequest.DeleteFile(it)) },
                 )
             }
         }
@@ -87,17 +96,17 @@ class FilesActivity : BaseActivity() {
                 requests.onReceive {
                     try {
                         when (it) {
-                            FilesDesign.Request.PopStack -> {
+                            FilesRequest.PopStack -> {
                                 if (stack.empty()) {
                                     finish()
                                 } else {
                                     stack.pop()
                                 }
                             }
-                            is FilesDesign.Request.OpenDirectory -> {
+                            is FilesRequest.OpenDirectory -> {
                                 stack.push(it.file.id)
                             }
-                            is FilesDesign.Request.OpenFile -> {
+                            is FilesRequest.OpenFile -> {
                                 startActivityForResult(
                                     ActivityResultContracts.StartActivityForResult(),
                                     Intent(Intent.ACTION_VIEW).setDataAndType(
@@ -106,15 +115,15 @@ class FilesActivity : BaseActivity() {
                                     ).grantPermissions()
                                 )
                             }
-                            is FilesDesign.Request.DeleteFile -> {
+                            is FilesRequest.DeleteFile -> {
                                 client.deleteDocument(it.file.id)
                             }
-                            is FilesDesign.Request.RenameFile -> {
+                            is FilesRequest.RenameFile -> {
                                 val newName = requestFileName(it.file.name)
 
                                 client.renameDocument(it.file.id, newName)
                             }
-                            is FilesDesign.Request.ImportFile -> {
+                            is FilesRequest.ImportFile -> {
                                 val uri: Uri? = startActivityForResult(
                                     com.github.kr328.clash.util.GetContentCompat(),
                                     "*/*"
@@ -130,7 +139,7 @@ class FilesActivity : BaseActivity() {
                                     }
                                 }
                             }
-                            is FilesDesign.Request.ExportFile -> {
+                            is FilesRequest.ExportFile -> {
                                 val uri: Uri? = startActivityForResult(
                                     ActivityResultContracts.CreateDocument("text/plain"),
                                     it.file.name
@@ -157,7 +166,7 @@ class FilesActivity : BaseActivity() {
     }
 
     override fun onBackPressed() {
-        requests.trySend(FilesDesign.Request.PopStack)
+        requests.trySend(FilesRequest.PopStack)
     }
 
     private suspend fun requestFileName(name: String): String {

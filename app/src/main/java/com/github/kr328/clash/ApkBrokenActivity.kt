@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import androidx.activity.compose.setContent
-import com.github.kr328.clash.design.ApkBrokenDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.ApkBrokenScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme

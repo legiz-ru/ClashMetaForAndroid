@@ -8,7 +8,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.ticker
 import com.github.kr328.clash.core.model.Provider
-import com.github.kr328.clash.design.ProvidersDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.ProviderItem
 import com.github.kr328.clash.design.compose.screen.ProvidersScreen

@@ -13,7 +13,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import com.github.kr328.clash.core.Clash
-import com.github.kr328.clash.design.MetaFeatureSettingsDesign
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.MetaFeatureSettingsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
@@ -34,6 +33,8 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.coroutines.resume
 
+private enum class GeoImport { GeoIp, GeoSite, Country, ASN }
+
 class MetaFeatureSettingsActivity : BaseActivity() {
     private val resetRequests = Channel<Unit>(Channel.CONFLATED)
 
@@ -52,10 +53,10 @@ class MetaFeatureSettingsActivity : BaseActivity() {
                     configuration = configuration,
                     onBack = { finish() },
                     onReset = { resetRequests.trySend(Unit) },
-                    onImportGeoIp = { launchImport(MetaFeatureSettingsDesign.Request.ImportGeoIp) },
-                    onImportGeoSite = { launchImport(MetaFeatureSettingsDesign.Request.ImportGeoSite) },
-                    onImportCountry = { launchImport(MetaFeatureSettingsDesign.Request.ImportCountry) },
-                    onImportASN = { launchImport(MetaFeatureSettingsDesign.Request.ImportASN) },
+                    onImportGeoIp = { launchImport(GeoImport.GeoIp) },
+                    onImportGeoSite = { launchImport(GeoImport.GeoSite) },
+                    onImportCountry = { launchImport(GeoImport.Country) },
+                    onImportASN = { launchImport(GeoImport.ASN) },
                     onGenerateAgeKeyPair = { showAgeKeypairDialog() },
                 )
             }
@@ -78,7 +79,7 @@ class MetaFeatureSettingsActivity : BaseActivity() {
         }
     }
 
-    private fun launchImport(type: MetaFeatureSettingsDesign.Request) {
+    private fun launchImport(type: GeoImport) {
         launch {
             val uri = startActivityForResult(GetContentCompat(), "*/*")
             importGeoFile(uri, type)
@@ -169,7 +170,7 @@ class MetaFeatureSettingsActivity : BaseActivity() {
         ".metadb", ".db", ".dat", ".mmdb"
     )
 
-    private suspend fun importGeoFile(uri: Uri?, importType: MetaFeatureSettingsDesign.Request) {
+    private suspend fun importGeoFile(uri: Uri?, importType: GeoImport) {
         val cursor: Cursor? = uri?.let {
             contentResolver.query(it, null, null, null, null, null)
         }
@@ -194,10 +195,10 @@ class MetaFeatureSettingsActivity : BaseActivity() {
                     return
                 }
                 val outputFileName = when (importType) {
-                    MetaFeatureSettingsDesign.Request.ImportGeoIp -> "geoip$ext"
-                    MetaFeatureSettingsDesign.Request.ImportGeoSite -> "geosite$ext"
-                    MetaFeatureSettingsDesign.Request.ImportCountry -> "country$ext"
-                    MetaFeatureSettingsDesign.Request.ImportASN -> "ASN$ext"
+                    GeoImport.GeoIp -> "geoip$ext"
+                    GeoImport.GeoSite -> "geosite$ext"
+                    GeoImport.Country -> "country$ext"
+                    GeoImport.ASN -> "ASN$ext"
                     else -> ""
                 }
 

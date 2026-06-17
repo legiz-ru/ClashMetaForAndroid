@@ -11,7 +11,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.core.content.getSystemService
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.github.kr328.clash.design.AccessControlDesign
 import com.github.kr328.clash.design.compose.screen.AccessControlScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
