@@ -126,6 +126,7 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
                     onDisconnect = { stopClashService() },
                     onSelectProxy = ::selectProxy,
                     onUrlTest = ::urlTestGroup,
+                    onLogoTap = ::onLogoTap,
                 )
             }
         }
@@ -223,6 +224,29 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
         launch {
             withClash { healthCheck(group) }
             fetchProxyGroups()
+        }
+    }
+
+    private var logoTapCount = 0
+    private var logoTapResetJob: kotlinx.coroutines.Job? = null
+
+    // Easter egg: 15 taps on the logo unlocks the "Always Summer" theme.
+    private fun onLogoTap() {
+        logoTapResetJob?.cancel()
+        logoTapCount++
+        if (logoTapCount >= 15) {
+            logoTapCount = 0
+            uiStore.summerModeUnlocked = true
+            Toast.makeText(
+                this,
+                "🥒 Всегда Лето разблокирован! Проверьте настройки темы",
+                Toast.LENGTH_LONG,
+            ).show()
+        } else {
+            logoTapResetJob = lifecycleScope.launch {
+                kotlinx.coroutines.delay(1000)
+                logoTapCount = 0
+            }
         }
     }
 

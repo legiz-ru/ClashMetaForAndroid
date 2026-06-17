@@ -2,6 +2,7 @@ package com.github.kr328.clash.design.compose.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -93,6 +94,7 @@ fun MainScreen(
     onDisconnect: () -> Unit,
     onSelectProxy: (String, String) -> Unit,
     onUrlTest: (String) -> Unit,
+    onLogoTap: () -> Unit = {},
     isTv: Boolean = false,
 ) {
     var showAddSheet by remember { mutableStateOf(false) }
@@ -124,7 +126,7 @@ fun MainScreen(
                         )
                         .padding(horizontal = 16.dp),
                 ) {
-                    Header(appTitle = appTitle, logoUrl = appLogoUrl)
+                    Header(appTitle = appTitle, logoUrl = appLogoUrl, onLogoTap = onLogoTap)
 
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -249,23 +251,32 @@ fun MainScreen(
 }
 
 @Composable
-private fun Header(appTitle: String, logoUrl: String) {
+private fun Header(appTitle: String, logoUrl: String, onLogoTap: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Hidden easter egg: tapping the logo 15× unlocks the "Always Summer"
+        // theme. Suppress the ripple so it stays invisible.
+        val logoModifier = Modifier
+            .size(64.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onLogoTap,
+            )
         val defaultLogo: @Composable () -> Unit = {
             Icon(
                 painter = painterResource(R.drawable.ic_clash),
                 contentDescription = null,
                 tint = androidx.compose.ui.graphics.Color.Unspecified,
-                modifier = Modifier.size(64.dp),
+                modifier = logoModifier,
             )
         }
         if (logoUrl.isNotEmpty()) {
-            RemoteIcon(url = logoUrl, modifier = Modifier.size(64.dp), fallback = defaultLogo)
+            RemoteIcon(url = logoUrl, modifier = logoModifier, fallback = defaultLogo)
         } else {
             defaultLogo()
         }
