@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.compose.component.SingleChoiceDialog
 import com.github.kr328.clash.design.model.AppInfo
 import com.github.kr328.clash.design.model.AppInfoSort
 

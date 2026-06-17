@@ -1,14 +1,25 @@
 package com.github.kr328.clash
 
+import android.content.res.Configuration
+import android.graphics.drawable.Drawable
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.core.model.ConnectionSnapshot
 import com.github.kr328.clash.design.AppConnectionsDesign
-import com.github.kr328.clash.design.model.ConnectionGroup
+import com.github.kr328.clash.design.compose.screen.AppConnectionsScreen
+import com.github.kr328.clash.design.compose.theme.ClashTheme
+import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
+import com.github.kr328.clash.design.model.DarkMode
+import com.github.kr328.clash.design.util.showConnectionDetailSheet
 import com.github.kr328.clash.util.withClash
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
@@ -20,6 +31,8 @@ class AppConnectionsActivity : BaseActivity<AppConnectionsDesign>() {
         const val EXTRA_CLOSED_JSON = "extra_closed_json"
     }
 
+    private val connectionsFlow = MutableStateFlow<List<Connection>>(emptyList())
+
     override suspend fun main() {
         val packageName = intent.getStringExtra(ConnectionsActivity.EXTRA_PACKAGE) ?: ""
         val appName = intent.getStringExtra(EXTRA_APP_NAME) ?: packageName
@@ -30,27 +43,34 @@ class AppConnectionsActivity : BaseActivity<AppConnectionsDesign>() {
                 ConnectionsJson.decodeFromString(ListSerializer(Connection.serializer()), closedJson)
             }.getOrElse { emptyList() }
         } else emptyList()
+        connectionsFlow.value = initialConnections
 
-        val initialGroup = ConnectionGroup(packageName, appName, null, initialConnections, 0, 0)
-        val design = AppConnectionsDesign(this, initialGroup)
-
-        setContentDesign(design)
-
-        if (closedJson != null) {
-            // Static snapshot of closed connections — no live polling
-            while (isActive) {
-                select<Unit> {
-                    events.onReceive {
-                        when (it) {
-                            Event.ClashStop -> finish()
-                            else -> Unit
-                        }
-                    }
-                    design.requests.onReceive { /* close-connection not applicable for closed */ }
-                }
+        val appIcon: Drawable? = if (packageName.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    packageManager.getApplicationInfo(packageName, 0).loadIcon(packageManager)
+                }.getOrNull()
             }
-        } else {
-            // Active connections — poll every second
+        } else null
+
+        val isLive = closedJson == null
+
+        setContent {
+            ClashTheme(variant = currentThemeVariant()) {
+                val connections by connectionsFlow.collectAsStateWithLifecycle()
+                AppConnectionsScreen(
+                    appName = appName,
+                    appIcon = appIcon,
+                    connections = connections,
+                    closable = isLive,
+                    onBack = { finish() },
+                    onConnectionClick = { showConnectionDetailSheet(this, it) },
+                    onClose = ::closeConn,
+                )
+            }
+        }
+
+        if (isLive) {
             val poller = launch {
                 while (isActive) {
                     try {
@@ -58,37 +78,51 @@ class AppConnectionsActivity : BaseActivity<AppConnectionsDesign>() {
                         val snapshot = ConnectionsJson.decodeFromString(
                             ConnectionSnapshot.serializer(), json
                         )
-                        val filtered = if (packageName.isEmpty())
+                        connectionsFlow.value = if (packageName.isEmpty())
                             snapshot.connections.filter { it.metadata.process.isEmpty() }
                         else
                             snapshot.connections.filter { it.metadata.process == packageName }
-                        design.updateConnections(filtered)
                     } catch (_: Exception) {}
                     delay(1000)
                 }
             }
 
             while (isActive) {
-                select<Unit> {
-                    events.onReceive {
-                        when (it) {
-                            Event.ClashStop -> finish()
-                            else -> Unit
-                        }
-                    }
-                    design.requests.onReceive {
-                        when (it) {
-                            is AppConnectionsDesign.Request.CloseConnection -> {
-                                launch {
-                                    try { withClash { closeConnection(it.id) } } catch (_: Exception) {}
-                                }
-                            }
-                        }
-                    }
+                when (events.receive()) {
+                    Event.ClashStop -> finish()
+                    else -> Unit
                 }
             }
 
             poller.cancel()
+        } else {
+            while (isActive) {
+                when (events.receive()) {
+                    Event.ClashStop -> finish()
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun closeConn(connection: Connection) {
+        launch {
+            try { withClash { closeConnection(connection.id) } } catch (_: Exception) {}
+        }
+    }
+
+    private fun currentThemeVariant(): ClashThemeVariant {
+        val cfg = resources.configuration
+        return when (uiStore.darkMode) {
+            DarkMode.Auto ->
+                if (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+                    ClashThemeVariant.Dark
+                } else {
+                    ClashThemeVariant.Light
+                }
+            DarkMode.ForceLight -> ClashThemeVariant.Light
+            DarkMode.ForceDark -> ClashThemeVariant.Dark
+            DarkMode.AlwaysSummer -> ClashThemeVariant.Summer
         }
     }
 }
