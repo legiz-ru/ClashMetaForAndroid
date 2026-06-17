@@ -24,6 +24,7 @@
     <string name="settings_general">General</string>
     <string name="settings_active_profile">Active profile</string>
     <string name="proxy_group_auto_no_select">This group is automatic; manual selection is not allowed.</string>
+    <string name="profile_delete_confirm">Delete profile \"%s\"?</string>
     <string name="help">Help</string>
     <string name="about">About</string>
 

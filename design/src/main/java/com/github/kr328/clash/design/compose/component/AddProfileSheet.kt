@@ -2,8 +2,10 @@ package com.github.kr328.clash.design.compose.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -49,13 +51,18 @@ fun AddProfileSheet(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+            ) {
                 SquareActionCard(
                     icon = R.drawable.ic_mdi_clipboard_outline,
                     label = stringResource(R.string.add_from_clipboard),
                     onClick = { onAction(AddProfileAction.Clipboard) },
                     modifier = Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .padding(end = 6.dp),
                 )
                 SquareActionCard(
@@ -64,6 +71,7 @@ fun AddProfileSheet(
                     onClick = { onAction(AddProfileAction.ScanQr) },
                     modifier = Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .padding(start = 6.dp),
                 )
             }
@@ -139,6 +147,7 @@ private fun SquareActionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight()
                 .padding(horizontal = 16.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,

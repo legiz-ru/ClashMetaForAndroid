@@ -50,7 +50,9 @@ import com.github.kr328.clash.design.compose.component.ConnectionToolbar
 import com.github.kr328.clash.design.compose.component.GhostPowerButton
 import com.github.kr328.clash.design.compose.component.ProxyGroupCard
 import com.github.kr328.clash.design.compose.component.ProxySelectionSheet
+import com.github.kr328.clash.design.compose.component.RemoteIcon
 import com.github.kr328.clash.design.compose.component.SimpleModeProxyList
+import com.github.kr328.clash.design.compose.component.verticalScrollbar
 import com.github.kr328.clash.design.util.elapsedIntervalString
 import com.github.kr328.clash.design.util.toBytesString
 import com.github.kr328.clash.core.model.ProxyGroup
@@ -73,6 +75,7 @@ fun MainScreen(
     hasProfiles: Boolean,
     activeProfile: Profile?,
     appTitle: String,
+    appLogoUrl: String,
     latencyTesting: Boolean,
     proxyGroups: List<Pair<String, ProxyGroup>>,
     useDots: Boolean,
@@ -97,6 +100,8 @@ fun MainScreen(
     val simpleMode = activeProfile?.simpleMode == true
     val groupMap = remember(proxyGroups) { proxyGroups.toMap() }
     val visibleGroups = remember(proxyGroups) { proxyGroups.filter { !it.second.hidden } }
+    val homeScroll = rememberScrollState()
+    val scrollbarColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     val body: @Composable (Modifier) -> Unit = { contentModifier ->
         Scaffold(
@@ -111,14 +116,15 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(homeScroll)
+                        .verticalScrollbar(homeScroll, scrollbarColor)
                         .padding(
                             top = inner.calculateTopPadding(),
                             bottom = inner.calculateBottomPadding(),
                         )
                         .padding(horizontal = 16.dp),
                 ) {
-                    Header(appTitle = appTitle)
+                    Header(appTitle = appTitle, logoUrl = appLogoUrl)
 
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -234,6 +240,7 @@ fun MainScreen(
             group = openedData,
             groupMap = groupMap,
             useDots = useDots,
+            isTv = isTv,
             onSelect = { proxy -> onSelectProxy(opened, proxy) },
             onUrlTest = { onUrlTest(opened) },
             onDismiss = { openedGroup = null },
@@ -242,19 +249,26 @@ fun MainScreen(
 }
 
 @Composable
-private fun Header(appTitle: String) {
+private fun Header(appTitle: String, logoUrl: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_clash),
-            contentDescription = null,
-            tint = androidx.compose.ui.graphics.Color.Unspecified,
-            modifier = Modifier.size(64.dp),
-        )
+        val defaultLogo: @Composable () -> Unit = {
+            Icon(
+                painter = painterResource(R.drawable.ic_clash),
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color.Unspecified,
+                modifier = Modifier.size(64.dp),
+            )
+        }
+        if (logoUrl.isNotEmpty()) {
+            RemoteIcon(url = logoUrl, modifier = Modifier.size(64.dp), fallback = defaultLogo)
+        } else {
+            defaultLogo()
+        }
         Text(
             text = appTitle,
             style = MaterialTheme.typography.headlineSmall,

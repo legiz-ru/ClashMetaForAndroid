@@ -98,7 +98,7 @@ class ProfilesActivity : BaseActivity<com.github.kr328.clash.design.ProfilesDesi
                     onProfileSupport = { openUrl(it.supportUrl) },
                     onProfileWebPage = { openUrl(it.profileWebPageUrl) },
                     onProfileEdit = { startActivity(PropertiesActivity::class.intent.setUUID(it.uuid)) },
-                    onProfileDelete = { profile -> launch { withProfile { delete(profile.uuid) } } },
+                    onProfileDelete = ::confirmDelete,
                     onNavigate = ::navigate,
                     onToggleStatus = ::toggleStatus,
                 )
@@ -196,6 +196,17 @@ class ProfilesActivity : BaseActivity<com.github.kr328.clash.design.ProfilesDesi
                 showUnsavedTips(profile)
             }
         }
+    }
+
+    private fun confirmDelete(profile: Profile) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.delete)
+            .setMessage(getString(R.string.profile_delete_confirm, profile.name))
+            .setPositiveButton(R.string.delete) { _, _ ->
+                launch { withProfile { delete(profile.uuid) } }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun showAnnounce(profile: Profile) {

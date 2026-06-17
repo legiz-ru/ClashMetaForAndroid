@@ -55,6 +55,7 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
     private val hasProfilesFlow = MutableStateFlow(false)
     private val activeProfileFlow = MutableStateFlow<Profile?>(null)
     private val appTitleFlow = MutableStateFlow("")
+    private val appLogoUrlFlow = MutableStateFlow("")
     private val latencyTestingFlow = MutableStateFlow(false)
     private val proxyGroupsFlow = MutableStateFlow<List<Pair<String, ProxyGroup>>>(emptyList())
     private val useDotsFlow = MutableStateFlow(true)
@@ -93,6 +94,7 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
             val hasProfiles by hasProfilesFlow.collectAsStateWithLifecycle()
             val activeProfile by activeProfileFlow.collectAsStateWithLifecycle()
             val appTitle by appTitleFlow.collectAsStateWithLifecycle()
+            val appLogoUrl by appLogoUrlFlow.collectAsStateWithLifecycle()
             val latencyTesting by latencyTestingFlow.collectAsStateWithLifecycle()
             val proxyGroups by proxyGroupsFlow.collectAsStateWithLifecycle()
             val useDots by useDotsFlow.collectAsStateWithLifecycle()
@@ -106,6 +108,7 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
                     hasProfiles = hasProfiles,
                     activeProfile = activeProfile,
                     appTitle = appTitle,
+                    appLogoUrl = appLogoUrl,
                     latencyTesting = latencyTesting,
                     proxyGroups = proxyGroups,
                     useDots = useDots,
@@ -167,6 +170,7 @@ class MainActivity : BaseActivity<com.github.kr328.clash.design.MainDesign>() {
             hasProfilesFlow.value = queryAll().isNotEmpty()
             appTitleFlow.value = active?.profileTitle?.takeIf { it.isNotEmpty() }
                 ?: getString(R.string.application_name)
+            appLogoUrlFlow.value = active?.profileLogo.orEmpty()
         }
         if (clashRunning) {
             fetchProxyGroups()
