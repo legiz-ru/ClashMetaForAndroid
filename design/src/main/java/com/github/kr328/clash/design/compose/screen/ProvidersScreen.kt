@@ -99,7 +99,9 @@ fun ProvidersScreen(
                         .padding(inner),
                 ) {
                     items(items = providers, key = { "${it.provider.type}:${it.provider.name}" }) { item ->
-                        ProviderRow(item = item, tick = tick, onClick = { onOpen(item.provider) })
+                        Box(modifier = Modifier.animateItem()) {
+                            ProviderRow(item = item, tick = tick, onClick = { onOpen(item.provider) })
+                        }
                     }
                 }
             }

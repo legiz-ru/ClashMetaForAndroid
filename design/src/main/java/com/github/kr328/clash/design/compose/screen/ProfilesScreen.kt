@@ -105,6 +105,7 @@ fun ProfilesScreen(
                         onWebPage = { onProfileWebPage(profile) },
                         onEdit = { onProfileEdit(profile) },
                         onDelete = { onProfileDelete(profile) },
+                        modifier = Modifier.animateItem(),
                     )
                 }
             }

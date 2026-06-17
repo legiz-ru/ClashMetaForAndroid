@@ -92,7 +92,9 @@ fun LogsScreen(
                         .padding(inner),
                 ) {
                     items(items = files, key = { it.fileName }) { file ->
-                        LogFileRow(file = file, onClick = { onOpenFile(file) })
+                        Box(modifier = Modifier.animateItem()) {
+                            LogFileRow(file = file, onClick = { onOpenFile(file) })
+                        }
                     }
                 }
             }

@@ -283,18 +283,20 @@ private fun ProxyPager(
                         .padding(horizontal = 12.dp),
                 ) {
                     items(items = group.proxies, key = { it.name }) { proxy ->
-                        ProxyRow(
-                            proxy = proxy,
-                            selected = proxy.name == group.now,
-                            delay = rowDelay(groupMap, proxy),
-                            useDots = useDots,
-                            enabled = true,
-                            parentIsSmart = isSmart,
-                            groupMap = groupMap,
-                            onClick = {
-                                if (isSelector) onSelect(name, proxy.name) else showAuto = true
-                            },
-                        )
+                        Box(modifier = Modifier.animateItem()) {
+                            ProxyRow(
+                                proxy = proxy,
+                                selected = proxy.name == group.now,
+                                delay = rowDelay(groupMap, proxy),
+                                useDots = useDots,
+                                enabled = true,
+                                parentIsSmart = isSmart,
+                                groupMap = groupMap,
+                                onClick = {
+                                    if (isSelector) onSelect(name, proxy.name) else showAuto = true
+                                },
+                            )
+                        }
                     }
                 }
             }

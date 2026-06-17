@@ -109,14 +109,16 @@ fun FilesScreen(
                         .padding(inner),
                 ) {
                     items(items = files, key = { it.id }) { file ->
-                        FileRow(
-                            file = file,
-                            now = now,
-                            onOpen = {
-                                if (file.isDirectory) onOpenDirectory(file) else onOpenFile(file)
-                            },
-                            onMore = { menuFile = file },
-                        )
+                        Box(modifier = Modifier.animateItem()) {
+                            FileRow(
+                                file = file,
+                                now = now,
+                                onOpen = {
+                                    if (file.isDirectory) onOpenDirectory(file) else onOpenFile(file)
+                                },
+                                onMore = { menuFile = file },
+                            )
+                        }
                     }
                 }
             }
