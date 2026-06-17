@@ -1,5 +1,10 @@
-package com.github.kr328.clash.design.preference
+package com.github.kr328.clash.design.compose.component
 
+/**
+ * Two-way converters between a typed value and its text representation, used by
+ * the Compose preference editors. Relocated from the old (now removed) View
+ * preference DSL.
+ */
 interface NullableTextAdapter<T> {
     fun from(value: T): String?
     fun to(text: String?): T

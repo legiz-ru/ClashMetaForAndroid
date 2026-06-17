@@ -42,7 +42,7 @@ fun SettingsCategory(
 
 /**
  * A single settings row: monochrome leading icon, title, optional subtitle and a
- * trailing chevron. Mirrors the look of the existing [com.github.kr328.clash.design.view.ActionLabel].
+ * trailing chevron.
  */
 @Composable
 fun SettingsItem(

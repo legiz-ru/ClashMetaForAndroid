@@ -30,8 +30,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.github.kr328.clash.design.R
-import com.github.kr328.clash.design.preference.NullableTextAdapter
-import com.github.kr328.clash.design.preference.TextAdapter
+import com.github.kr328.clash.design.compose.component.NullableTextAdapter
+import com.github.kr328.clash.design.compose.component.TextAdapter
 
 /**
  * Compose equivalents of the View-based editable preferences

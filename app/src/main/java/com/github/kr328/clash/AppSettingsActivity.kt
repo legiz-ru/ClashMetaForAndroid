@@ -18,7 +18,6 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.AppSettingsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
-import com.github.kr328.clash.design.databinding.DesignAboutBinding
 import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
@@ -140,11 +139,10 @@ class AppSettingsActivity : BaseActivity(), Behavior {
 
     private suspend fun showAbout() {
         val version = queryAppVersionName()
-        val binding = DesignAboutBinding.inflate(layoutInflater).apply {
-            versionName = version
-        }
+        val view = layoutInflater.inflate(R.layout.design_about, null)
+        view.findViewById<android.widget.TextView>(R.id.version_name).text = version
         MaterialAlertDialogBuilder(this)
-            .setView(binding.root)
+            .setView(view)
             .setPositiveButton(R.string.check_for_updates) { _, _ ->
                 launch { runUpdateCheck() }
             }

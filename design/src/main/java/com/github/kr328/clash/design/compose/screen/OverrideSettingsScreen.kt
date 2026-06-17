@@ -21,8 +21,8 @@ import com.github.kr328.clash.design.compose.component.PreferenceRow
 import com.github.kr328.clash.design.compose.component.PreferenceScaffold
 import com.github.kr328.clash.design.compose.component.SettingsCategory
 import com.github.kr328.clash.design.compose.component.SingleChoiceDialog
-import com.github.kr328.clash.design.preference.NullableTextAdapter
-import com.github.kr328.clash.design.preference.TextAdapter
+import com.github.kr328.clash.design.compose.component.NullableTextAdapter
+import com.github.kr328.clash.design.compose.component.TextAdapter
 
 /**
  * Override settings screen (1:1 with OverrideSettingsDesign, restyled to MD3E).

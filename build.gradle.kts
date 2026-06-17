@@ -179,12 +179,6 @@ subprojects {
             }
         }
 
-        buildFeatures.apply {
-            dataBinding {
-                isEnabled = name != "hideapi"
-            }
-        }
-
         if (isApp) {
             this as AppExtension
 

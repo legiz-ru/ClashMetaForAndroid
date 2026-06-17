@@ -15,7 +15,7 @@ import com.github.kr328.clash.design.compose.component.EditableListPreference
 import com.github.kr328.clash.design.compose.component.PreferenceRow
 import com.github.kr328.clash.design.compose.component.PreferenceScaffold
 import com.github.kr328.clash.design.compose.component.SettingsCategory
-import com.github.kr328.clash.design.preference.TextAdapter
+import com.github.kr328.clash.design.compose.component.TextAdapter
 
 /**
  * Meta feature settings screen (1:1 with MetaFeatureSettingsDesign, restyled to MD3E).
