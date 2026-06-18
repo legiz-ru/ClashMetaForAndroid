@@ -3,7 +3,10 @@ package com.github.kr328.clash.design.compose.screen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,8 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
@@ -148,29 +149,14 @@ private fun SettingsList(
 
 @Composable
 private fun SettingsBottomBar(onNavigate: (SettingsNavTarget) -> Unit) {
-    NavigationBar {
-        NavigationBarItem(
-            selected = false,
-            onClick = { onNavigate(SettingsNavTarget.Home) },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_mdi_home),
-                    contentDescription = null,
-                )
-            },
-            label = { Text(stringResource(R.string.home)) },
-        )
-        NavigationBarItem(
-            selected = true,
-            onClick = { onNavigate(SettingsNavTarget.Settings) },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_mdi_cog),
-                    contentDescription = null,
-                )
-            },
-            label = { Text(stringResource(R.string.settings)) },
-        )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        NavPill(selected = SettingsNavTarget.Settings, onNavigate = onNavigate)
     }
 }
 

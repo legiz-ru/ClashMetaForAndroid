@@ -392,7 +392,7 @@ private fun MainBottomBar(
             }
         }
 
-        NavPill(onNavigate = onNavigate)
+        NavPill(selected = SettingsNavTarget.Home, onNavigate = onNavigate)
 
         AnimatedVisibility(visible = clashRunning) {
             Row {
@@ -408,68 +408,6 @@ private fun MainBottomBar(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun NavPill(onNavigate: (SettingsNavTarget) -> Unit) {
-    Surface(
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shadowElevation = 3.dp,
-    ) {
-        Row(
-            modifier = Modifier.padding(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NavPillItem(
-                selected = true,
-                icon = R.drawable.ic_mdi_home,
-                label = stringResource(R.string.home),
-                onClick = { onNavigate(SettingsNavTarget.Home) },
-            )
-            NavPillItem(
-                selected = false,
-                icon = R.drawable.ic_mdi_cog,
-                label = stringResource(R.string.settings),
-                onClick = { onNavigate(SettingsNavTarget.Settings) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun NavPillItem(
-    selected: Boolean,
-    icon: Int,
-    label: String,
-    onClick: () -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val fg = if (selected) scheme.onPrimary else scheme.onSurfaceVariant
-    Row(
-        modifier = Modifier
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .background(if (selected) scheme.primary else Color.Transparent)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = label,
-            tint = fg,
-            modifier = Modifier.size(22.dp),
-        )
-        if (selected) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = label,
-                color = fg,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-            )
         }
     }
 }
