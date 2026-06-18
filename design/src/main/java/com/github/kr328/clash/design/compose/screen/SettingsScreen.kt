@@ -30,7 +30,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.component.SettingsCategory
-import com.github.kr328.clash.design.compose.component.SettingsGroup
 import com.github.kr328.clash.design.compose.component.SettingsItem
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 
@@ -106,48 +105,42 @@ private fun SettingsList(
             .padding(vertical = 8.dp),
     ) {
         SettingsCategory(stringResource(R.string.settings_general))
-        SettingsGroup {
-            SettingsItem(R.drawable.ic_baseline_settings, stringResource(R.string.app)) {
-                onOpen(SettingsDestination.App)
-            }
-            SettingsItem(R.drawable.ic_baseline_info, stringResource(R.string.about)) {
-                onOpen(SettingsDestination.About)
-            }
+        SettingsItem(R.drawable.ic_baseline_settings, stringResource(R.string.app)) {
+            onOpen(SettingsDestination.App)
+        }
+        SettingsItem(R.drawable.ic_baseline_info, stringResource(R.string.about)) {
+            onOpen(SettingsDestination.About)
         }
 
         SettingsCategory(stringResource(R.string.settings_core))
-        SettingsGroup {
-            SettingsItem(R.drawable.ic_baseline_dns, stringResource(R.string.network)) {
-                onOpen(SettingsDestination.Network)
-            }
-            SettingsItem(R.drawable.ic_baseline_extension, stringResource(R.string.override)) {
-                onOpen(SettingsDestination.Override)
-            }
-            SettingsItem(R.drawable.ic_baseline_meta, stringResource(R.string.meta_features)) {
-                onOpen(SettingsDestination.MetaFeature)
-            }
-            SettingsItem(R.drawable.ic_baseline_assignment, stringResource(R.string.logs)) {
-                onOpen(SettingsDestination.Logs)
-            }
+        SettingsItem(R.drawable.ic_baseline_dns, stringResource(R.string.network)) {
+            onOpen(SettingsDestination.Network)
+        }
+        SettingsItem(R.drawable.ic_baseline_extension, stringResource(R.string.override)) {
+            onOpen(SettingsDestination.Override)
+        }
+        SettingsItem(R.drawable.ic_baseline_meta, stringResource(R.string.meta_features)) {
+            onOpen(SettingsDestination.MetaFeature)
+        }
+        SettingsItem(R.drawable.ic_baseline_assignment, stringResource(R.string.logs)) {
+            onOpen(SettingsDestination.Logs)
         }
 
         // Only available while a profile is running.
         AnimatedVisibility(visible = clashRunning) {
             Column {
                 SettingsCategory(stringResource(R.string.settings_active_profile))
-                SettingsGroup {
-                    SettingsItem(R.drawable.ic_arrow_decision_outline, stringResource(R.string.rules)) {
-                        onOpen(SettingsDestination.Rules)
-                    }
-                    SettingsItem(
-                        R.drawable.ic_baseline_swap_vertical_circle,
-                        stringResource(R.string.providers),
-                    ) {
-                        onOpen(SettingsDestination.Providers)
-                    }
-                    SettingsItem(R.drawable.ic_baseline_view_list, stringResource(R.string.connections)) {
-                        onOpen(SettingsDestination.Connections)
-                    }
+                SettingsItem(R.drawable.ic_arrow_decision_outline, stringResource(R.string.rules)) {
+                    onOpen(SettingsDestination.Rules)
+                }
+                SettingsItem(
+                    R.drawable.ic_baseline_swap_vertical_circle,
+                    stringResource(R.string.providers),
+                ) {
+                    onOpen(SettingsDestination.Providers)
+                }
+                SettingsItem(R.drawable.ic_baseline_view_list, stringResource(R.string.connections)) {
+                    onOpen(SettingsDestination.Connections)
                 }
             }
         }

@@ -10,7 +10,6 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.component.PreferenceRow
 import com.github.kr328.clash.design.compose.component.PreferenceScaffold
 import com.github.kr328.clash.design.compose.component.SettingsCategory
-import com.github.kr328.clash.design.compose.component.SettingsGroup
 import com.github.kr328.clash.design.compose.component.SingleChoiceDialog
 import com.github.kr328.clash.design.compose.component.SwitchPreference
 import com.github.kr328.clash.design.model.DarkMode
@@ -46,93 +45,81 @@ fun AppSettingsScreen(
 
     PreferenceScaffold(title = stringResource(R.string.app), onBack = onBack) {
         SettingsCategory(stringResource(R.string.behavior))
-        SettingsGroup {
-            SwitchPreference(
-                title = stringResource(R.string.auto_restart),
-                summary = stringResource(R.string.allow_clash_auto_restart),
-                icon = R.drawable.ic_baseline_restore,
-                checked = autoRestart,
-                onCheckedChange = onAutoRestart,
-            )
-        }
+        SwitchPreference(
+            title = stringResource(R.string.auto_restart),
+            summary = stringResource(R.string.allow_clash_auto_restart),
+            icon = R.drawable.ic_baseline_restore,
+            checked = autoRestart,
+            onCheckedChange = onAutoRestart,
+        )
 
         SettingsCategory(stringResource(R.string.interface_))
-        SettingsGroup {
-            PreferenceRow(
-                title = stringResource(R.string.dark_mode),
-                summary = darkModeOptions.firstOrNull { it.first == darkMode }?.second,
-                icon = R.drawable.ic_baseline_brightness_4,
-                onClick = { showDarkDialog = true },
-            )
-            PreferenceRow(
-                title = stringResource(R.string.language),
-                summary = languageSummary,
-                icon = R.drawable.ic_baseline_language,
-                onClick = onLanguage,
-            )
-            SwitchPreference(
-                title = stringResource(R.string.delay_display),
-                summary = stringResource(R.string.delay_display_dots),
-                icon = R.drawable.ic_baseline_speed,
-                checked = delayDots,
-                onCheckedChange = onDelayDots,
-            )
-            SwitchPreference(
-                title = stringResource(R.string.hide_app_icon_title),
-                summary = stringResource(R.string.hide_app_icon_desc),
-                icon = R.drawable.ic_baseline_hide,
-                checked = hideIcon,
-                onCheckedChange = onHideIcon,
-            )
-            SwitchPreference(
-                title = stringResource(R.string.hide_from_recents_title),
-                summary = stringResource(R.string.hide_from_recents_desc),
-                icon = R.drawable.ic_baseline_stack,
-                checked = hideRecents,
-                onCheckedChange = onHideRecents,
-            )
-        }
+        PreferenceRow(
+            title = stringResource(R.string.dark_mode),
+            summary = darkModeOptions.firstOrNull { it.first == darkMode }?.second,
+            icon = R.drawable.ic_baseline_brightness_4,
+            onClick = { showDarkDialog = true },
+        )
+        PreferenceRow(
+            title = stringResource(R.string.language),
+            summary = languageSummary,
+            icon = R.drawable.ic_baseline_language,
+            onClick = onLanguage,
+        )
+        SwitchPreference(
+            title = stringResource(R.string.delay_display),
+            summary = stringResource(R.string.delay_display_dots),
+            icon = R.drawable.ic_baseline_speed,
+            checked = delayDots,
+            onCheckedChange = onDelayDots,
+        )
+        SwitchPreference(
+            title = stringResource(R.string.hide_app_icon_title),
+            summary = stringResource(R.string.hide_app_icon_desc),
+            icon = R.drawable.ic_baseline_hide,
+            checked = hideIcon,
+            onCheckedChange = onHideIcon,
+        )
+        SwitchPreference(
+            title = stringResource(R.string.hide_from_recents_title),
+            summary = stringResource(R.string.hide_from_recents_desc),
+            icon = R.drawable.ic_baseline_stack,
+            checked = hideRecents,
+            onCheckedChange = onHideRecents,
+        )
 
         SettingsCategory(stringResource(R.string.service))
-        SettingsGroup {
-            SwitchPreference(
-                title = stringResource(R.string.show_traffic),
-                summary = stringResource(R.string.show_traffic_summary),
-                icon = R.drawable.ic_baseline_domain,
-                checked = dynamicNotification,
-                enabled = dynamicNotificationEnabled,
-                onCheckedChange = onDynamicNotification,
-            )
-        }
+        SwitchPreference(
+            title = stringResource(R.string.show_traffic),
+            summary = stringResource(R.string.show_traffic_summary),
+            icon = R.drawable.ic_baseline_domain,
+            checked = dynamicNotification,
+            enabled = dynamicNotificationEnabled,
+            onCheckedChange = onDynamicNotification,
+        )
 
         SettingsCategory(stringResource(R.string.privacy))
-        SettingsGroup {
-            SwitchPreference(
-                title = stringResource(R.string.send_hwid_title),
-                summary = stringResource(R.string.send_hwid_desc),
-                icon = R.drawable.ic_baseline_assignment,
-                checked = sendHwid,
-                onCheckedChange = onSendHwid,
-            )
-        }
+        SwitchPreference(
+            title = stringResource(R.string.send_hwid_title),
+            summary = stringResource(R.string.send_hwid_desc),
+            icon = R.drawable.ic_baseline_assignment,
+            checked = sendHwid,
+            onCheckedChange = onSendHwid,
+        )
 
         SettingsCategory(stringResource(R.string.about))
-        SettingsGroup {
-            PreferenceRow(
-                title = stringResource(R.string.about),
-                icon = R.drawable.ic_baseline_info,
-                onClick = onAbout,
-            )
-        }
+        PreferenceRow(
+            title = stringResource(R.string.about),
+            icon = R.drawable.ic_baseline_info,
+            onClick = onAbout,
+        )
 
         SettingsCategory(stringResource(R.string.templates))
-        SettingsGroup {
-            PreferenceRow(
-                title = stringResource(R.string.custom_template),
-                summary = stringResource(R.string.custom_template_desc),
-                onClick = onCustomTemplate,
-            )
-        }
+        PreferenceRow(
+            title = stringResource(R.string.custom_template),
+            summary = stringResource(R.string.custom_template_desc),
+            onClick = onCustomTemplate,
+        )
     }
 
     if (showDarkDialog) {
