@@ -2,6 +2,7 @@ package com.github.kr328.clash.design.compose.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedVisibility
@@ -12,21 +13,22 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,7 +50,6 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.component.AddProfileAction
 import com.github.kr328.clash.design.compose.component.AddProfileSheet
 import com.github.kr328.clash.design.compose.component.AppNavigationRail
-import com.github.kr328.clash.design.compose.component.ConnectionToolbar
 import com.github.kr328.clash.design.compose.component.GhostPowerButton
 import com.github.kr328.clash.design.compose.component.ProxyGroupCard
 import com.github.kr328.clash.design.compose.component.ProxySelectionSheet
@@ -111,7 +112,14 @@ fun MainScreen(
             modifier = contentModifier,
             bottomBar = {
                 if (!expanded) {
-                    MainBottomBar(onNavigate = onNavigate)
+                    MainBottomBar(
+                        clashRunning = clashRunning,
+                        simpleMode = simpleMode,
+                        latencyTesting = latencyTesting,
+                        onNavigate = onNavigate,
+                        onDisconnect = onDisconnect,
+                        onLatencyTest = onLatencyTest,
+                    )
                 }
             },
         ) { inner ->
@@ -182,22 +190,9 @@ fun MainScreen(
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(72.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
-                }
-
-                if (clashRunning && !expanded) {
-                    ConnectionToolbar(
-                        visible = true,
-                        showLatencyTest = simpleMode,
-                        latencyTesting = latencyTesting,
-                        onDisconnect = onDisconnect,
-                        onLatencyTest = onLatencyTest,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                    )
                 }
             }
         }
@@ -355,21 +350,146 @@ private fun PowerSection(onToggle: () -> Unit) {
     }
 }
 
+/**
+ * Floating bottom bar: a Home/Settings nav pill, flanked while running by a red
+ * square "stop" button (right) and, for simple-mode profiles, a square
+ * latency-test button (left). Inspired by the June app's floating pill nav.
+ */
 @Composable
-private fun MainBottomBar(onNavigate: (SettingsNavTarget) -> Unit) {
-    NavigationBar {
-        NavigationBarItem(
-            selected = true,
-            onClick = { onNavigate(SettingsNavTarget.Home) },
-            icon = { Icon(painterResource(R.drawable.ic_mdi_home), contentDescription = null) },
-            label = { Text(stringResource(R.string.home)) },
+private fun MainBottomBar(
+    clashRunning: Boolean,
+    simpleMode: Boolean,
+    latencyTesting: Boolean,
+    onNavigate: (SettingsNavTarget) -> Unit,
+    onDisconnect: () -> Unit,
+    onLatencyTest: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AnimatedVisibility(visible = clashRunning && simpleMode) {
+            Row {
+                SquareBarButton(
+                    onClick = { if (!latencyTesting) onLatencyTest() },
+                    container = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ) {
+                    if (latencyTesting) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_baseline_speed),
+                            contentDescription = stringResource(R.string.delay_test),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+        }
+
+        NavPill(onNavigate = onNavigate)
+
+        AnimatedVisibility(visible = clashRunning) {
+            Row {
+                Spacer(modifier = Modifier.width(12.dp))
+                SquareBarButton(
+                    onClick = onDisconnect,
+                    container = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_mdi_power),
+                        contentDescription = stringResource(R.string.disconnect),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavPill(onNavigate: (SettingsNavTarget) -> Unit) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shadowElevation = 3.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NavPillItem(
+                selected = true,
+                icon = R.drawable.ic_mdi_home,
+                label = stringResource(R.string.home),
+                onClick = { onNavigate(SettingsNavTarget.Home) },
+            )
+            NavPillItem(
+                selected = false,
+                icon = R.drawable.ic_mdi_cog,
+                label = stringResource(R.string.settings),
+                onClick = { onNavigate(SettingsNavTarget.Settings) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavPillItem(
+    selected: Boolean,
+    icon: Int,
+    label: String,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val fg = if (selected) scheme.onPrimary else scheme.onSurfaceVariant
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
+            .background(if (selected) scheme.primary else Color.Transparent)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = label,
+            tint = fg,
+            modifier = Modifier.size(22.dp),
         )
-        NavigationBarItem(
-            selected = false,
-            onClick = { onNavigate(SettingsNavTarget.Settings) },
-            icon = { Icon(painterResource(R.drawable.ic_mdi_cog), contentDescription = null) },
-            label = { Text(stringResource(R.string.settings)) },
-        )
+        if (selected) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                color = fg,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SquareBarButton(
+    onClick: () -> Unit,
+    container: Color,
+    contentColor: Color,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        color = container,
+        contentColor = contentColor,
+        shadowElevation = 3.dp,
+        modifier = Modifier.size(56.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) { content() }
     }
 }
 
