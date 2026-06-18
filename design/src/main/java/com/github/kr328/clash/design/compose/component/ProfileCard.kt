@@ -5,6 +5,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,15 +64,25 @@ fun ProfileCard(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
 
+    // Highlight the focused card so D-pad users (TV) can see which profile the
+    // center button will activate.
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
+
     Card(
         onClick = onClick,
+        interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = if (profile.active) BorderStroke(2.dp, scheme.primary) else null,
+        border = when {
+            focused -> BorderStroke(3.dp, scheme.primary)
+            profile.active -> BorderStroke(2.dp, scheme.primary)
+            else -> null
+        },
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header: sync (when updatable) + name
