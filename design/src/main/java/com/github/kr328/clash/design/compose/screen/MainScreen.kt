@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -128,11 +129,13 @@ fun MainScreen(
                 ) {
                     Header(appTitle = appTitle, logoUrl = appLogoUrl, onLogoTap = onLogoTap)
 
-                    if (isLoading) {
+                    AnimatedVisibility(
+                        visible = isLoading,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    ) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .padding(vertical = 64.dp)
-                                .align(Alignment.CenterHorizontally)
                                 .size(48.dp),
                         )
                     }
@@ -155,30 +158,32 @@ fun MainScreen(
                         )
                     }
 
-                    if (hasProfiles && !clashRunning) {
+                    AnimatedVisibility(visible = hasProfiles && !clashRunning && !isLoading) {
                         PowerSection(onToggle = onPowerToggle)
                     }
 
-                    if (clashRunning) {
-                        if (simpleMode && visibleGroups.isNotEmpty()) {
-                            val (firstName, firstGroup) = visibleGroups.first()
-                            SimpleModeProxyList(
-                                group = firstGroup,
-                                groupMap = groupMap,
-                                useDots = useDots,
-                                onSelect = { proxy -> onSelectProxy(firstName, proxy) },
-                            )
-                        } else {
-                            for ((name, group) in visibleGroups) {
-                                ProxyGroupCard(
-                                    name = name,
-                                    group = group,
+                    AnimatedVisibility(visible = clashRunning) {
+                        Column {
+                            if (simpleMode && visibleGroups.isNotEmpty()) {
+                                val (firstName, firstGroup) = visibleGroups.first()
+                                SimpleModeProxyList(
+                                    group = firstGroup,
                                     groupMap = groupMap,
-                                    onClick = { openedGroup = name },
+                                    useDots = useDots,
+                                    onSelect = { proxy -> onSelectProxy(firstName, proxy) },
                                 )
+                            } else {
+                                for ((name, group) in visibleGroups) {
+                                    ProxyGroupCard(
+                                        name = name,
+                                        group = group,
+                                        groupMap = groupMap,
+                                        onClick = { openedGroup = name },
+                                    )
+                                }
                             }
+                            Spacer(modifier = Modifier.height(72.dp))
                         }
-                        Spacer(modifier = Modifier.height(72.dp))
                     }
                 }
 
