@@ -7,11 +7,11 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.core.model.Connection
 import com.github.kr328.clash.core.model.ConnectionSnapshot
+import com.github.kr328.clash.design.compose.component.ConnectionDetailSheet
 import com.github.kr328.clash.design.compose.screen.AppConnectionsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
 import com.github.kr328.clash.design.model.DarkMode
-import com.github.kr328.clash.design.util.showConnectionDetailSheet
 import com.github.kr328.clash.util.withClash
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -31,6 +31,7 @@ class AppConnectionsActivity : BaseActivity() {
     }
 
     private val connectionsFlow = MutableStateFlow<List<Connection>>(emptyList())
+    private val detailFlow = MutableStateFlow<Connection?>(null)
 
     override suspend fun main() {
         val packageName = intent.getStringExtra(ConnectionsActivity.EXTRA_PACKAGE) ?: ""
@@ -57,15 +58,22 @@ class AppConnectionsActivity : BaseActivity() {
         setContent {
             ClashTheme(variant = currentThemeVariant()) {
                 val connections by connectionsFlow.collectAsStateWithLifecycle()
+                val detail by detailFlow.collectAsStateWithLifecycle()
                 AppConnectionsScreen(
                     appName = appName,
                     appIcon = appIcon,
                     connections = connections,
                     closable = isLive,
                     onBack = { finish() },
-                    onConnectionClick = { showConnectionDetailSheet(this, it) },
+                    onConnectionClick = { detailFlow.value = it },
                     onClose = ::closeConn,
                 )
+                detail?.let {
+                    ConnectionDetailSheet(
+                        connection = it,
+                        onDismiss = { detailFlow.value = null },
+                    )
+                }
             }
         }
 
