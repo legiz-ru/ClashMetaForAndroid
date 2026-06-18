@@ -119,8 +119,8 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(homeScroll)
                         .verticalScrollbar(homeScroll, scrollbarColor)
+                        .verticalScroll(homeScroll)
                         .padding(
                             top = inner.calculateTopPadding(),
                             bottom = inner.calculateBottomPadding(),

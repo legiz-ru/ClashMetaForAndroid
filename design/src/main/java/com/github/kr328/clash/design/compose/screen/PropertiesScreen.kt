@@ -166,6 +166,20 @@ fun PropertiesScreen(
     }
 }
 
+/**
+ * Display label for a proxy link: the URL-decoded text after `#` (the remark),
+ * falling back to the host, then the raw link. Mirrors the old ProxyLinkAdapter.
+ */
+private fun proxyLinkAlias(url: String): String {
+    val afterHash = url.substringAfterLast("#", "").trim()
+    if (afterHash.isNotBlank()) {
+        return runCatching { java.net.URLDecoder.decode(afterHash, "UTF-8") }.getOrDefault(afterHash)
+    }
+    return runCatching {
+        url.substringAfter("://").substringBefore("?").substringBefore("/").ifBlank { url }
+    }.getOrDefault(url)
+}
+
 @Composable
 private fun ProxyLinkRow(
     link: String,
@@ -189,7 +203,7 @@ private fun ProxyLinkRow(
         )
         Spacer(modifier = Modifier.width(20.dp))
         Text(
-            text = link,
+            text = proxyLinkAlias(link),
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurface,
             maxLines = 2,

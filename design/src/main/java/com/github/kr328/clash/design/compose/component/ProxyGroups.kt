@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -215,6 +216,8 @@ fun ProxySelectionSheet(
     var showAutoDialog by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val scrollbarColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val content: @Composable () -> Unit = {
         Column(
@@ -262,6 +265,7 @@ fun ProxySelectionSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (isTv) Modifier.weight(1f) else Modifier.heightIn(max = 480.dp))
+                    .verticalScrollbar(listState, scrollbarColor)
                     .padding(horizontal = 12.dp),
             ) {
                 items(items = sorted) { proxy ->
@@ -301,7 +305,7 @@ fun ProxySelectionSheet(
             }
         }
     } else {
-        ModalBottomSheet(onDismissRequest = onDismiss) {
+        ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
             content()
         }
     }

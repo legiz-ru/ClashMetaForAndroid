@@ -73,8 +73,8 @@ fun PreferenceScaffold(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(scroll)
                     .verticalScrollbar(scroll, scrollbarColor)
+                    .verticalScroll(scroll)
                     .padding(inner)
                     .padding(vertical = 8.dp),
                 content = content,

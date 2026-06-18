@@ -5,20 +5,21 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -29,18 +30,14 @@ import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 
 /**
- * Floating toolbar shown on phones while Clash is running. Uses the native MD3
- * Expressive [HorizontalFloatingToolbar] and replaces the previous disconnect +
- * latency-test FAB row.
+ * Floating controls shown on phones while Clash is running: an optional
+ * latency-test mini FAB (simple-mode profiles) plus a "disconnect" extended FAB.
+ * Mirrors the FAB row from the old design_main.xml.
  *
  * @param visible           usually `clashRunning`
  * @param showLatencyTest   usually `clashRunning && profileSimpleMode`
- * @param latencyTesting    shows an inline loading indicator and disables the test button
- *
- * Targets Material 3 1.4.x (alpha). If a toolbar API signature changes in a later
- * alpha, the adjustment is local to this file.
+ * @param latencyTesting    shows an inline progress indicator and disables the test button
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ConnectionToolbar(
     visible: Boolean,
@@ -56,17 +53,20 @@ fun ConnectionToolbar(
         exit = fadeOut() + slideOutVertically { it / 2 },
         modifier = modifier,
     ) {
-        HorizontalFloatingToolbar(
-            expanded = true,
-            colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (showLatencyTest) {
-                FilledIconButton(
-                    onClick = onLatencyTest,
-                    enabled = !latencyTesting,
+                SmallFloatingActionButton(
+                    onClick = { if (!latencyTesting) onLatencyTest() },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 ) {
                     if (latencyTesting) {
-                        LoadingIndicator(modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
                     } else {
                         Icon(
                             painter = painterResource(R.drawable.ic_baseline_speed),
@@ -76,7 +76,7 @@ fun ConnectionToolbar(
                 }
             }
 
-            Button(onClick = onDisconnect) {
+            ExtendedFloatingActionButton(onClick = onDisconnect) {
                 Icon(
                     painter = painterResource(R.drawable.ic_mdi_power),
                     contentDescription = null,

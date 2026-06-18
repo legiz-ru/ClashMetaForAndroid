@@ -1,10 +1,7 @@
 package com.github.kr328.clash.design.compose.component
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -23,7 +20,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -77,25 +76,29 @@ fun ProfileCard(
             // Header: sync (when updatable) + name
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (profile.imported && profile.type != Profile.Type.File) {
-                    // Keep one continuous 0..360 loop running and apply it only
-                    // while updating. Driving rotate() off a conditional target
-                    // made the icon spin *backwards* toward 0 when an update
-                    // finished mid-rotation; this avoids that.
-                    val transition = rememberInfiniteTransition(label = "profileSync")
-                    val spin by transition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 360f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart,
-                        ),
-                        label = "profileSyncAngle",
-                    )
+                    // Spin only while updating: start a fresh 0..360 loop when an
+                    // update begins and settle back to 0 when it ends, so the icon
+                    // never jumps to a random phase or snaps backwards.
+                    val rotation = remember { Animatable(0f) }
+                    LaunchedEffect(updating) {
+                        if (updating) {
+                            rotation.snapTo(0f)
+                            while (true) {
+                                rotation.animateTo(
+                                    targetValue = 360f,
+                                    animationSpec = tween(1000, easing = LinearEasing),
+                                )
+                                rotation.snapTo(0f)
+                            }
+                        } else {
+                            rotation.snapTo(0f)
+                        }
+                    }
                     CardActionIcon(
                         icon = R.drawable.ic_baseline_sync,
                         contentDescription = stringResource(R.string.update),
                         onClick = onUpdate,
-                        modifier = Modifier.rotate(if (updating) spin else 0f),
+                        modifier = Modifier.rotate(rotation.value),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
