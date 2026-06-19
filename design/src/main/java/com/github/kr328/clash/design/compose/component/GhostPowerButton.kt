@@ -79,7 +79,7 @@ fun GhostPowerButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
+            painter = painterResource(R.drawable.ic_prizrak_ghost),
             contentDescription = stringResource(if (running) R.string.stop else R.string.start),
             tint = contentColor,
             modifier = Modifier.size(size * 0.55f),
