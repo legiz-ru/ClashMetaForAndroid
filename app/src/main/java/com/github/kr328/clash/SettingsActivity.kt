@@ -22,11 +22,15 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class SettingsActivity : BaseActivity() {
+    private val running = MutableStateFlow(clashRunning)
+    private val hasProfilesFlow = MutableStateFlow(true)
+
     override suspend fun main() {
-        val running = MutableStateFlow(clashRunning)
+        hasProfilesFlow.value = withProfile { queryAll().isNotEmpty() }
 
         setContent {
             val isRunning by running.collectAsStateWithLifecycle()
+            val hasProfiles by hasProfilesFlow.collectAsStateWithLifecycle()
 
             ClashTheme(variant = currentThemeVariant()) {
                 SettingsScreen(
@@ -35,6 +39,7 @@ class SettingsActivity : BaseActivity() {
                     onOpen = ::openDestination,
                     onNavigate = ::navigate,
                     onToggleStatus = { toggleStatus() },
+                    hasProfiles = hasProfiles,
                 )
             }
         }
@@ -42,6 +47,8 @@ class SettingsActivity : BaseActivity() {
         while (isActive) {
             when (events.receive()) {
                 Event.ClashStart, Event.ClashStop -> running.value = clashRunning
+                Event.ProfileChanged, Event.ProfileLoaded, Event.ActivityStart ->
+                    hasProfilesFlow.value = withProfile { queryAll().isNotEmpty() }
                 else -> Unit
             }
         }

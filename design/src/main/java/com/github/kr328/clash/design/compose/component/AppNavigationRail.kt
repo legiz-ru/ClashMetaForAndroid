@@ -3,6 +3,8 @@ package com.github.kr328.clash.design.compose.component
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
@@ -24,19 +26,32 @@ fun AppNavigationRail(
     clashRunning: Boolean,
     onNavigate: (SettingsNavTarget) -> Unit,
     onToggleStatus: () -> Unit,
+    hasProfiles: Boolean = true,
 ) {
     NavigationRail(
         header = {
-            FilledIconButton(
-                onClick = onToggleStatus,
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_mdi_power),
-                    contentDescription = stringResource(
-                        if (clashRunning) R.string.stop else R.string.start,
-                    ),
-                )
+            // Hide the power toggle until there's a profile to start; turn it red
+            // while running so "disconnect" reads clearly.
+            if (hasProfiles || clashRunning) {
+                FilledIconButton(
+                    onClick = onToggleStatus,
+                    colors = if (clashRunning) {
+                        IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        )
+                    } else {
+                        IconButtonDefaults.filledIconButtonColors()
+                    },
+                    modifier = Modifier.padding(top = 8.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_mdi_power),
+                        contentDescription = stringResource(
+                            if (clashRunning) R.string.stop else R.string.start,
+                        ),
+                    )
+                }
             }
         },
     ) {

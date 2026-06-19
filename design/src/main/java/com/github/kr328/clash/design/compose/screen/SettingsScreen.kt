@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
@@ -59,6 +60,7 @@ fun SettingsScreen(
     onNavigate: (SettingsNavTarget) -> Unit,
     onToggleStatus: () -> Unit,
     modifier: Modifier = Modifier,
+    hasProfiles: Boolean = true,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (expanded) {
@@ -67,6 +69,7 @@ fun SettingsScreen(
                     clashRunning = clashRunning,
                     onNavigate = onNavigate,
                     onToggleStatus = onToggleStatus,
+                    hasProfiles = hasProfiles,
                 )
                 SettingsList(
                     clashRunning = clashRunning,
@@ -165,19 +168,30 @@ private fun SettingsRail(
     clashRunning: Boolean,
     onNavigate: (SettingsNavTarget) -> Unit,
     onToggleStatus: () -> Unit,
+    hasProfiles: Boolean,
 ) {
     NavigationRail(
         header = {
-            FilledIconButton(
-                onClick = onToggleStatus,
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_mdi_power),
-                    contentDescription = stringResource(
-                        if (clashRunning) R.string.stop else R.string.start,
-                    ),
-                )
+            if (hasProfiles || clashRunning) {
+                FilledIconButton(
+                    onClick = onToggleStatus,
+                    colors = if (clashRunning) {
+                        IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        )
+                    } else {
+                        IconButtonDefaults.filledIconButtonColors()
+                    },
+                    modifier = Modifier.padding(top = 8.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_mdi_power),
+                        contentDescription = stringResource(
+                            if (clashRunning) R.string.stop else R.string.start,
+                        ),
+                    )
+                }
             }
         },
     ) {

@@ -209,6 +209,7 @@ fun MainScreen(
                     clashRunning = clashRunning,
                     onNavigate = onNavigate,
                     onToggleStatus = onPowerToggle,
+                    hasProfiles = hasProfiles,
                 )
                 Box(
                     modifier = Modifier
