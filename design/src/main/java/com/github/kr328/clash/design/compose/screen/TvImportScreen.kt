@@ -20,7 +20,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -44,14 +47,25 @@ fun TvImportScreen(
     status: String?,
     onCancel: () -> Unit,
 ) {
+    val cancelFocus = remember { FocusRequester() }
+    // Keep the cancel button reachable without scrolling (TV/D-pad) and focused
+    // by default so the remote always has a target.
+    LaunchedEffect(Unit) { runCatching { cancelFocus.requestFocus() } }
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+          Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+          ) {
             Text(
                 text = stringResource(R.string.tv_import_title),
                 style = MaterialTheme.typography.headlineSmall,
@@ -120,10 +134,13 @@ fun TvImportScreen(
                     )
                 }
             }
+          }
 
             OutlinedButton(
                 onClick = onCancel,
-                modifier = Modifier.padding(top = 32.dp),
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .focusRequester(cancelFocus),
             ) {
                 Text(stringResource(R.string.cancel))
             }
