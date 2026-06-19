@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -170,7 +174,13 @@ fun MainScreen(
                         PowerSection(onToggle = onPowerToggle)
                     }
 
-                    AnimatedVisibility(visible = clashRunning) {
+                    AnimatedVisibility(
+                        visible = clashRunning,
+                        // Drop in from the top (like the power button), instead of
+                        // the default bottom-anchored expand that read diagonally.
+                        enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+                        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+                    ) {
                         Column {
                             if (simpleMode && visibleGroups.isNotEmpty()) {
                                 val (firstName, firstGroup) = visibleGroups.first()

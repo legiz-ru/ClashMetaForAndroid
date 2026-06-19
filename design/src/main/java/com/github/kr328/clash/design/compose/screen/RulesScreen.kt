@@ -1,5 +1,9 @@
 package com.github.kr328.clash.design.compose.screen
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +27,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -125,13 +131,19 @@ private fun RuleRow(rule: Rule) {
         "REJECT", "REJECT-DROP" -> RejectRed
         else -> scheme.onSurfaceVariant
     }
+    // Focusable so the D-pad can step through (and thus scroll) this read-only
+    // list on TV; the focused row gets a primary outline.
+    val source = remember { MutableInteractionSource() }
+    val focused by source.collectIsFocusedAsState()
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
+            .padding(horizontal = 12.dp, vertical = 3.dp)
+            .focusable(interactionSource = source),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = if (focused) BorderStroke(2.dp, scheme.primary) else null,
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

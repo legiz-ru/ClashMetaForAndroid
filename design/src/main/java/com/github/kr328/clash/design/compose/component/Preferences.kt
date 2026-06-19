@@ -1,7 +1,11 @@
 package com.github.kr328.clash.design.compose.component
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -28,8 +32,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.focusGroup
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,6 +83,7 @@ fun PreferenceScaffold(
                     .fillMaxSize()
                     .verticalScrollbar(scroll, scrollbarColor)
                     .verticalScroll(scroll)
+                    .focusGroup()
                     .padding(inner)
                     .padding(vertical = 8.dp),
                 content = content,
@@ -138,11 +147,21 @@ private fun PreferenceContainer(
 ) {
     val scheme = MaterialTheme.colorScheme
     val alpha = if (enabled) 1f else 0.4f
+    val source = remember { MutableInteractionSource() }
+    val focused by source.collectIsFocusedAsState()
     Row(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(
+                enabled = enabled,
+                interactionSource = source,
+                indication = LocalIndication.current,
+                onClick = onClick,
+            )
+            .background(
+                if (focused) scheme.primary.copy(alpha = 0.14f) else Color.Transparent,
+            )
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

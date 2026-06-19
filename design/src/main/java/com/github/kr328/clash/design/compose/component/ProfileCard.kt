@@ -4,9 +4,13 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -64,33 +68,100 @@ fun ProfileCard(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
 
-    // Highlight the focused card so D-pad users (TV) can see which profile the
-    // center button will activate.
-    val interactionSource = remember { MutableInteractionSource() }
-    val focused by interactionSource.collectIsFocusedAsState()
+    // The whole card is no longer a single clickable: that swallowed D-pad focus
+    // so the action icons were unreachable on TV. Instead the name/info block is a
+    // focusable "activate" target and every icon is its own focusable button.
+    val activateSource = remember { MutableInteractionSource() }
+    val activateFocused by activateSource.collectIsFocusedAsState()
 
     Card(
-        onClick = onClick,
-        interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = when {
-            focused -> BorderStroke(3.dp, scheme.primary)
-            profile.active -> BorderStroke(2.dp, scheme.primary)
-            else -> null
-        },
+        border = if (profile.active) BorderStroke(2.dp, scheme.primary) else null,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Header: sync (when updatable) + name
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Activate region: tap (or D-pad center) to make this profile active.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .then(
+                        if (activateFocused) {
+                            Modifier.border(3.dp, scheme.primary, RoundedCornerShape(12.dp))
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .clickable(
+                        interactionSource = activateSource,
+                        indication = LocalIndication.current,
+                        onClick = onClick,
+                    )
+                    .padding(8.dp),
+            ) {
+                Text(
+                    text = profile.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (profile.download >= 2) {
+                    InfoRow(
+                        icon = R.drawable.ic_mdi_chart_timeline_variant,
+                        label = stringResource(R.string.traffic_used),
+                        value = (profile.download + profile.upload).toBytesString(),
+                        topMargin = 8.dp,
+                    )
+                }
+                if (profile.total >= 2) {
+                    InfoRow(
+                        icon = R.drawable.ic_mdi_database_check,
+                        label = stringResource(R.string.traffic_available),
+                        value = profile.total.toBytesString(),
+                    )
+                }
+                if (profile.expire != 0L) {
+                    InfoRow(
+                        icon = R.drawable.ic_mdi_calendar_alert,
+                        label = stringResource(R.string.expires),
+                        value = profile.expire.toDateStr(),
+                    )
+                }
+                InfoRow(
+                    icon = R.drawable.ic_mdi_update,
+                    label = stringResource(R.string.updated),
+                    value = (now - profile.updatedAt).elapsedIntervalString(context),
+                )
+            }
+
+            // Action row — each icon is independently focusable for D-pad.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (profile.active) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_baseline_check),
+                        contentDescription = null,
+                        tint = scheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                } else {
+                    Spacer(modifier = Modifier.size(24.dp))
+                }
+                Spacer(modifier = Modifier.weight(1f))
+
                 if (profile.imported && profile.type != Profile.Type.File) {
-                    // Spin only while updating: start a fresh 0..360 loop when an
-                    // update begins and settle back to 0 when it ends, so the icon
-                    // never jumps to a random phase or snaps backwards.
+                    // Spin only while updating: a fresh 0..360 loop on update that
+                    // settles at 0, so the icon never jumps phase or runs backwards.
                     val rotation = remember { Animatable(0f) }
                     LaunchedEffect(updating) {
                         if (updating) {
@@ -110,67 +181,9 @@ fun ProfileCard(
                         icon = R.drawable.ic_baseline_sync,
                         contentDescription = stringResource(R.string.update),
                         onClick = onUpdate,
-                        modifier = Modifier.rotate(rotation.value),
+                        iconModifier = Modifier.rotate(rotation.value),
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text(
-                    text = profile.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = scheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            if (profile.download >= 2) {
-                InfoRow(
-                    icon = R.drawable.ic_mdi_chart_timeline_variant,
-                    label = stringResource(R.string.traffic_used),
-                    value = (profile.download + profile.upload).toBytesString(),
-                    topMargin = 12.dp,
-                )
-            }
-            if (profile.total >= 2) {
-                InfoRow(
-                    icon = R.drawable.ic_mdi_database_check,
-                    label = stringResource(R.string.traffic_available),
-                    value = profile.total.toBytesString(),
-                )
-            }
-            if (profile.expire != 0L) {
-                InfoRow(
-                    icon = R.drawable.ic_mdi_calendar_alert,
-                    label = stringResource(R.string.expires),
-                    value = profile.expire.toDateStr(),
-                )
-            }
-            InfoRow(
-                icon = R.drawable.ic_mdi_update,
-                label = stringResource(R.string.updated),
-                value = (now - profile.updatedAt).elapsedIntervalString(context),
-            )
-
-            // Bottom action row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (profile.active) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_baseline_check),
-                        contentDescription = null,
-                        tint = scheme.primary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                } else {
-                    Spacer(modifier = Modifier.size(24.dp))
-                }
-                Spacer(modifier = Modifier.weight(1f))
-
                 if (profile.announce.isNotEmpty()) {
                     CardActionIcon(R.drawable.ic_mdi_bullhorn_variant_outline, null, onAnnounce)
                 }
@@ -229,20 +242,35 @@ private fun CardActionIcon(
     contentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    iconModifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
+    val source = remember { MutableInteractionSource() }
+    val focused by source.collectIsFocusedAsState()
     Box(
         modifier = modifier
             .padding(start = 4.dp)
-            .size(32.dp)
-            .clickable(onClick = onClick),
+            .size(36.dp)
+            .clip(CircleShape)
+            .then(
+                if (focused) {
+                    Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                } else {
+                    Modifier
+                }
+            )
+            .clickable(
+                interactionSource = source,
+                indication = LocalIndication.current,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(icon),
             contentDescription = contentDescription,
             tint = tint,
-            modifier = Modifier.size(22.dp),
+            modifier = iconModifier.size(22.dp),
         )
     }
 }
