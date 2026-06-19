@@ -304,17 +304,23 @@ class MainActivity : BaseActivity() {
                 .setSingleChoiceItems(labels, checked) { dialog, which ->
                     dialog.dismiss()
                     val newMode = modes[which]
-                    if (newMode != current) {
-                        launch {
-                            withClash {
-                                val o = queryOverride(Clash.OverrideSlot.Session)
-                                o.mode = newMode
-                                patchOverride(Clash.OverrideSlot.Session, o)
-                            }
-                            // Reflect the new mode immediately (prizrak parity:
-                            // the proxy view depends on the active routing mode).
-                            fetchProxyGroups()
+                    // Always re-apply the chosen mode (idempotent): relying on a
+                    // `newMode != current` guard skipped the patch when the profile
+                    // already started in that mode, so the switch appeared dead.
+                    launch {
+                        withClash {
+                            val o = queryOverride(Clash.OverrideSlot.Session)
+                            o.mode = newMode
+                            patchOverride(Clash.OverrideSlot.Session, o)
                         }
+                        Toast.makeText(
+                            this@MainActivity,
+                            R.string.mode_switch_tips,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                        // Reflect the new mode immediately (prizrak parity:
+                        // the proxy view depends on the active routing mode).
+                        fetchProxyGroups()
                     }
                 }
                 .setNegativeButton(R.string.cancel, null)
