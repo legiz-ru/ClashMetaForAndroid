@@ -4,22 +4,22 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -50,16 +50,20 @@ import com.github.kr328.clash.design.R
  * stay monochrome per the design brief.
  */
 
-/** Top bar (back + title) + scrollable content with a scroll indicator. */
+/**
+ * Top bar (back + title) + a LazyColumn body. Using a lazy list (rather than a
+ * plain verticalScroll Column) is what makes D-pad focus traversal/scrolling
+ * work on TV. Screens emit their rows via `item { }` / `items { }`.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PreferenceScaffold(
     title: String,
     onBack: () -> Unit,
     actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit,
+    content: LazyListScope.() -> Unit,
 ) {
-    val scroll = rememberScrollState()
+    val listState = rememberLazyListState()
     val scrollbarColor = MaterialTheme.colorScheme.onSurfaceVariant
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Scaffold(
@@ -78,14 +82,13 @@ fun PreferenceScaffold(
                 )
             },
         ) { inner ->
-            Column(
+            LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScrollbar(scroll, scrollbarColor)
-                    .verticalScroll(scroll)
-                    .focusGroup()
-                    .padding(inner)
-                    .padding(vertical = 8.dp),
+                    .verticalScrollbar(listState, scrollbarColor)
+                    .padding(inner),
+                contentPadding = PaddingValues(vertical = 8.dp),
                 content = content,
             )
         }

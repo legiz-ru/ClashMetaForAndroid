@@ -1,6 +1,7 @@
 package com.github.kr328.clash.design.compose.screen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -91,77 +92,91 @@ fun PropertiesScreen(
             }
         },
     ) {
-        PreferenceRow(
-            title = stringResource(R.string.name),
-            summary = profile.name.ifEmpty { stringResource(R.string.profile_name) },
-            icon = R.drawable.ic_outline_label,
-            enabled = nameEnabled,
-            onClick = onEditName,
-        )
-
-        if (showUrl) {
+        item {
             PreferenceRow(
-                title = stringResource(R.string.url),
-                summary = profile.source.ifEmpty { stringResource(R.string.accept_http_content) },
-                icon = R.drawable.ic_outline_inbox,
-                enabled = urlEnabled,
-                onClick = onEditUrl,
+                title = stringResource(R.string.name),
+                summary = profile.name.ifEmpty { stringResource(R.string.profile_name) },
+                icon = R.drawable.ic_outline_label,
+                enabled = nameEnabled,
+                onClick = onEditName,
             )
         }
 
+        if (showUrl) {
+            item {
+                PreferenceRow(
+                    title = stringResource(R.string.url),
+                    summary = profile.source.ifEmpty { stringResource(R.string.accept_http_content) },
+                    icon = R.drawable.ic_outline_inbox,
+                    enabled = urlEnabled,
+                    onClick = onEditUrl,
+                )
+            }
+        }
+
         if (showProxy) {
-            proxyLinks.forEachIndexed { index, link ->
+            itemsIndexed(proxyLinks) { index, link ->
                 ProxyLinkRow(
                     link = link,
                     onClick = { onEditProxyLink(index, link) },
                     onDelete = { onDeleteProxyLink(index) },
                 )
             }
-            SettingsItem(
-                icon = R.drawable.ic_baseline_add,
-                title = stringResource(R.string.add_proxy_links),
-                subtitle = stringResource(R.string.add_proxy_links_desc),
-                showChevron = false,
-                onClick = onAddProxyLinks,
+            item {
+                SettingsItem(
+                    icon = R.drawable.ic_baseline_add,
+                    title = stringResource(R.string.add_proxy_links),
+                    subtitle = stringResource(R.string.add_proxy_links_desc),
+                    showChevron = false,
+                    onClick = onAddProxyLinks,
+                )
+            }
+        }
+
+        item {
+            PreferenceRow(
+                title = stringResource(R.string.auto_update),
+                summary = if (profile.interval == 0L) {
+                    stringResource(R.string.disabled)
+                } else {
+                    stringResource(R.string.format_minutes, profile.interval / 1000 / 60)
+                },
+                icon = R.drawable.ic_outline_update,
+                enabled = intervalEnabled,
+                onClick = onEditInterval,
             )
         }
 
-        PreferenceRow(
-            title = stringResource(R.string.auto_update),
-            summary = if (profile.interval == 0L) {
-                stringResource(R.string.disabled)
-            } else {
-                stringResource(R.string.format_minutes, profile.interval / 1000 / 60)
-            },
-            icon = R.drawable.ic_outline_update,
-            enabled = intervalEnabled,
-            onClick = onEditInterval,
-        )
-
-        SettingsItem(
-            icon = R.drawable.ic_outline_folder,
-            title = stringResource(R.string.browse_files),
-            subtitle = stringResource(R.string.browse_configuration_providers),
-            onClick = onBrowseFiles,
-        )
+        item {
+            SettingsItem(
+                icon = R.drawable.ic_outline_folder,
+                title = stringResource(R.string.browse_files),
+                subtitle = stringResource(R.string.browse_configuration_providers),
+                onClick = onBrowseFiles,
+            )
+        }
 
         if (showTemplate) {
-            SettingsItem(
-                icon = R.drawable.ic_outline_article,
-                title = stringResource(R.string.select_template),
-                subtitle = stringResource(R.string.select_template_desc),
-                onClick = onSelectTemplate,
-            )
+            item {
+                SettingsItem(
+                    icon = R.drawable.ic_outline_article,
+                    title = stringResource(R.string.select_template),
+                    subtitle = stringResource(R.string.select_template_desc),
+                    onClick = onSelectTemplate,
+                )
+            }
         }
 
         if (showHwid) {
-            SettingsItem(
-                icon = R.drawable.ic_outline_info,
-                title = stringResource(R.string.hwid_active_title),
-                subtitle = stringResource(R.string.hwid_active_desc),
-                showChevron = false,
-                onClick = {},
-            )
+            item {
+                SettingsItem(
+                    icon = R.drawable.ic_outline_info,
+                    title = stringResource(R.string.hwid_active_title),
+                    subtitle = stringResource(R.string.hwid_active_desc),
+                    showChevron = false,
+                    onClick = {},
+                )
+            }
         }
     }
 }

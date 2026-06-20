@@ -20,8 +20,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -46,12 +50,18 @@ fun AddProfileSheet(
     // Open fully expanded so every option (incl. manual / from file) is visible
     // immediately without dragging — important on TV where there is no drag.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tvFocus = remember { FocusRequester() }
+    // On TV, land the D-pad on the first option rather than the drag handle.
+    LaunchedEffect(Unit) { if (isTv) runCatching { tvFocus.requestFocus() } }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
         ) {
             if (isTv) {
-                TvImportCard(onClick = { onAction(AddProfileAction.TvImport) })
+                TvImportCard(
+                    onClick = { onAction(AddProfileAction.TvImport) },
+                    modifier = Modifier.focusRequester(tvFocus),
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
@@ -97,11 +107,11 @@ fun AddProfileSheet(
 }
 
 @Composable
-private fun TvImportCard(onClick: () -> Unit) {
+private fun TvImportCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = scheme.primaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),

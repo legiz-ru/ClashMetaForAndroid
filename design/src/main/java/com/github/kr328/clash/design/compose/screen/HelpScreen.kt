@@ -18,16 +18,16 @@ fun HelpScreen(
     onOpenLink: (String) -> Unit,
 ) {
     PreferenceScaffold(title = stringResource(R.string.about), onBack = onBack) {
-        SettingsCategory(stringResource(R.string.document))
-        LinkRow(R.string.clash_meta_wiki, R.string.clash_meta_wiki_url, onOpenLink)
+        item { SettingsCategory(stringResource(R.string.document)) }
+        item { LinkRow(R.string.clash_meta_wiki, R.string.clash_meta_wiki_url, onOpenLink) }
 
-        SettingsCategory(stringResource(R.string.sources))
-        LinkRow(R.string.clash_meta_core, R.string.clash_meta_core_url, onOpenLink)
-        LinkRow(R.string.clash_meta_for_android, R.string.meta_github_url, onOpenLink)
-        LinkRow(R.string.moshen_core, R.string.moshen_core_url, onOpenLink)
-        LinkRow(R.string.mihomo_smart_core, R.string.mihomo_smart_core_url, onOpenLink)
-        LinkRow(R.string.moshen_fork_core, R.string.moshen_fork_core_url, onOpenLink)
-        LinkRow(R.string.cmfa_origin, R.string.cmfa_origin_url, onOpenLink)
+        item { SettingsCategory(stringResource(R.string.sources)) }
+        item { LinkRow(R.string.clash_meta_core, R.string.clash_meta_core_url, onOpenLink) }
+        item { LinkRow(R.string.clash_meta_for_android, R.string.meta_github_url, onOpenLink) }
+        item { LinkRow(R.string.moshen_core, R.string.moshen_core_url, onOpenLink) }
+        item { LinkRow(R.string.mihomo_smart_core, R.string.mihomo_smart_core_url, onOpenLink) }
+        item { LinkRow(R.string.moshen_fork_core, R.string.moshen_fork_core_url, onOpenLink) }
+        item { LinkRow(R.string.cmfa_origin, R.string.cmfa_origin_url, onOpenLink) }
     }
 }
 

@@ -52,70 +52,88 @@ fun NetworkSettingsScreen(
     )
 
     PreferenceScaffold(title = stringResource(R.string.network), onBack = onBack) {
-        SwitchPreference(
-            title = stringResource(R.string.route_system_traffic),
-            summary = stringResource(R.string.routing_via_vpn_service),
-            icon = R.drawable.ic_baseline_vpn_lock,
-            checked = uiStore.enableVpn,
-            enabled = vpnEnabled,
-            onCheckedChange = { uiStore.enableVpn = it; bump() },
-        )
-
-        SettingsCategory(stringResource(R.string.vpn_service_options))
-        SwitchPreference(
-            title = stringResource(R.string.bypass_private_network),
-            summary = stringResource(R.string.bypass_private_network_summary),
-            checked = srvStore.bypassPrivateNetwork,
-            enabled = depsEnabled,
-            onCheckedChange = { srvStore.bypassPrivateNetwork = it; bump() },
-        )
-        SwitchPreference(
-            title = stringResource(R.string.dns_hijacking),
-            summary = stringResource(R.string.dns_hijacking_summary),
-            checked = srvStore.dnsHijacking,
-            enabled = depsEnabled,
-            onCheckedChange = { srvStore.dnsHijacking = it; bump() },
-        )
-        SwitchPreference(
-            title = stringResource(R.string.allow_bypass),
-            summary = stringResource(R.string.allow_bypass_summary),
-            checked = srvStore.allowBypass,
-            enabled = depsEnabled,
-            onCheckedChange = { srvStore.allowBypass = it; bump() },
-        )
-        SwitchPreference(
-            title = stringResource(R.string.allow_ipv6),
-            summary = stringResource(R.string.allow_ipv6_summary),
-            checked = srvStore.allowIpv6,
-            enabled = depsEnabled,
-            onCheckedChange = { srvStore.allowIpv6 = it; bump() },
-        )
-        if (Build.VERSION.SDK_INT >= 29) {
+        item {
             SwitchPreference(
-                title = stringResource(R.string.system_proxy),
-                summary = stringResource(R.string.system_proxy_summary),
-                checked = srvStore.systemProxy,
-                enabled = depsEnabled,
-                onCheckedChange = { srvStore.systemProxy = it; bump() },
+                title = stringResource(R.string.route_system_traffic),
+                summary = stringResource(R.string.routing_via_vpn_service),
+                icon = R.drawable.ic_baseline_vpn_lock,
+                checked = uiStore.enableVpn,
+                enabled = vpnEnabled,
+                onCheckedChange = { uiStore.enableVpn = it; bump() },
             )
         }
-        PreferenceRow(
-            title = stringResource(R.string.tun_stack_mode),
-            summary = tunStackOptions.firstOrNull { it.first == srvStore.tunStackMode }?.second,
-            enabled = depsEnabled,
-            onClick = { showTunStack = true },
-        )
-        PreferenceRow(
-            title = stringResource(R.string.access_control_mode),
-            summary = aclOptions.firstOrNull { it.first == srvStore.accessControlMode }?.second,
-            enabled = depsEnabled,
-            onClick = { showAclMode = true },
-        )
-        PreferenceRow(
-            title = stringResource(R.string.access_control_packages),
-            summary = stringResource(R.string.access_control_packages_summary),
-            onClick = onAccessControlPackages,
-        )
+
+        item { SettingsCategory(stringResource(R.string.vpn_service_options)) }
+        item {
+            SwitchPreference(
+                title = stringResource(R.string.bypass_private_network),
+                summary = stringResource(R.string.bypass_private_network_summary),
+                checked = srvStore.bypassPrivateNetwork,
+                enabled = depsEnabled,
+                onCheckedChange = { srvStore.bypassPrivateNetwork = it; bump() },
+            )
+        }
+        item {
+            SwitchPreference(
+                title = stringResource(R.string.dns_hijacking),
+                summary = stringResource(R.string.dns_hijacking_summary),
+                checked = srvStore.dnsHijacking,
+                enabled = depsEnabled,
+                onCheckedChange = { srvStore.dnsHijacking = it; bump() },
+            )
+        }
+        item {
+            SwitchPreference(
+                title = stringResource(R.string.allow_bypass),
+                summary = stringResource(R.string.allow_bypass_summary),
+                checked = srvStore.allowBypass,
+                enabled = depsEnabled,
+                onCheckedChange = { srvStore.allowBypass = it; bump() },
+            )
+        }
+        item {
+            SwitchPreference(
+                title = stringResource(R.string.allow_ipv6),
+                summary = stringResource(R.string.allow_ipv6_summary),
+                checked = srvStore.allowIpv6,
+                enabled = depsEnabled,
+                onCheckedChange = { srvStore.allowIpv6 = it; bump() },
+            )
+        }
+        if (Build.VERSION.SDK_INT >= 29) {
+            item {
+                SwitchPreference(
+                    title = stringResource(R.string.system_proxy),
+                    summary = stringResource(R.string.system_proxy_summary),
+                    checked = srvStore.systemProxy,
+                    enabled = depsEnabled,
+                    onCheckedChange = { srvStore.systemProxy = it; bump() },
+                )
+            }
+        }
+        item {
+            PreferenceRow(
+                title = stringResource(R.string.tun_stack_mode),
+                summary = tunStackOptions.firstOrNull { it.first == srvStore.tunStackMode }?.second,
+                enabled = depsEnabled,
+                onClick = { showTunStack = true },
+            )
+        }
+        item {
+            PreferenceRow(
+                title = stringResource(R.string.access_control_mode),
+                summary = aclOptions.firstOrNull { it.first == srvStore.accessControlMode }?.second,
+                enabled = depsEnabled,
+                onClick = { showAclMode = true },
+            )
+        }
+        item {
+            PreferenceRow(
+                title = stringResource(R.string.access_control_packages),
+                summary = stringResource(R.string.access_control_packages_summary),
+                onClick = onAccessControlPackages,
+            )
+        }
     }
 
     if (showTunStack) {

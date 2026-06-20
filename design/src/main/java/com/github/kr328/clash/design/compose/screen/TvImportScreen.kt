@@ -3,6 +3,7 @@ package com.github.kr328.clash.design.compose.screen
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,13 +60,6 @@ fun TvImportScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-          Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-          ) {
             Text(
                 text = stringResource(R.string.tv_import_title),
                 style = MaterialTheme.typography.headlineSmall,
@@ -73,68 +67,79 @@ fun TvImportScreen(
                 textAlign = TextAlign.Center,
             )
 
-            when {
-                status != null -> {
-                    Text(
-                        text = status,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 32.dp),
-                    )
-                }
-                qr == null -> {
-                    Text(
-                        text = stringResource(R.string.tv_import_loading),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 32.dp),
-                    )
-                    CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp))
-                }
-                else -> {
-                    Image(
-                        bitmap = remember(qr) { qr.asImageBitmap() },
-                        contentDescription = stringResource(R.string.tv_import_qr_desc),
-                        modifier = Modifier
-                            .padding(top = 24.dp)
-                            .size(256.dp),
-                    )
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                        modifier = Modifier.padding(top = 24.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        ) {
-                            LabeledValue(stringResource(R.string.tv_import_ip_label), ip)
-                            LabeledValue(stringResource(R.string.tv_import_port_label), port)
-                        }
-                    }
-                    if (url.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                contentAlignment = Alignment.Center,
+            ) {
+                when {
+                    status != null -> {
                         Text(
-                            text = url,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            text = status,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 12.dp),
                         )
                     }
-                    Text(
-                        text = stringResource(R.string.tv_import_instruction),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 16.dp),
-                    )
+                    qr == null -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = stringResource(R.string.tv_import_loading),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp))
+                        }
+                    }
+                    else -> {
+                        // QR on the left, address/instructions on the right.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        ) {
+                            Image(
+                                bitmap = remember(qr) { qr.asImageBitmap() },
+                                contentDescription = stringResource(R.string.tv_import_qr_desc),
+                                modifier = Modifier.size(256.dp),
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                                    ) {
+                                        LabeledValue(stringResource(R.string.tv_import_ip_label), ip)
+                                        LabeledValue(stringResource(R.string.tv_import_port_label), port)
+                                    }
+                                }
+                                if (url.isNotEmpty()) {
+                                    Text(
+                                        text = url,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(top = 12.dp),
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(R.string.tv_import_instruction),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 16.dp),
+                                )
+                            }
+                        }
+                    }
                 }
             }
-          }
 
             OutlinedButton(
                 onClick = onCancel,
