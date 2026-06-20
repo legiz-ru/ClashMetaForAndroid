@@ -148,13 +148,13 @@ private fun Hero(appVersion: String, coreVersion: String) {
 
 @Composable
 private fun ActionButtons(onCheckUpdate: () -> Unit, onChangelog: () -> Unit) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FilledTonalButton(onClick = onCheckUpdate, modifier = Modifier.weight(1f)) {
+        FilledTonalButton(onClick = onCheckUpdate, modifier = Modifier.fillMaxWidth()) {
             Icon(
                 painter = painterResource(R.drawable.ic_mdi_update),
                 contentDescription = null,
@@ -163,7 +163,7 @@ private fun ActionButtons(onCheckUpdate: () -> Unit, onChangelog: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.check_for_updates), maxLines = 1)
         }
-        FilledTonalButton(onClick = onChangelog, modifier = Modifier.weight(1f)) {
+        FilledTonalButton(onClick = onChangelog, modifier = Modifier.fillMaxWidth()) {
             Icon(
                 painter = painterResource(R.drawable.ic_baseline_assignment),
                 contentDescription = null,

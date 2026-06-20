@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -94,9 +95,9 @@ fun TvImportScreen(
                         }
                     }
                     else -> {
-                        // QR on the left, address/instructions on the right.
+                        // QR on the left, address/instructions on the right —
+                        // wrap-content so the whole group stays centred (Box).
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(24.dp),
                         ) {
@@ -105,7 +106,7 @@ fun TvImportScreen(
                                 contentDescription = stringResource(R.string.tv_import_qr_desc),
                                 modifier = Modifier.size(256.dp),
                             )
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.widthIn(max = 360.dp)) {
                                 Card(
                                     shape = RoundedCornerShape(12.dp),
                                     colors = CardDefaults.cardColors(
