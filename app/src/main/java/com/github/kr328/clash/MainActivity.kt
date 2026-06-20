@@ -293,40 +293,42 @@ class MainActivity : BaseActivity() {
             val current = withClash {
                 queryOverride(Clash.OverrideSlot.Session).mode ?: queryTunnelState().mode
             }
+            // Resolve the choice from a suspending dialog and apply it from THIS
+            // coroutine (prizrak structure). Patching from a launch{} spawned inside
+            // the dialog's click listener did not take effect.
+            val newMode = showModeDialog(current) ?: return@launch
+            withClash {
+                val o = queryOverride(Clash.OverrideSlot.Session)
+                o.mode = newMode
+                patchOverride(Clash.OverrideSlot.Session, o)
+            }
+            Toast.makeText(this@MainActivity, R.string.mode_switch_tips, Toast.LENGTH_SHORT).show()
+            // Reflect the new mode immediately (the proxy view depends on it).
+            fetchProxyGroups()
+        }
+    }
+
+    private suspend fun showModeDialog(current: TunnelState.Mode?): TunnelState.Mode? =
+        kotlinx.coroutines.suspendCancellableCoroutine { cont ->
             val modes = arrayOf(TunnelState.Mode.Rule, TunnelState.Mode.Global)
             val labels = arrayOf(
                 getString(R.string.mode_rule_label),
                 getString(R.string.mode_global_label),
             )
             val checked = modes.indexOf(current).coerceAtLeast(0)
-            MaterialAlertDialogBuilder(this@MainActivity)
+            val dialog = MaterialAlertDialogBuilder(this@MainActivity)
                 .setTitle(R.string.mode_selector_title)
-                .setSingleChoiceItems(labels, checked) { dialog, which ->
-                    dialog.dismiss()
-                    val newMode = modes[which]
-                    // Always re-apply the chosen mode (idempotent): relying on a
-                    // `newMode != current` guard skipped the patch when the profile
-                    // already started in that mode, so the switch appeared dead.
-                    launch {
-                        withClash {
-                            val o = queryOverride(Clash.OverrideSlot.Session)
-                            o.mode = newMode
-                            patchOverride(Clash.OverrideSlot.Session, o)
-                        }
-                        Toast.makeText(
-                            this@MainActivity,
-                            R.string.mode_switch_tips,
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                        // Reflect the new mode immediately (prizrak parity:
-                        // the proxy view depends on the active routing mode).
-                        fetchProxyGroups()
-                    }
+                .setSingleChoiceItems(labels, checked) { d, which ->
+                    if (cont.isActive) cont.resumeWith(Result.success(modes[which]))
+                    d.dismiss()
                 }
-                .setNegativeButton(R.string.cancel, null)
+                .setNegativeButton(R.string.cancel) { _, _ -> }
+                .setOnDismissListener {
+                    if (cont.isActive) cont.resumeWith(Result.success(null))
+                }
                 .show()
+            cont.invokeOnCancellation { dialog.dismiss() }
         }
-    }
 
     private fun latencyTestSimpleMode() {
         launch {
