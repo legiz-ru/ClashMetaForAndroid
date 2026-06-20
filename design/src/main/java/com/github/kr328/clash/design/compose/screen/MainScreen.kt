@@ -318,20 +318,21 @@ private fun Onboarding(onAdd: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 12.dp),
         )
+        // Same muted circular style as the (stopped) ghost power button.
         Box(
             modifier = Modifier
                 .padding(top = 48.dp)
                 .size(120.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable(onClick = onAdd),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_baseline_add),
                 contentDescription = stringResource(R.string.add_profile),
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(64.dp),
             )
         }
         Text(
