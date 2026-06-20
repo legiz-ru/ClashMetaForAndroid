@@ -13,7 +13,6 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.componentName
-import com.github.kr328.clash.core.bridge.Bridge
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.AppSettingsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
@@ -23,10 +22,8 @@ import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
 import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.store.ServiceStore
-import com.github.kr328.clash.update.UpdateChecker
 import com.github.kr328.clash.util.ApplicationObserver
 import com.github.kr328.clash.util.GetContentCompat
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
@@ -112,7 +109,6 @@ class AppSettingsActivity : BaseActivity(), Behavior {
                     },
                     sendHwid = sendHwid,
                     onSendHwid = { uiStore.sendHwid = it; sendHwidFlow.value = it },
-                    onAbout = { launch { showAbout() } },
                     onCustomTemplate = { launch { selectCustomTemplate() } },
                 )
             }
@@ -135,48 +131,6 @@ class AppSettingsActivity : BaseActivity(), Behavior {
 
     private fun recreateAll() {
         ApplicationObserver.createdActivities.forEach { it.recreate() }
-    }
-
-    private suspend fun showAbout() {
-        val version = queryAppVersionName()
-        val view = layoutInflater.inflate(R.layout.design_about, null)
-        view.findViewById<android.widget.TextView>(R.id.version_name).text = version
-        MaterialAlertDialogBuilder(this)
-            .setView(view)
-            .setPositiveButton(R.string.check_for_updates) { _, _ ->
-                launch { runUpdateCheck() }
-            }
-            .show()
-    }
-
-    private suspend fun runUpdateCheck() {
-        when (val result = UpdateChecker.check(this)) {
-            is UpdateChecker.CheckResult.UpdateAvailable ->
-                showUpdateAvailableDialog(result.tagName, result.downloadUrl)
-            is UpdateChecker.CheckResult.UpToDate ->
-                simpleDialog(R.string.update_not_found_title, getString(R.string.update_not_found_message))
-            is UpdateChecker.CheckResult.Error ->
-                simpleDialog(R.string.update_error_title, result.message)
-        }
-    }
-
-    private fun showUpdateAvailableDialog(tagName: String, downloadUrl: String) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.update_available_title)
-            .setMessage(getString(R.string.update_available_message, tagName))
-            .setPositiveButton(R.string.update_download) { _, _ ->
-                UpdateChecker.startDownload(this, downloadUrl, tagName)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun simpleDialog(titleRes: Int, message: String) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(titleRes)
-            .setMessage(message)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
     }
 
     private suspend fun selectCustomTemplate() {
@@ -226,12 +180,6 @@ class AppSettingsActivity : BaseActivity(), Behavior {
             newState,
             PackageManager.DONT_KILL_APP
         )
-    }
-
-    private suspend fun queryAppVersionName(): String {
-        return withContext(Dispatchers.IO) {
-            packageManager.getPackageInfo(packageName, 0).versionName + "\n" + Bridge.nativeCoreVersion().replace("_", "-")
-        }
     }
 
     private fun getLanguageDisplayName(): String {

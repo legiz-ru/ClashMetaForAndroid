@@ -458,6 +458,9 @@
 
     <!-- Update checker -->
     <string name="check_for_updates">Check for Updates</string>
+    <string name="about_developer">Developer</string>
+    <string name="about_changelog">Changelog</string>
+    <string name="about_license">License</string>
     <string name="update_available_title">Update Available</string>
     <string name="update_available_message">Version %s is available. Download and install?</string>
     <string name="update_download">Download</string>

@@ -38,7 +38,6 @@ fun AppSettingsScreen(
     onDynamicNotification: (Boolean) -> Unit,
     sendHwid: Boolean,
     onSendHwid: (Boolean) -> Unit,
-    onAbout: () -> Unit,
     onCustomTemplate: () -> Unit,
 ) {
     var showDarkDialog by remember { mutableStateOf(false) }
@@ -120,15 +119,6 @@ fun AppSettingsScreen(
                 icon = R.drawable.ic_baseline_assignment,
                 checked = sendHwid,
                 onCheckedChange = onSendHwid,
-            )
-        }
-
-        item { SettingsCategory(stringResource(R.string.about)) }
-        item {
-            PreferenceRow(
-                title = stringResource(R.string.about),
-                icon = R.drawable.ic_baseline_info,
-                onClick = onAbout,
             )
         }
 

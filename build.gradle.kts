@@ -46,6 +46,14 @@ subprojects {
     extensions.configure<BaseExtension> {
         buildFeatures.buildConfig = true
         defaultConfig {
+            // Moshen core version, read from go.mod at build time (the
+            // `replace ... => github.com/legiz-ru/moshen vX.Y.Z` line).
+            val moshenCoreVersion = rootProject.file("core/src/main/golang/go.mod")
+                .takeIf { it.exists() }?.readText()
+                ?.let { Regex("""legiz-ru/moshen\s+(v[\w.\-]+)""").find(it)?.groupValues?.get(1) }
+                ?: "unknown"
+            buildConfigField("String", "CORE_VERSION", "\"$moshenCoreVersion\"")
+
             if (isApp) {
                 val customApplicationId = queryConfigProperty("custom.application.id") as? String?
                 applicationId = customApplicationId.takeIf { it?.isNotBlank() == true } ?: "ru.legiz.prizrakbox"
