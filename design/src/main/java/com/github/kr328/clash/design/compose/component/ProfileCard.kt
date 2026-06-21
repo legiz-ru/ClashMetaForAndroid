@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -68,11 +69,13 @@ fun ProfileCard(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
 
-    // The whole card is no longer a single clickable: that swallowed D-pad focus
-    // so the action icons were unreachable on TV. Instead the name/info block is a
-    // focusable "activate" target and every icon is its own focusable button.
-    val activateSource = remember { MutableInteractionSource() }
-    val activateFocused by activateSource.collectIsFocusedAsState()
+    // Touch: the whole card activates the profile (tap anywhere but the action
+    // icons). D-pad: the card-level click is made non-focusable so it does not
+    // shadow the inner buttons — the name is the focus target that activates and
+    // each icon is its own target.
+    val cardSource = remember { MutableInteractionSource() }
+    val nameSource = remember { MutableInteractionSource() }
+    val nameFocused by nameSource.collectIsFocusedAsState()
 
     Card(
         modifier = modifier
@@ -83,28 +86,36 @@ fun ProfileCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = if (profile.active) BorderStroke(2.dp, scheme.primary) else null,
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusProperties { canFocus = false }
+                .clickable(
+                    interactionSource = cardSource,
+                    indication = LocalIndication.current,
+                    onClick = onClick,
+                )
+                .padding(12.dp),
+        ) {
             Row(verticalAlignment = Alignment.Top) {
-                // Activate region: name + info. Tapping anywhere here (touch) or
-                // pressing center (D-pad) makes this profile active. The update
-                // button sits in the top-right corner, outside this region.
-                Column(
+                // Name = the D-pad focus target (also activates).
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
                         .then(
-                            if (activateFocused) {
+                            if (nameFocused) {
                                 Modifier.border(3.dp, scheme.primary, RoundedCornerShape(10.dp))
                             } else {
                                 Modifier
                             }
                         )
                         .clickable(
-                            interactionSource = activateSource,
-                            indication = LocalIndication.current,
+                            interactionSource = nameSource,
+                            indication = null,
                             onClick = onClick,
                         )
-                        .padding(8.dp),
+                        .padding(vertical = 4.dp),
                 ) {
                     Text(
                         text = profile.name,
@@ -112,34 +123,6 @@ fun ProfileCard(
                         color = scheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                    )
-
-                    if (profile.download >= 2) {
-                        InfoRow(
-                            icon = R.drawable.ic_mdi_chart_timeline_variant,
-                            label = stringResource(R.string.traffic_used),
-                            value = (profile.download + profile.upload).toBytesString(),
-                            topMargin = 8.dp,
-                        )
-                    }
-                    if (profile.total >= 2) {
-                        InfoRow(
-                            icon = R.drawable.ic_mdi_database_check,
-                            label = stringResource(R.string.traffic_available),
-                            value = profile.total.toBytesString(),
-                        )
-                    }
-                    if (profile.expire != 0L) {
-                        InfoRow(
-                            icon = R.drawable.ic_mdi_calendar_alert,
-                            label = stringResource(R.string.expires),
-                            value = profile.expire.toDateStr(),
-                        )
-                    }
-                    InfoRow(
-                        icon = R.drawable.ic_mdi_update,
-                        label = stringResource(R.string.updated),
-                        value = (now - profile.updatedAt).elapsedIntervalString(context),
                     )
                 }
                 if (profile.imported && profile.type != Profile.Type.File) {
@@ -167,6 +150,35 @@ fun ProfileCard(
                     )
                 }
             }
+
+            // Info rows — full width, values hug the right edge.
+            if (profile.download >= 2) {
+                InfoRow(
+                    icon = R.drawable.ic_mdi_chart_timeline_variant,
+                    label = stringResource(R.string.traffic_used),
+                    value = (profile.download + profile.upload).toBytesString(),
+                    topMargin = 8.dp,
+                )
+            }
+            if (profile.total >= 2) {
+                InfoRow(
+                    icon = R.drawable.ic_mdi_database_check,
+                    label = stringResource(R.string.traffic_available),
+                    value = profile.total.toBytesString(),
+                )
+            }
+            if (profile.expire != 0L) {
+                InfoRow(
+                    icon = R.drawable.ic_mdi_calendar_alert,
+                    label = stringResource(R.string.expires),
+                    value = profile.expire.toDateStr(),
+                )
+            }
+            InfoRow(
+                icon = R.drawable.ic_mdi_update,
+                label = stringResource(R.string.updated),
+                value = (now - profile.updatedAt).elapsedIntervalString(context),
+            )
 
             // Action row — each icon is independently focusable for D-pad.
             Row(
