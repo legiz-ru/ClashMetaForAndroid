@@ -158,6 +158,124 @@ object ProfileProcessor {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Subscription URL management (new-url / new-domain / fallback-url / fallback-domain)
+    // -------------------------------------------------------------------------
+
+    private fun isHttpUrl(s: String) =
+        s.startsWith("http://", ignoreCase = true) || s.startsWith("https://", ignoreCase = true)
+
+    /** Replaces only the host of [url] with [newHost], keeping scheme/port/path/query/fragment. */
+    private fun swapHost(url: String, newHost: String): String? = try {
+        val u = java.net.URI(url)
+        val sb = StringBuilder()
+        sb.append(u.scheme).append("://")
+        if (u.userInfo != null) sb.append(u.userInfo).append("@")
+        sb.append(newHost)
+        if (u.port != -1) sb.append(":").append(u.port)
+        sb.append(u.rawPath ?: "")
+        if (u.rawQuery != null) sb.append("?").append(u.rawQuery)
+        if (u.rawFragment != null) sb.append("#").append(u.rawFragment)
+        sb.toString()
+    } catch (_: Exception) {
+        null
+    }
+
+    /** new-url (full, takes precedence) or new-domain (host-swap) → migrated source, or null. */
+    private fun computeMigratedSource(source: String, headers: okhttp3.Headers): String? {
+        val newUrl = headers["new-url"]?.trim().orEmpty()
+        if (newUrl.isNotBlank() && isHttpUrl(newUrl)) return newUrl
+        val newDomain = headers["new-domain"]?.trim().orEmpty()
+        if (newDomain.isNotBlank()) {
+            swapHost(source, newDomain)?.let { if (it != source) return it }
+        }
+        return null
+    }
+
+    /** Ordered endpoints to try: primary source, then fallback-url, then fallback-domain host-swap. */
+    private fun fallbackCandidates(source: String, fallbackUrl: String, fallbackDomain: String): List<String> {
+        val list = ArrayList<String>()
+        list.add(source)
+        if (fallbackUrl.isNotBlank() && isHttpUrl(fallbackUrl)) list.add(fallbackUrl)
+        if (fallbackDomain.isNotBlank()) swapHost(source, fallbackDomain)?.let { list.add(it) }
+        return list.distinct()
+    }
+
+    private data class ProbeResult(val url: String, val headers: okhttp3.Headers)
+
+    /**
+     * Returns the first [candidates] endpoint that answers 2xx within 9s, with its
+     * response headers. Used to read the management headers and pick a live endpoint.
+     */
+    private fun probeEndpoint(context: Context, candidates: List<String>): ProbeResult? {
+        val client = OkHttpClient.Builder()
+            .callTimeout(9, TimeUnit.SECONDS)
+            .build()
+        for (url in candidates) {
+            try {
+                client.newCall(buildProfileRequest(context, url)).execute().use { resp ->
+                    if (resp.isSuccessful) return ProbeResult(url, resp.headers)
+                }
+            } catch (_: Exception) {
+                // try next candidate
+            }
+        }
+        return null
+    }
+
+    /**
+     * Resolves the effective subscription endpoint for a profile:
+     *  - applies new-url / new-domain migration (persisting the new source via
+     *    [persistMigratedSource], up to 3 hops),
+     *  - picks a live endpoint via fallback-url / fallback-domain when the primary is down.
+     *
+     * Entity-agnostic so both the import path (Pending) and the refresh path
+     * (Imported) can reuse it — the caller supplies how to persist a migrated source.
+     *
+     * Best-effort: on any error the original [source] is returned with no override URL.
+     * Returns the (possibly migrated) canonical source and the URL to actually download
+     * from (null = use the canonical source as before; this may be a temporary
+     * fallback mirror that must NOT be persisted as the profile's source).
+     */
+    private suspend fun resolveSubscriptionEndpoint(
+        context: Context,
+        uuid: UUID,
+        type: Profile.Type,
+        source: String,
+        persistMigratedSource: (String) -> Unit,
+    ): Pair<String, String?> {
+        if (type == Profile.Type.File || !isHttpUrl(source)) {
+            return source to null
+        }
+        return try {
+            var current = source
+            val importedDir = context.importedDir.resolve(uuid.toString())
+            val stored = readProfileHeaders(importedDir)
+            var fbUrl = stored.fallbackUrl
+            var fbDomain = stored.fallbackDomain
+            var downloadUrl: String? = null
+            var migrations = 0
+            while (migrations < 3) {
+                val probe = probeEndpoint(context, fallbackCandidates(current, fbUrl, fbDomain))
+                    ?: break
+                fbUrl = probe.headers["fallback-url"]?.trim().orEmpty()
+                fbDomain = probe.headers["fallback-domain"]?.trim().orEmpty()
+                val migrated = computeMigratedSource(current, probe.headers)
+                if (migrated != null && migrated != current) {
+                    current = migrated
+                    persistMigratedSource(migrated)
+                    migrations++
+                    continue
+                }
+                downloadUrl = probe.url
+                break
+            }
+            current to downloadUrl
+        } catch (_: Exception) {
+            source to null
+        }
+    }
+
     /**
      * Parses the `subscription-userinfo` header and returns [upload, download, total, expire] in bytes/ms.
      */
@@ -504,13 +622,14 @@ object ProfileProcessor {
         type: Profile.Type,
         source: String,
         alreadyPrefetched: Boolean = false,
+        downloadUrlOverride: String? = null,
     ): FetchTarget {
         val isHttpUrl = source.startsWith("https://", true) || source.startsWith("http://", true)
 
         if (type == Profile.Type.Url && isHttpUrl) {
             if (!alreadyPrefetched) {
                 val localConfig = context.processingDir.resolve("config.yaml")
-                val result = prefetchProfileConfig(context, source, localConfig)
+                val result = prefetchProfileConfig(context, downloadUrlOverride ?: source, localConfig)
                 if (!result.success) {
                     throw IOException("Unable to fetch url profile with HWID headers")
                 }
@@ -532,7 +651,7 @@ object ProfileProcessor {
     suspend fun apply(context: Context, uuid: UUID, callback: IFetchObserver? = null) {
         withContext(NonCancellable) {
             processLock.withLock {
-                val snapshot = profileLock.withLock {
+                var snapshot = profileLock.withLock {
                     val pending = PendingDao().queryByUUID(uuid)
                         ?: throw IllegalArgumentException("profile $uuid not found")
 
@@ -547,6 +666,15 @@ object ProfileProcessor {
                     pending
                 }
 
+                // Subscription URL management: apply new-url / new-domain migration
+                // (persisting the new source onto the pending row) and pick a live
+                // endpoint via fallback-url / fallback-domain. Best-effort — on any
+                // error this is a no-op and the original source is used as before.
+                val (migratedSource, downloadUrl) = resolveSubscriptionEndpoint(
+                    context, snapshot.uuid, snapshot.type, snapshot.source
+                ) { migrated -> PendingDao().update(snapshot.copy(source = migrated)) }
+                snapshot = snapshot.copy(source = migratedSource)
+
                 // Accumulates HTTP response headers for profiles that end up being converted,
                 // so we can save profile metadata (title, logo, subscription info, etc.) later.
                 var convertedHeaders: okhttp3.Headers? = null
@@ -554,7 +682,7 @@ object ProfileProcessor {
                 // Converted profiles: fetch source (with pxa headers), update meta, convert.
                 if (snapshot.type == Profile.Type.Converted) {
                     val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
-                    val fetchResult = fetchSourceContentWithPxa(context, snapshot.source)
+                    val fetchResult = fetchSourceContentWithPxa(context, downloadUrl ?: snapshot.source)
                     if (fetchResult.headersAvailable) {
                         TemplateManager.savePxaMeta(
                             pendingDir,
@@ -599,7 +727,7 @@ object ProfileProcessor {
                      snapshot.source.startsWith("https://", ignoreCase = true))
                 ) {
                     val localConfig = context.processingDir.resolve("config.yaml")
-                    val prefetchResult = prefetchProfileConfig(context, snapshot.source, localConfig)
+                    val prefetchResult = prefetchProfileConfig(context, downloadUrl ?: snapshot.source, localConfig)
                     if (!prefetchResult.success) {
                         throw IOException("Unable to fetch url profile with HWID headers")
                     }
@@ -702,7 +830,7 @@ object ProfileProcessor {
                         } else if (snapshot?.type == Profile.Type.Url) {
                             if (snapshot.source.startsWith("https://", true)) {
                                 val client = OkHttpClient()
-                                val request = buildProfileRequest(context, snapshot.source)
+                                val request = buildProfileRequest(context, downloadUrl ?: snapshot.source)
 
                                 client.newCall(request).execute().use { response ->
                                     val userinfo = response.headers["subscription-userinfo"]
@@ -794,7 +922,7 @@ object ProfileProcessor {
     suspend fun update(context: Context, uuid: UUID, callback: IFetchObserver?) {
         withContext(NonCancellable) {
             processLock.withLock {
-                val snapshot = profileLock.withLock {
+                var snapshot = profileLock.withLock {
                     val imported = ImportedDao().queryByUUID(uuid)
                         ?: throw IllegalArgumentException("profile $uuid not found")
 
@@ -807,11 +935,20 @@ object ProfileProcessor {
                     imported
                 }
 
+                // Subscription URL management: apply new-url / new-domain migration
+                // (persisting the new source onto the imported row) and pick a live
+                // endpoint via fallback-url / fallback-domain. Best-effort — on any
+                // error this is a no-op and the original source is used as before.
+                val (migratedSource, downloadUrl) = resolveSubscriptionEndpoint(
+                    context, snapshot.uuid, snapshot.type, snapshot.source
+                ) { migrated -> ImportedDao().update(snapshot.copy(source = migrated)) }
+                snapshot = snapshot.copy(source = migratedSource)
+
                 // Converted profiles: re-fetch source (with pxa headers) and re-apply template.
                 var convertedFetchResult: FetchedSource? = null
                 if (snapshot.type == Profile.Type.Converted) {
                     val importedDir = context.importedDir.resolve(snapshot.uuid.toString())
-                    val fetchResult = fetchSourceContentWithPxa(context, snapshot.source)
+                    val fetchResult = fetchSourceContentWithPxa(context, downloadUrl ?: snapshot.source)
                     convertedFetchResult = fetchResult
 
                     if (fetchResult.headersAvailable) {
@@ -849,7 +986,9 @@ object ProfileProcessor {
                     }
                 }
 
-                val fetchTarget = resolveFetchTarget(context, snapshot.type, snapshot.source)
+                val fetchTarget = resolveFetchTarget(
+                    context, snapshot.type, snapshot.source, downloadUrlOverride = downloadUrl
+                )
                 var cb = callback
 
                 Clash.fetchAndValid(context.processingDir, fetchTarget.source, fetchTarget.force) {
@@ -970,6 +1109,8 @@ object ProfileProcessor {
         val connsViewMp: Boolean = false,
         val rpMp: Boolean = false,
         val simpleMode: Boolean = false,
+        val fallbackUrl: String = "",
+        val fallbackDomain: String = "",
     )
 
     fun saveProfileHeaders(profileDir: File, headers: okhttp3.Headers) {
@@ -992,6 +1133,9 @@ object ProfileProcessor {
             if (headers["pxa-conns-view-mp"]?.trim() == "1") json.put("pxa_conns_view_mp", true)
             if (headers["pxa-rp-mp"]?.trim() == "1") json.put("pxa_rp_mp", true)
             if (headers["pxa-simple-mode"]?.trim() == "1") json.put("pxa_simple_mode", true)
+            // Subscription fallback endpoints (absent header => not written => cleared on read).
+            headers["fallback-url"]?.trim()?.let { if (it.isNotBlank()) json.put("fallback_url", it) }
+            headers["fallback-domain"]?.trim()?.let { if (it.isNotBlank()) json.put("fallback_domain", it) }
             profileDir.resolve("profile_links.json").writeText(json.toString())
         } catch (_: Exception) {}
     }
@@ -1014,6 +1158,8 @@ object ProfileProcessor {
                     connsViewMp = json.optBoolean("pxa_conns_view_mp", false),
                     rpMp = json.optBoolean("pxa_rp_mp", false),
                     simpleMode = json.optBoolean("pxa_simple_mode", false),
+                    fallbackUrl = json.optString("fallback_url", ""),
+                    fallbackDomain = json.optString("fallback_domain", ""),
                 )
             } else ProfileHeaders()
         } catch (_: Exception) { ProfileHeaders() }
