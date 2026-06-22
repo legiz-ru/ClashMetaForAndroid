@@ -242,7 +242,7 @@ object ProfileProcessor {
         uuid: UUID,
         type: Profile.Type,
         source: String,
-        persistMigratedSource: (String) -> Unit,
+        persistMigratedSource: suspend (String) -> Unit,
     ): Pair<String, String?> {
         if (type == Profile.Type.File || !isHttpUrl(source)) {
             return source to null
