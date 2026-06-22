@@ -1126,9 +1126,16 @@ object ProfileProcessor {
             }
             headers["announce"]?.let { if (it.isNotBlank()) json.put("announce", decodeHeaderValue(it)) }
             if (isHeaderTrue(headers, "x-hwid-active")) json.put("x_hwid_active", true)
-            headers["pxa-latency-dots"]?.trim()?.toIntOrNull()?.let {
-                if (it == 0 || it == 1) json.put("pxa_latency_dots", it)
-            }
+            // pxa-latency-dots (0 = numeric ms, 1 = colored dots). For Happ-compatibility
+            // the `ping-result` alias is also accepted: time => 0, icon => 1.
+            // The native pxa-latency-dots header takes precedence when both are present.
+            val latencyDots = headers["pxa-latency-dots"]?.trim()?.toIntOrNull()?.takeIf { it == 0 || it == 1 }
+                ?: when (headers["ping-result"]?.trim()?.lowercase()) {
+                    "time" -> 0
+                    "icon" -> 1
+                    else -> null
+                }
+            if (latencyDots != null) json.put("pxa_latency_dots", latencyDots)
             if (headers["pxa-global-mode-mp"]?.trim() == "1") json.put("pxa_global_mode_mp", true)
             if (headers["pxa-conns-view-mp"]?.trim() == "1") json.put("pxa_conns_view_mp", true)
             if (headers["pxa-rp-mp"]?.trim() == "1") json.put("pxa_rp_mp", true)
