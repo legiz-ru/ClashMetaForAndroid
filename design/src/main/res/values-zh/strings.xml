@@ -274,6 +274,9 @@
     <string name="age_public_key">公钥（用于加密，须在服务端配置）</string>
     <string name="age_private_key">私钥（设置到配置文件）</string>
     <string name="age_keypair_result_title">已生成密钥对</string>
+    <string name="age_key_required_title">已加密的配置文件</string>
+    <string name="age_key_required_msg">此配置文件已加密，只有提供对应的 AGE-SECRET-KEY- 私钥才能导入。请在配置文件属性中设置 Age 私钥后重新保存。</string>
+    <string name="age_key_required_set">设置私钥</string>
     <string name="age_regenerate">重新生成</string>
     <string name="age_copy_key">复制密钥</string>
 </resources>

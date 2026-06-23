@@ -548,6 +548,9 @@
     <string name="age_public_key">Публичный ключ (для шифрования, должен быть применён со стороны сервера)</string>
     <string name="age_private_key">Секретный ключ (установить в профиль)</string>
     <string name="age_keypair_result_title">Сгенерированная пара ключей</string>
+    <string name="age_key_required_title">Зашифрованный профиль</string>
+    <string name="age_key_required_msg">Этот профиль зашифрован. Импортировать его можно только при наличии ключа AGE-SECRET-KEY-. Укажите секретный ключ Age в свойствах профиля и сохраните ещё раз.</string>
+    <string name="age_key_required_set">Указать ключ</string>
     <string name="age_regenerate">Перегенерировать</string>
     <string name="age_copy_key">Скопировать ключ</string>
 </resources>

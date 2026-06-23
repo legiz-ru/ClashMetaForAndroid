@@ -27,7 +27,10 @@ val ValidatorAutoUpdateInterval: Validator = {
 val ValidatorAgeSecretKey: Validator = {
     it.isEmpty() || it.lines().filter { l -> l.trim().isNotEmpty() }.all { l ->
         l.trim().let { key ->
-            key.startsWith("AGE-SECRET-KEY-1", ignoreCase = true) && key.length > 20
+            // Accept all age secret-key variants: classic X25519 (AGE-SECRET-KEY-1…),
+            // hybrid / post-quantum (AGE-SECRET-KEY-HYBRID-1…, AGE-SECRET-KEY-PQ-…).
+            // The native core (verifySecretKeys) performs the authoritative validation.
+            key.startsWith("AGE-SECRET-KEY-", ignoreCase = true) && key.length > 20
         }
     }
 }

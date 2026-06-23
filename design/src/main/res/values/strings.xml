@@ -584,6 +584,9 @@
     <string name="age_public_key">Public Key (for encryption, must be applied on the server side)</string>
     <string name="age_private_key">Secret Key (set in profile)</string>
     <string name="age_keypair_result_title">Generated Key Pair</string>
+    <string name="age_key_required_title">Encrypted profile</string>
+    <string name="age_key_required_msg">This profile is encrypted. It can only be imported if you provide its AGE-SECRET-KEY- secret key. Set the Age secret key in the profile properties and save again.</string>
+    <string name="age_key_required_set">Set key</string>
     <string name="age_regenerate">Regenerate</string>
     <string name="age_copy_key">Copy key</string>
 </resources>

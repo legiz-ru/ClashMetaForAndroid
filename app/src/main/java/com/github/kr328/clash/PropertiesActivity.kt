@@ -417,11 +417,15 @@ class PropertiesActivity : BaseActivity() {
 
                     finish()
                 } catch (e: Exception) {
-                    val (issue, supportUrl) = resolveHwidIssue(e)
-                    when (issue) {
-                        HwidIssue.NotSupported -> showHwidNotSupportedDialog()
-                        HwidIssue.MaxDevicesReached -> showHwidMaxDevicesDialog(supportUrl)
-                        HwidIssue.None -> Toast.makeText(this, e.message ?: "Unknown", Toast.LENGTH_LONG).show()
+                    if (isAgeKeyRequired(e)) {
+                        showAgeKeyRequiredDialog()
+                    } else {
+                        val (issue, supportUrl) = resolveHwidIssue(e)
+                        when (issue) {
+                            HwidIssue.NotSupported -> showHwidNotSupportedDialog()
+                            HwidIssue.MaxDevicesReached -> showHwidMaxDevicesDialog(supportUrl)
+                            HwidIssue.None -> Toast.makeText(this, e.message ?: "Unknown", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             }
@@ -432,6 +436,30 @@ class PropertiesActivity : BaseActivity() {
         None,
         NotSupported,
         MaxDevicesReached,
+    }
+
+    private fun isAgeKeyRequired(exception: Throwable): Boolean {
+        var current: Throwable? = exception
+        while (current != null) {
+            if (current is ProfileProcessor.AgeKeyRequiredException) return true
+            if (current.message.orEmpty().contains("AGE_KEY_REQUIRED", ignoreCase = true)) return true
+            current = current.cause
+        }
+        return false
+    }
+
+    private suspend fun showAgeKeyRequiredDialog() {
+        withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine<Unit> { cont ->
+                val dialog = MaterialAlertDialogBuilder(this@PropertiesActivity)
+                    .setTitle(R.string.age_key_required_title)
+                    .setMessage(R.string.age_key_required_msg)
+                    .setPositiveButton(R.string.ok) { _, _ -> if (cont.isActive) cont.resume(Unit) }
+                    .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
+                    .show()
+                cont.invokeOnCancellation { dialog.dismiss() }
+            }
+        }
     }
 
     private fun resolveHwidIssue(exception: Throwable): Pair<HwidIssue, String> {

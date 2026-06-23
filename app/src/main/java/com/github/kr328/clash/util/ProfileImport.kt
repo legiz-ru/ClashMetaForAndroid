@@ -71,6 +71,36 @@ private suspend fun Context.showHwidNotSupportedImportDialog() {
     }
 }
 
+private fun isAgeKeyRequiredImport(exception: Throwable): Boolean {
+    var current: Throwable? = exception
+    while (current != null) {
+        if (current is ProfileProcessor.AgeKeyRequiredException) return true
+        if (current.message.orEmpty().contains("AGE_KEY_REQUIRED", ignoreCase = true)) return true
+        current = current.cause
+    }
+    return false
+}
+
+private suspend fun Context.showAgeKeyRequiredImportDialog(uuid: UUID) {
+    withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine<Unit> { cont ->
+            val dialog = MaterialAlertDialogBuilder(this@showAgeKeyRequiredImportDialog)
+                .setTitle(com.github.kr328.clash.design.R.string.age_key_required_title)
+                .setMessage(com.github.kr328.clash.design.R.string.age_key_required_msg)
+                .setPositiveButton(com.github.kr328.clash.design.R.string.age_key_required_set) { _, _ ->
+                    if (cont.isActive) cont.resume(Unit)
+                    startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                }
+                .setNegativeButton(com.github.kr328.clash.design.R.string.cancel) { _, _ ->
+                    if (cont.isActive) cont.resume(Unit)
+                }
+                .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
+                .show()
+            cont.invokeOnCancellation { dialog.dismiss() }
+        }
+    }
+}
+
 private suspend fun Context.showHwidMaxDevicesImportDialog(supportUrl: String) {
     withContext(Dispatchers.Main) {
         suspendCancellableCoroutine<Unit> { cont ->
@@ -154,6 +184,7 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
         var hwidIssue = HwidIssue.None
         var hwidSupportUrl = ""
         var committed = false
+        var ageKeyRequired = false
 
         withModelProgressBar {
             configure {
@@ -172,6 +203,10 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
                 withProfile { queryByUUID(uuid)?.let { setActive(it) } }
                 committed = true
             } catch (e: Exception) {
+                if (isAgeKeyRequiredImport(e)) {
+                    ageKeyRequired = true
+                    return@withModelProgressBar
+                }
                 val (issue, supportUrl) = resolveHwidImportIssue(e)
                 hwidIssue = issue
                 hwidSupportUrl = supportUrl
@@ -187,7 +222,9 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
             }
         }
 
-        when (hwidIssue) {
+        if (ageKeyRequired) {
+            showAgeKeyRequiredImportDialog(uuid)
+        } else when (hwidIssue) {
             HwidIssue.NotSupported -> showHwidNotSupportedImportDialog()
             HwidIssue.MaxDevicesReached -> showHwidMaxDevicesImportDialog(hwidSupportUrl)
             HwidIssue.None -> if (committed) {

@@ -35,6 +35,20 @@ object ProfileProcessor {
     class HwidNotSupportedException : IOException("HWID_NOT_SUPPORTED")
     class HwidMaxDevicesReachedException(val supportUrl: String = "") : IOException("HWID_MAX_DEVICES_REACHED")
 
+    /** Thrown when a fetched config is age-encrypted but the profile has no age-secret-key set. */
+    class AgeKeyRequiredException : IOException("AGE_KEY_REQUIRED")
+
+    /**
+     * Detects whether [content] is an age-encrypted payload (ASCII-armored or binary header).
+     * Such configs can only be parsed by the core when a matching age-secret-key is present
+     * (written to age-secret-key.txt alongside config.yaml).
+     */
+    fun isAgeEncrypted(content: String): Boolean {
+        val trimmed = content.trimStart()
+        return trimmed.startsWith("-----BEGIN AGE ENCRYPTED FILE-----") ||
+            trimmed.startsWith("age-encryption.org/v1")
+    }
+
     private fun isHeaderTrue(headers: okhttp3.Headers, name: String): Boolean {
         return headers[name]?.trim()?.equals("true", ignoreCase = true) == true
     }
@@ -683,6 +697,10 @@ object ProfileProcessor {
                 if (snapshot.type == Profile.Type.Converted) {
                     val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
                     val fetchResult = fetchSourceContentWithPxa(context, downloadUrl ?: snapshot.source)
+                    // Encrypted source without a key cannot be converted — surface a clear warning.
+                    if (isAgeEncrypted(fetchResult.content) && snapshot.ageSecretKey.isEmpty()) {
+                        throw AgeKeyRequiredException()
+                    }
                     if (fetchResult.headersAvailable) {
                         TemplateManager.savePxaMeta(
                             pendingDir,
@@ -735,6 +753,11 @@ object ProfileProcessor {
 
                     if (localConfig.exists()) {
                         val content = localConfig.readText(Charsets.UTF_8)
+                        // Age-encrypted config but no key set: the core can't decrypt it.
+                        // Throw a typed error so the import UI can prompt for an age-secret-key.
+                        if (isAgeEncrypted(content) && snapshot.ageSecretKey.isEmpty()) {
+                            throw AgeKeyRequiredException()
+                        }
                         if (detectContentFormat(content) == ContentFormat.ConvertibleContent) {
                             val pendingDir = context.pendingDir.resolve(snapshot.uuid.toString())
 
