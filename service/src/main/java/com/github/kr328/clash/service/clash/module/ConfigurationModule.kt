@@ -58,6 +58,11 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
 
                 val profileDir = service.importedDir.resolve(active.uuid.toString())
                 val configFile = profileDir.resolve("config.yaml")
+
+                // Provide the age secret key (if any) so the core can decrypt an
+                // age-encrypted config on load; empty clears any previously set key.
+                Clash.setAgeSecretKeys(active.ageSecretKey)
+
                 var originalConfig: String? = null
                 try {
                     if (configFile.exists()) {

@@ -251,6 +251,15 @@ object Clash {
         return Bridge.nativeCloseConnection(id)
     }
 
+    /**
+     * Installs the age secret keys (newline-separated) used by the core to decrypt
+     * age-encrypted configs. Must be called before loading/parsing such a config;
+     * pass an empty string to clear. The core reads identities only from this global.
+     */
+    fun setAgeSecretKeys(keys: String) {
+        Bridge.nativeSetAgeSecretKeys(keys)
+    }
+
     fun verifySecretKeys(keys: String): Boolean {
         return Bridge.nativeVerifySecretKeys(keys)
     }

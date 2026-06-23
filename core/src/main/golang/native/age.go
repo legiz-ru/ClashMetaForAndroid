@@ -8,7 +8,23 @@ import (
 	"strings"
 
 	"github.com/metacubex/age"
+	mihomoage "github.com/metacubex/mihomo/component/age"
 )
+
+//export setAgeSecretKeys
+func setAgeSecretKeys(keys C.c_string) {
+	s := C.GoString(keys)
+	parsed := make([]string, 0)
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			parsed = append(parsed, line)
+		}
+	}
+	// The core decrypts age-encrypted configs via age.DecryptBytes, which reads
+	// identities only from this process-global slice (no key file is consulted).
+	mihomoage.SetGlobalSecretKeys(parsed...)
+}
 
 //export verifySecretKeys
 func verifySecretKeys(keys C.c_string) C.int {

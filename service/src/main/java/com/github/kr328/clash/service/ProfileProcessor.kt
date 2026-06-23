@@ -803,6 +803,11 @@ object ProfileProcessor {
                         .writeText(snapshot.ageSecretKey)
                 }
 
+                // Install the age secret key into the core so it can decrypt an
+                // age-encrypted config during fetchAndValid (the core reads identities
+                // only from this global, not from age-secret-key.txt). Empty clears it.
+                Clash.setAgeSecretKeys(snapshot.ageSecretKey)
+
                 val fetchTarget = resolveFetchTarget(
                     context, snapshot.type, snapshot.source, alreadyPrefetched
                 )
@@ -1008,6 +1013,10 @@ object ProfileProcessor {
                         else -> convertAndWriteConfig(context, fetchResult.content, importedDir, context.processingDir)
                     }
                 }
+
+                // Install the age secret key so an age-encrypted config can be
+                // decrypted by the core during this refresh; empty clears it.
+                Clash.setAgeSecretKeys(snapshot.ageSecretKey)
 
                 val fetchTarget = resolveFetchTarget(
                     context, snapshot.type, snapshot.source, downloadUrlOverride = downloadUrl
