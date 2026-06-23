@@ -10,6 +10,7 @@ import (
 	"os"
 	P "path"
 	"runtime"
+	"sync"
 	"time"
 
 	"cfa/native/app"
@@ -117,16 +118,21 @@ func FetchAndValid(
 		return err
 	}
 
+	// Collect the providers that actually need downloading (skip cached / invalid),
+	// then fetch them concurrently with a bounded worker pool. Provider downloads are
+	// independent network calls, so parallelising them cuts the wall-clock time roughly
+	// by the pool size and turns stacked per-host timeouts into parallel ones.
+	type providerTask struct {
+		name         string
+		url          *U.URL
+		path         string
+		pathInBundle string
+		isRule       bool
+	}
+
+	var tasks []providerTask
+
 	forEachProviders(rawCfg, func(index int, total int, name string, provider map[string]any, prefix string) {
-		bytes, _ := json.Marshal(&Status{
-			Action:      "FetchProviders",
-			Args:        []string{name},
-			Progress:    index,
-			MaxProgress: total,
-		})
-
-		reportStatus(string(bytes))
-
 		u, uok := provider["url"]
 		p, pok := provider["path"]
 
@@ -150,23 +156,84 @@ func FetchAndValid(
 			return
 		}
 
+		pib := ""
 		if prefix == RULES {
-			if pib, uok := provider["path-in-bundle"]; uok {
-				if pib, uok := pib.(string); uok && pib != "" {
-					// The core will handle extraction; we maintain fetch consistency
-					// with historical CMFA behavior by pre-fetching from the bundle.
-					if file, err := RB.Open(pib); err == nil {
-						defer file.Close()
-						if err := writeFile(ps, file); err == nil {
-							return
-						}
-					}
+			if v, ok := provider["path-in-bundle"]; ok {
+				if s, ok := v.(string); ok {
+					pib = s
 				}
 			}
 		}
 
-		_ = fetch(url, ps)
+		tasks = append(tasks, providerTask{
+			name:         name,
+			url:          url,
+			path:         ps,
+			pathInBundle: pib,
+			isRule:       prefix == RULES,
+		})
 	})
+
+	if total := len(tasks); total > 0 {
+		const maxConcurrent = 5
+
+		fetchOne := func(t providerTask) {
+			if t.isRule && t.pathInBundle != "" {
+				// The core will handle extraction; we maintain fetch consistency
+				// with historical CMFA behavior by pre-fetching from the bundle.
+				if file, err := RB.Open(t.pathInBundle); err == nil {
+					wrErr := writeFile(t.path, file)
+					file.Close()
+					if wrErr == nil {
+						return
+					}
+				}
+			}
+
+			_ = fetch(t.url, t.path)
+		}
+
+		sem := make(chan struct{}, maxConcurrent)
+		doneCh := make(chan string, total)
+		var wg sync.WaitGroup
+
+		for i := range tasks {
+			t := tasks[i]
+			wg.Add(1)
+			sem <- struct{}{}
+
+			go func() {
+				defer wg.Done()
+				defer func() { <-sem }()
+
+				fetchOne(t)
+
+				doneCh <- t.name
+			}()
+		}
+
+		go func() {
+			wg.Wait()
+			close(doneCh)
+		}()
+
+		// Report progress from this goroutine only, preserving the original
+		// single-threaded reportStatus call site (the JNI callback is not safe
+		// to invoke concurrently from worker goroutines).
+		completed := 0
+		for name := range doneCh {
+			completed++
+
+			bytes, _ := json.Marshal(&Status{
+				Action:      "FetchProviders",
+				Args:        []string{name},
+				Progress:    completed,
+				MaxProgress: total,
+			})
+
+			reportStatus(string(bytes))
+		}
+	}
 
 	// Fetch proxy group icons
 	fetchProxyGroupIcons(rawCfg, path, reportStatus)

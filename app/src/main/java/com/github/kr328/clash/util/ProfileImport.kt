@@ -8,6 +8,7 @@ import com.github.kr328.clash.MainActivity
 import com.github.kr328.clash.PropertiesActivity
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
+import com.github.kr328.clash.design.dialog.applyFetchStatus
 import com.github.kr328.clash.design.dialog.withModelProgressBar
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.TemplateManager
@@ -15,6 +16,8 @@ import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.util.pendingDir
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -159,7 +162,13 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
             }
 
             try {
-                withProfile { commit(uuid, null) }
+                withProfile {
+                    coroutineScope {
+                        commit(uuid) { status ->
+                            launch { configure { applyFetchStatus(this@importProfileFromUrl, status) } }
+                        }
+                    }
+                }
                 withProfile { queryByUUID(uuid)?.let { setActive(it) } }
                 committed = true
             } catch (e: Exception) {
@@ -222,7 +231,13 @@ private suspend fun Context.importDirectProxyLinks(proxyLinks: String): ProfileI
         }
 
         try {
-            withProfile { commit(uuid, null) }
+            withProfile {
+                coroutineScope {
+                    commit(uuid) { status ->
+                        launch { configure { applyFetchStatus(this@importDirectProxyLinks, status) } }
+                    }
+                }
+            }
             withProfile { queryByUUID(uuid)?.let { setActive(it) } }
         } catch (_: Exception) {
             Toast.makeText(

@@ -2,6 +2,7 @@ package com.github.kr328.clash.design.dialog
 
 import android.content.Context
 import android.widget.TextView
+import com.github.kr328.clash.core.model.FetchStatus
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.util.layoutInflater
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -14,6 +15,38 @@ interface ModelProgressBarConfigure {
     var text: String?
     var progress: Int
     var max: Int
+}
+
+/**
+ * Maps a fetch [status] reported during profile commit onto the progress dialog,
+ * so callers (import flow, properties screen) show live per-provider progress
+ * instead of a static indeterminate message.
+ */
+fun ModelProgressBarConfigure.applyFetchStatus(context: Context, status: FetchStatus) {
+    when (status.action) {
+        FetchStatus.Action.FetchConfiguration -> {
+            text = context.getString(R.string.format_fetching_configuration, status.args[0])
+            isIndeterminate = true
+        }
+        FetchStatus.Action.FetchProviders -> {
+            text = context.getString(R.string.format_fetching_provider, status.args[0])
+            isIndeterminate = false
+            max = status.max
+            progress = status.progress
+        }
+        FetchStatus.Action.FetchIcons -> {
+            text = context.getString(R.string.fetching_icons)
+            isIndeterminate = false
+            max = status.max
+            progress = status.progress
+        }
+        FetchStatus.Action.Verifying -> {
+            text = context.getString(R.string.verifying)
+            isIndeterminate = false
+            max = status.max
+            progress = status.progress
+        }
+    }
 }
 
 interface ModelProgressBarScope {

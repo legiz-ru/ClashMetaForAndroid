@@ -1184,8 +1184,9 @@ object ProfileProcessor {
         return withContext(Dispatchers.IO) {
             try {
                 val client = OkHttpClient.Builder()
-                    .connectTimeout(10, TimeUnit.SECONDS)
-                    .readTimeout(10, TimeUnit.SECONDS)
+                    .connectTimeout(3, TimeUnit.SECONDS)
+                    .readTimeout(3, TimeUnit.SECONDS)
+                    .callTimeout(3, TimeUnit.SECONDS)
                     .build()
                 val baseRequest = buildProfileRequest(context, url)
 
