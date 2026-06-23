@@ -9,7 +9,6 @@ import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.data.SelectionDao
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.importedDir
-import com.github.kr328.clash.service.util.patchTunPackages
 import com.github.kr328.clash.service.util.sendProfileLoaded
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.selects.select
@@ -57,26 +56,15 @@ class ConfigurationModule(service: Service) : Module<ConfigurationModule.LoadExc
                     ?: throw NullPointerException("No profile selected")
 
                 val profileDir = service.importedDir.resolve(active.uuid.toString())
-                val configFile = profileDir.resolve("config.yaml")
 
                 // Provide the age secret key (if any) so the core can decrypt an
                 // age-encrypted config on load; empty clears any previously set key.
                 Clash.setAgeSecretKeys(active.ageSecretKey)
 
-                var originalConfig: String? = null
-                try {
-                    if (configFile.exists()) {
-                        val original = configFile.readText()
-                        val patched = patchTunPackages(original, store.accessControlMode, store.accessControlPackages)
-                        if (patched != original) {
-                            originalConfig = original
-                            configFile.writeText(patched)
-                        }
-                    }
-                    Clash.load(profileDir).await()
-                } finally {
-                    originalConfig?.let { configFile.writeText(it) }
-                }
+                // Per-app access control is enforced at the VpnService layer
+                // (TunService addAllowed/DisallowedApplication); the core's own tun
+                // is disabled (Tun.Enable=false), so no config-text patching is needed.
+                Clash.load(profileDir).await()
 
                 val remove = SelectionDao().querySelections(active.uuid)
                     .filterNot { Clash.patchSelector(it.proxy, it.selected) }

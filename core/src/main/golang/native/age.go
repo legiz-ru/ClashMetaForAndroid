@@ -26,6 +26,30 @@ func setAgeSecretKeys(keys C.c_string) {
 	mihomoage.SetGlobalSecretKeys(parsed...)
 }
 
+//export decryptConfig
+func decryptConfig(content C.c_string, keys C.c_string) *C.char {
+	s := C.GoString(content)
+	k := C.GoString(keys)
+
+	parsed := make([]string, 0)
+	for _, line := range strings.Split(k, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			parsed = append(parsed, line)
+		}
+	}
+
+	out, err := mihomoage.DecryptBytes([]byte(s), parsed...)
+	if err != nil {
+		// Not age-encrypted, or the key is missing/wrong: return the input
+		// unchanged so callers degrade gracefully (e.g. find no tun section)
+		// without ever persisting plaintext.
+		return C.CString(s)
+	}
+
+	return C.CString(string(out))
+}
+
 //export verifySecretKeys
 func verifySecretKeys(keys C.c_string) C.int {
 	s := C.GoString(keys)

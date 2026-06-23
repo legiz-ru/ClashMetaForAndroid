@@ -260,6 +260,15 @@ object Clash {
         Bridge.nativeSetAgeSecretKeys(keys)
     }
 
+    /**
+     * Returns the decrypted YAML for [content] using the newline-separated [keys].
+     * If [content] is not age-encrypted, or the key is missing/wrong, the input is
+     * returned unchanged. Decryption happens in memory; no plaintext is persisted.
+     */
+    fun decryptConfig(content: String, keys: String): String {
+        return Bridge.nativeDecryptConfig(content, keys)
+    }
+
     fun verifySecretKeys(keys: String): Boolean {
         return Bridge.nativeVerifySecretKeys(keys)
     }

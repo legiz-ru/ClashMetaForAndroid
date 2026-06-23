@@ -9,6 +9,7 @@ import android.os.Build
 import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.log.Log
+import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.clash.clashRuntime
 import com.github.kr328.clash.service.clash.module.*
 import com.github.kr328.clash.service.model.AccessControlMode
@@ -158,11 +159,16 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
             // Access Control — merge profile tun packages with UI settings (union)
             val profileUuid = store.activeProfile
             val (profileInclude, profileExclude) = if (profileUuid != null) {
-                val configFile = self.importedDir
-                    .resolve(profileUuid.toString())
-                    .resolve("config.yaml")
-                if (configFile.exists()) parseTunPackageLists(configFile.readText())
-                else Pair(emptySet(), emptySet())
+                val profileDir = self.importedDir.resolve(profileUuid.toString())
+                val configFile = profileDir.resolve("config.yaml")
+                if (configFile.exists()) {
+                    // The config may be age-encrypted on disk; decrypt it in memory
+                    // (using the profile's stored key) so its tun.*-package lists can
+                    // be read. Nothing plaintext is written back to disk.
+                    val keyFile = profileDir.resolve("age-secret-key.txt")
+                    val key = if (keyFile.exists()) keyFile.readText() else ""
+                    parseTunPackageLists(Clash.decryptConfig(configFile.readText(), key))
+                } else Pair(emptySet(), emptySet())
             } else Pair(emptySet<String>(), emptySet<String>())
 
             val allInclude = mutableSetOf<String>()
