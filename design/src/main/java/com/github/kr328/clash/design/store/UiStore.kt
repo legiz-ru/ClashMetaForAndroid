@@ -57,6 +57,28 @@ class UiStore(context: Context) {
         values = ProxySort.values()
     )
 
+    /**
+     * Per-profile proxy sort. Remembered separately for each profile (keyed by its UUID)
+     * so switching/restarting profiles keeps each profile's own sort. Falls back to the
+     * legacy global [proxySort] when the profile has no stored value (smooth migration),
+     * and to the global value entirely when [profileUuid] is empty (no active profile).
+     */
+    fun getProxySort(profileUuid: String): ProxySort {
+        if (profileUuid.isEmpty()) return proxySort
+        val name = store.provider.getString(proxySortKey(profileUuid), proxySort.name)
+        return ProxySort.values().find { it.name == name } ?: ProxySort.Default
+    }
+
+    fun setProxySort(profileUuid: String, sort: ProxySort) {
+        if (profileUuid.isEmpty()) {
+            proxySort = sort
+            return
+        }
+        store.provider.setString(proxySortKey(profileUuid), sort.name)
+    }
+
+    private fun proxySortKey(profileUuid: String) = "proxy_sort_$profileUuid"
+
     var proxyLastGroup: String by store.string(
         key = "proxy_last_group",
         defaultValue = ""

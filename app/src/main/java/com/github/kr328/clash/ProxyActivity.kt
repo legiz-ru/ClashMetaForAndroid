@@ -30,10 +30,17 @@ class ProxyActivity : BaseActivity() {
     private lateinit var names: List<String>
     private val reloadLock = Semaphore(10)
 
+    // UUID of the active profile and its remembered sort; the sort is persisted per profile.
+    private var profileUuid: String = ""
+    private var proxySort: ProxySort = ProxySort.Default
+
     override suspend fun main() {
         val mode = withClash { queryOverride(Clash.OverrideSlot.Session).mode }
         names = withClash { queryProxyGroupNames(uiStore.proxyExcludeNotSelectable) }
-        val activeProfileLatencyDots = withProfile { queryActive()?.latencyDots ?: -1 }
+        val active = withProfile { queryActive() }
+        profileUuid = active?.uuid?.toString() ?: ""
+        proxySort = uiStore.getProxySort(profileUuid)
+        val activeProfileLatencyDots = active?.latencyDots ?: -1
         val useDots = when (activeProfileLatencyDots) {
             0 -> false
             1 -> true
@@ -49,7 +56,7 @@ class ProxyActivity : BaseActivity() {
                     groupMap = groupMap,
                     useDots = useDots,
                     mode = mode,
-                    sort = uiStore.proxySort,
+                    sort = proxySort,
                     excludeNotSelectable = uiStore.proxyExcludeNotSelectable,
                     testingGroups = testing,
                     initialGroup = uiStore.proxyLastGroup,
@@ -84,7 +91,7 @@ class ProxyActivity : BaseActivity() {
     private fun reloadGroup(name: String) {
         launch {
             val group = reloadLock.withPermit {
-                withClash { queryProxyGroup(name, uiStore.proxySort) }
+                withClash { queryProxyGroup(name, proxySort) }
             }
             groupMapFlow.value = groupMapFlow.value.toMutableMap().apply { put(name, group) }
         }
@@ -107,7 +114,7 @@ class ProxyActivity : BaseActivity() {
             try {
                 withClash { healthCheck(group) }
                 val refreshed = reloadLock.withPermit {
-                    withClash { queryProxyGroup(group, uiStore.proxySort) }
+                    withClash { queryProxyGroup(group, proxySort) }
                 }
                 groupMapFlow.value = groupMapFlow.value.toMutableMap().apply { put(group, refreshed) }
             } finally {
@@ -117,7 +124,8 @@ class ProxyActivity : BaseActivity() {
     }
 
     private fun setSort(sort: ProxySort) {
-        uiStore.proxySort = sort
+        proxySort = sort
+        uiStore.setProxySort(profileUuid, sort)
         reloadAll()
     }
 

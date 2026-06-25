@@ -183,7 +183,10 @@ class MainActivity : BaseActivity() {
 
     private suspend fun fetchProxyGroups() {
         try {
-            val activeLatencyDots = withProfile { queryActive()?.latencyDots ?: -1 }
+            val active = withProfile { queryActive() }
+            val activeLatencyDots = active?.latencyDots ?: -1
+            // Per-profile proxy sort, shared with ProxyActivity.
+            val sort = uiStore.getProxySort(active?.uuid?.toString() ?: "")
             val effectiveDots = when (activeLatencyDots) {
                 0 -> false
                 1 -> true
@@ -192,7 +195,7 @@ class MainActivity : BaseActivity() {
             withClash {
                 val names = queryProxyGroupNames(uiStore.proxyExcludeNotSelectable)
                 val visibleGroups = names.map { name ->
-                    name to queryProxyGroup(name, uiStore.proxySort)
+                    name to queryProxyGroup(name, sort)
                 }.filter { !it.second.hidden }
 
                 val knownNames = visibleGroups.map { it.first }.toHashSet()
@@ -202,7 +205,7 @@ class MainActivity : BaseActivity() {
                     .map { it.name }
                     .distinct()
                 val nestedSmartGroups = nestedSmartNames.map { name ->
-                    name to queryProxyGroup(name, uiStore.proxySort).copy(hidden = true)
+                    name to queryProxyGroup(name, sort).copy(hidden = true)
                 }
 
                 proxyGroupsFlow.value = visibleGroups + nestedSmartGroups
