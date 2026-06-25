@@ -3,7 +3,6 @@ package com.github.kr328.clash.design.compose.screen
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,15 +29,16 @@ fun NetworkSettingsScreen(
     onBack: () -> Unit,
     onAccessControlPackages: () -> Unit,
 ) {
-    var rev by remember { mutableIntStateOf(0) }
-    @Suppress("UNUSED_VARIABLE") val r = rev
-    val bump = { rev++ }
-
     var showTunStack by remember { mutableStateOf(false) }
     var showAclMode by remember { mutableStateOf(false) }
 
+    // Snapshot state mirrors of the persisted stores so rows reflect changes immediately
+    // (read inside each item) without a rev/bump recompose trigger.
+    var enableVpn by remember { mutableStateOf(uiStore.enableVpn) }
+    var tunStackMode by remember { mutableStateOf(srvStore.tunStackMode) }
+    var aclMode by remember { mutableStateOf(srvStore.accessControlMode) }
+
     val vpnEnabled = !running
-    val depsEnabled = uiStore.enableVpn && !running
 
     val tunStackOptions = listOf(
         "system" to stringResource(R.string.tun_stack_system),
@@ -57,9 +57,9 @@ fun NetworkSettingsScreen(
                 title = stringResource(R.string.route_system_traffic),
                 summary = stringResource(R.string.routing_via_vpn_service),
                 icon = R.drawable.ic_baseline_vpn_lock,
-                checked = uiStore.enableVpn,
+                checked = enableVpn,
                 enabled = vpnEnabled,
-                onCheckedChange = { uiStore.enableVpn = it; bump() },
+                onCheckedChange = { uiStore.enableVpn = it; enableVpn = it },
             )
         }
 
@@ -69,8 +69,8 @@ fun NetworkSettingsScreen(
                 title = stringResource(R.string.bypass_private_network),
                 summary = stringResource(R.string.bypass_private_network_summary),
                 checked = srvStore.bypassPrivateNetwork,
-                enabled = depsEnabled,
-                onCheckedChange = { srvStore.bypassPrivateNetwork = it; bump() },
+                enabled = enableVpn && !running,
+                onCheckedChange = { srvStore.bypassPrivateNetwork = it },
             )
         }
         item {
@@ -78,8 +78,8 @@ fun NetworkSettingsScreen(
                 title = stringResource(R.string.dns_hijacking),
                 summary = stringResource(R.string.dns_hijacking_summary),
                 checked = srvStore.dnsHijacking,
-                enabled = depsEnabled,
-                onCheckedChange = { srvStore.dnsHijacking = it; bump() },
+                enabled = enableVpn && !running,
+                onCheckedChange = { srvStore.dnsHijacking = it },
             )
         }
         item {
@@ -87,8 +87,8 @@ fun NetworkSettingsScreen(
                 title = stringResource(R.string.allow_bypass),
                 summary = stringResource(R.string.allow_bypass_summary),
                 checked = srvStore.allowBypass,
-                enabled = depsEnabled,
-                onCheckedChange = { srvStore.allowBypass = it; bump() },
+                enabled = enableVpn && !running,
+                onCheckedChange = { srvStore.allowBypass = it },
             )
         }
         item {
@@ -96,8 +96,8 @@ fun NetworkSettingsScreen(
                 title = stringResource(R.string.allow_ipv6),
                 summary = stringResource(R.string.allow_ipv6_summary),
                 checked = srvStore.allowIpv6,
-                enabled = depsEnabled,
-                onCheckedChange = { srvStore.allowIpv6 = it; bump() },
+                enabled = enableVpn && !running,
+                onCheckedChange = { srvStore.allowIpv6 = it },
             )
         }
         if (Build.VERSION.SDK_INT >= 29) {
@@ -106,24 +106,24 @@ fun NetworkSettingsScreen(
                     title = stringResource(R.string.system_proxy),
                     summary = stringResource(R.string.system_proxy_summary),
                     checked = srvStore.systemProxy,
-                    enabled = depsEnabled,
-                    onCheckedChange = { srvStore.systemProxy = it; bump() },
+                    enabled = enableVpn && !running,
+                    onCheckedChange = { srvStore.systemProxy = it },
                 )
             }
         }
         item {
             PreferenceRow(
                 title = stringResource(R.string.tun_stack_mode),
-                summary = tunStackOptions.firstOrNull { it.first == srvStore.tunStackMode }?.second,
-                enabled = depsEnabled,
+                summary = tunStackOptions.firstOrNull { it.first == tunStackMode }?.second,
+                enabled = enableVpn && !running,
                 onClick = { showTunStack = true },
             )
         }
         item {
             PreferenceRow(
                 title = stringResource(R.string.access_control_mode),
-                summary = aclOptions.firstOrNull { it.first == srvStore.accessControlMode }?.second,
-                enabled = depsEnabled,
+                summary = aclOptions.firstOrNull { it.first == aclMode }?.second,
+                enabled = enableVpn && !running,
                 onClick = { showAclMode = true },
             )
         }
@@ -140,8 +140,8 @@ fun NetworkSettingsScreen(
         SingleChoiceDialog(
             title = stringResource(R.string.tun_stack_mode),
             options = tunStackOptions,
-            selected = srvStore.tunStackMode,
-            onSelect = { srvStore.tunStackMode = it; bump() },
+            selected = tunStackMode,
+            onSelect = { srvStore.tunStackMode = it; tunStackMode = it },
             onDismiss = { showTunStack = false },
         )
     }
@@ -149,8 +149,8 @@ fun NetworkSettingsScreen(
         SingleChoiceDialog(
             title = stringResource(R.string.access_control_mode),
             options = aclOptions,
-            selected = srvStore.accessControlMode,
-            onSelect = { srvStore.accessControlMode = it; bump() },
+            selected = aclMode,
+            onSelect = { srvStore.accessControlMode = it; aclMode = it },
             onDismiss = { showAclMode = false },
         )
     }

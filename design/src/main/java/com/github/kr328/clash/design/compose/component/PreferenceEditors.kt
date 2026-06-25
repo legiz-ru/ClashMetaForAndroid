@@ -52,7 +52,11 @@ fun <T> EditableTextPreference(
     @DrawableRes icon: Int? = null,
 ) {
     var showDialog by remember { mutableStateOf(false) }
-    val display = adapter.from(value)
+    // Self-updating display state: seeded from [value] and re-seeded when the caller
+    // passes a new value (e.g. hoisted/flow-driven screens), but updated locally on edit
+    // so LazyColumn rows reflect changes immediately without an external recompose trigger.
+    var current by remember(value) { mutableStateOf(value) }
+    val display = adapter.from(current)
     val summary = when {
         display == null -> placeholder
         display.isEmpty() -> empty
@@ -69,14 +73,18 @@ fun <T> EditableTextPreference(
     if (showDialog) {
         TextInputDialog(
             title = title,
-            initial = adapter.from(value) ?: "",
+            initial = adapter.from(current) ?: "",
             numeric = numeric,
             onConfirm = {
-                onValueChange(adapter.to(it))
+                val nv = adapter.to(it)
+                current = nv
+                onValueChange(nv)
                 showDialog = false
             },
             onReset = {
-                onValueChange(adapter.to(null))
+                val nv = adapter.to(null)
+                current = nv
+                onValueChange(nv)
                 showDialog = false
             },
             onDismiss = { showDialog = false },
@@ -134,10 +142,12 @@ fun <T> EditableListPreference(
     @DrawableRes icon: Int? = null,
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    // Self-updating display state (see EditableTextPreference) so edits show immediately.
+    var current by remember(value) { mutableStateOf(value) }
     val summary = when {
-        value == null -> placeholder
-        value.isEmpty() -> stringResource(R.string.empty)
-        else -> stringResource(R.string.format_elements, value.size)
+        current == null -> placeholder
+        current!!.isEmpty() -> stringResource(R.string.empty)
+        else -> stringResource(R.string.format_elements, current!!.size)
     }
     PreferenceRow(
         title = title,
@@ -150,12 +160,15 @@ fun <T> EditableListPreference(
     if (showDialog) {
         ListEditorDialog(
             title = title,
-            initial = value?.map { adapter.from(it) } ?: emptyList(),
+            initial = current?.map { adapter.from(it) } ?: emptyList(),
             onApply = {
-                onValueChange(it.map { item -> adapter.to(item) })
+                val nv = it.map { item -> adapter.to(item) }
+                current = nv
+                onValueChange(nv)
                 showDialog = false
             },
             onReset = {
+                current = null
                 onValueChange(null)
                 showDialog = false
             },
@@ -246,10 +259,12 @@ fun <K, V> EditableMapPreference(
     @DrawableRes icon: Int? = null,
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    // Self-updating display state (see EditableTextPreference) so edits show immediately.
+    var current by remember(value) { mutableStateOf(value) }
     val summary = when {
-        value == null -> placeholder
-        value.isEmpty() -> stringResource(R.string.empty)
-        else -> stringResource(R.string.format_elements, value.size)
+        current == null -> placeholder
+        current!!.isEmpty() -> stringResource(R.string.empty)
+        else -> stringResource(R.string.format_elements, current!!.size)
     }
     PreferenceRow(
         title = title,
@@ -262,15 +277,16 @@ fun <K, V> EditableMapPreference(
     if (showDialog) {
         MapEditorDialog(
             title = title,
-            initial = value?.map { keyAdapter.from(it.key) to valueAdapter.from(it.value) }
+            initial = current?.map { keyAdapter.from(it.key) to valueAdapter.from(it.value) }
                 ?: emptyList(),
             onApply = { pairs ->
-                onValueChange(
-                    pairs.associate { keyAdapter.to(it.first) to valueAdapter.to(it.second) },
-                )
+                val nv = pairs.associate { keyAdapter.to(it.first) to valueAdapter.to(it.second) }
+                current = nv
+                onValueChange(nv)
                 showDialog = false
             },
             onReset = {
+                current = null
                 onValueChange(null)
                 showDialog = false
             },

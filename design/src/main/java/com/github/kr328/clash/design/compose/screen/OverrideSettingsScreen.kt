@@ -4,7 +4,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,9 +33,10 @@ fun OverrideSettingsScreen(
     onBack: () -> Unit,
     onReset: () -> Unit,
 ) {
-    var rev by remember { mutableIntStateOf(0) }
-    @Suppress("UNUSED_VARIABLE") val r = rev
-    val bump = { rev++ }
+    // dns.enable as snapshot state so dependent DNS rows' enabled flag updates live when
+    // the strategy row changes it (read as `dnsEnable != false` inside each item). Editable
+    // values stay in sync inside each self-updating preference component — no rev/bump.
+    var dnsEnable by remember { mutableStateOf(configuration.dns.enable) }
 
     val booleanOptions: List<Pair<Boolean?, String>> = listOf(
         null to stringResource(R.string.dont_modify),
@@ -74,7 +74,6 @@ fun OverrideSettingsScreen(
         ConfigurationOverride.FilterMode.WhiteList to stringResource(R.string.whitelist),
         ConfigurationOverride.FilterMode.Rule to stringResource(R.string.rule),
     )
-    val dnsEnabled = configuration.dns.enable != false
 
     PreferenceScaffold(
         title = stringResource(R.string.override),
@@ -90,11 +89,11 @@ fun OverrideSettingsScreen(
     ) {
         item { SettingsCategory(stringResource(R.string.general)) }
 
-        item { PortPreference(stringResource(R.string.http_port), configuration.httpPort) { configuration.httpPort = it; bump() } }
-        item { PortPreference(stringResource(R.string.socks_port), configuration.socksPort) { configuration.socksPort = it; bump() } }
-        item { PortPreference(stringResource(R.string.redirect_port), configuration.redirectPort) { configuration.redirectPort = it; bump() } }
-        item { PortPreference(stringResource(R.string.tproxy_port), configuration.tproxyPort) { configuration.tproxyPort = it; bump() } }
-        item { PortPreference(stringResource(R.string.mixed_port), configuration.mixedPort) { configuration.mixedPort = it; bump() } }
+        item { PortPreference(stringResource(R.string.http_port), configuration.httpPort) { configuration.httpPort = it } }
+        item { PortPreference(stringResource(R.string.socks_port), configuration.socksPort) { configuration.socksPort = it } }
+        item { PortPreference(stringResource(R.string.redirect_port), configuration.redirectPort) { configuration.redirectPort = it } }
+        item { PortPreference(stringResource(R.string.tproxy_port), configuration.tproxyPort) { configuration.tproxyPort = it } }
+        item { PortPreference(stringResource(R.string.mixed_port), configuration.mixedPort) { configuration.mixedPort = it } }
 
         item {
             EditableListPreference(
@@ -102,16 +101,16 @@ fun OverrideSettingsScreen(
                 value = configuration.authentication,
                 adapter = TextAdapter.String,
                 placeholder = stringResource(R.string.dont_modify),
-                onValueChange = { configuration.authentication = it; bump() },
+                onValueChange = { configuration.authentication = it },
             )
         }
 
-        item { SelectablePreference(stringResource(R.string.allow_lan), booleanOptions, configuration.allowLan) { configuration.allowLan = it; bump() } }
-        item { SelectablePreference(stringResource(R.string.ipv6), booleanOptions, configuration.ipv6) { configuration.ipv6 = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.allow_lan), booleanOptions, configuration.allowLan) { configuration.allowLan = it } }
+        item { SelectablePreference(stringResource(R.string.ipv6), booleanOptions, configuration.ipv6) { configuration.ipv6 = it } }
 
-        item { StringPreference(stringResource(R.string.bind_address), configuration.bindAddress, stringResource(R.string.default_)) { configuration.bindAddress = it; bump() } }
-        item { StringPreference(stringResource(R.string.external_controller), configuration.externalController, stringResource(R.string.default_)) { configuration.externalController = it; bump() } }
-        item { StringPreference(stringResource(R.string.external_controller_tls), configuration.externalControllerTLS, stringResource(R.string.default_)) { configuration.externalControllerTLS = it; bump() } }
+        item { StringPreference(stringResource(R.string.bind_address), configuration.bindAddress, stringResource(R.string.default_)) { configuration.bindAddress = it } }
+        item { StringPreference(stringResource(R.string.external_controller), configuration.externalController, stringResource(R.string.default_)) { configuration.externalController = it } }
+        item { StringPreference(stringResource(R.string.external_controller_tls), configuration.externalControllerTLS, stringResource(R.string.default_)) { configuration.externalControllerTLS = it } }
 
         item {
             EditableListPreference(
@@ -119,20 +118,20 @@ fun OverrideSettingsScreen(
                 value = configuration.externalControllerCors.allowOrigins,
                 adapter = TextAdapter.String,
                 placeholder = stringResource(R.string.dont_modify),
-                onValueChange = { configuration.externalControllerCors.allowOrigins = it; bump() },
+                onValueChange = { configuration.externalControllerCors.allowOrigins = it },
             )
         }
         item {
             SelectablePreference(stringResource(R.string.allow_private_network), booleanOptions, configuration.externalControllerCors.allowPrivateNetwork) {
-                configuration.externalControllerCors.allowPrivateNetwork = it; bump()
+                configuration.externalControllerCors.allowPrivateNetwork = it
             }
         }
 
-        item { StringPreference(stringResource(R.string.secret), configuration.secret, stringResource(R.string.default_)) { configuration.secret = it; bump() } }
+        item { StringPreference(stringResource(R.string.secret), configuration.secret, stringResource(R.string.default_)) { configuration.secret = it } }
 
-        item { SelectablePreference(stringResource(R.string.mode), modeOptions, configuration.mode) { configuration.mode = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.mode), modeOptions, configuration.mode) { configuration.mode = it } }
 
-        item { SelectablePreference(stringResource(R.string.log_level), logLevelOptions, configuration.logLevel) { configuration.logLevel = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.log_level), logLevelOptions, configuration.logLevel) { configuration.logLevel = it } }
 
         item {
             EditableMapPreference(
@@ -141,33 +140,33 @@ fun OverrideSettingsScreen(
                 keyAdapter = TextAdapter.String,
                 valueAdapter = TextAdapter.String,
                 placeholder = stringResource(R.string.dont_modify),
-                onValueChange = { configuration.hosts = it; bump() },
+                onValueChange = { configuration.hosts = it },
             )
         }
 
         item { SettingsCategory(stringResource(R.string.dns)) }
 
-        item { SelectablePreference(stringResource(R.string.strategy), dnsStrategyOptions, configuration.dns.enable) { configuration.dns.enable = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.strategy), dnsStrategyOptions, configuration.dns.enable) { configuration.dns.enable = it; dnsEnable = it } }
 
-        item { SelectablePreference(stringResource(R.string.prefer_h3), booleanOptions, configuration.dns.preferH3, dnsEnabled) { configuration.dns.preferH3 = it; bump() } }
-        item { StringPreference(stringResource(R.string.listen), configuration.dns.listen, stringResource(R.string.disabled), dnsEnabled) { configuration.dns.listen = it; bump() } }
-        item { SelectablePreference(stringResource(R.string.append_system_dns), booleanOptions, configuration.app.appendSystemDns, dnsEnabled) { configuration.app.appendSystemDns = it; bump() } }
-        item { SelectablePreference(stringResource(R.string.ipv6), booleanOptions, configuration.dns.ipv6, dnsEnabled) { configuration.dns.ipv6 = it; bump() } }
-        item { SelectablePreference(stringResource(R.string.use_hosts), booleanOptions, configuration.dns.useHosts, dnsEnabled) { configuration.dns.useHosts = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.prefer_h3), booleanOptions, configuration.dns.preferH3, dnsEnable != false) { configuration.dns.preferH3 = it } }
+        item { StringPreference(stringResource(R.string.listen), configuration.dns.listen, stringResource(R.string.disabled), dnsEnable != false) { configuration.dns.listen = it } }
+        item { SelectablePreference(stringResource(R.string.append_system_dns), booleanOptions, configuration.app.appendSystemDns, dnsEnable != false) { configuration.app.appendSystemDns = it } }
+        item { SelectablePreference(stringResource(R.string.ipv6), booleanOptions, configuration.dns.ipv6, dnsEnable != false) { configuration.dns.ipv6 = it } }
+        item { SelectablePreference(stringResource(R.string.use_hosts), booleanOptions, configuration.dns.useHosts, dnsEnable != false) { configuration.dns.useHosts = it } }
 
-        item { SelectablePreference(stringResource(R.string.enhanced_mode), enhancedModeOptions, configuration.dns.enhancedMode, dnsEnabled) { configuration.dns.enhancedMode = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.enhanced_mode), enhancedModeOptions, configuration.dns.enhancedMode, dnsEnable != false) { configuration.dns.enhancedMode = it } }
 
-        item { DnsListPreference(stringResource(R.string.name_server), configuration.dns.nameServer, dnsEnabled) { configuration.dns.nameServer = it; bump() } }
-        item { DnsListPreference(stringResource(R.string.fallback), configuration.dns.fallback, dnsEnabled) { configuration.dns.fallback = it; bump() } }
-        item { DnsListPreference(stringResource(R.string.default_name_server), configuration.dns.defaultServer, dnsEnabled) { configuration.dns.defaultServer = it; bump() } }
-        item { DnsListPreference(stringResource(R.string.fakeip_filter), configuration.dns.fakeIpFilter, dnsEnabled) { configuration.dns.fakeIpFilter = it; bump() } }
+        item { DnsListPreference(stringResource(R.string.name_server), configuration.dns.nameServer, dnsEnable != false) { configuration.dns.nameServer = it } }
+        item { DnsListPreference(stringResource(R.string.fallback), configuration.dns.fallback, dnsEnable != false) { configuration.dns.fallback = it } }
+        item { DnsListPreference(stringResource(R.string.default_name_server), configuration.dns.defaultServer, dnsEnable != false) { configuration.dns.defaultServer = it } }
+        item { DnsListPreference(stringResource(R.string.fakeip_filter), configuration.dns.fakeIpFilter, dnsEnable != false) { configuration.dns.fakeIpFilter = it } }
 
-        item { SelectablePreference(stringResource(R.string.fakeip_filter_mode), filterModeOptions, configuration.dns.fakeIPFilterMode, dnsEnabled) { configuration.dns.fakeIPFilterMode = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.fakeip_filter_mode), filterModeOptions, configuration.dns.fakeIPFilterMode, dnsEnable != false) { configuration.dns.fakeIPFilterMode = it } }
 
-        item { SelectablePreference(stringResource(R.string.geoip_fallback), booleanOptions, configuration.dns.fallbackFilter.geoIp, dnsEnabled) { configuration.dns.fallbackFilter.geoIp = it; bump() } }
-        item { StringPreference(stringResource(R.string.geoip_fallback_code), configuration.dns.fallbackFilter.geoIpCode, stringResource(R.string.raw_cn), dnsEnabled) { configuration.dns.fallbackFilter.geoIpCode = it; bump() } }
-        item { DnsListPreference(stringResource(R.string.domain_fallback), configuration.dns.fallbackFilter.domain, dnsEnabled) { configuration.dns.fallbackFilter.domain = it; bump() } }
-        item { DnsListPreference(stringResource(R.string.ipcidr_fallback), configuration.dns.fallbackFilter.ipcidr, dnsEnabled) { configuration.dns.fallbackFilter.ipcidr = it; bump() } }
+        item { SelectablePreference(stringResource(R.string.geoip_fallback), booleanOptions, configuration.dns.fallbackFilter.geoIp, dnsEnable != false) { configuration.dns.fallbackFilter.geoIp = it } }
+        item { StringPreference(stringResource(R.string.geoip_fallback_code), configuration.dns.fallbackFilter.geoIpCode, stringResource(R.string.raw_cn), dnsEnable != false) { configuration.dns.fallbackFilter.geoIpCode = it } }
+        item { DnsListPreference(stringResource(R.string.domain_fallback), configuration.dns.fallbackFilter.domain, dnsEnable != false) { configuration.dns.fallbackFilter.domain = it } }
+        item { DnsListPreference(stringResource(R.string.ipcidr_fallback), configuration.dns.fallbackFilter.ipcidr, dnsEnable != false) { configuration.dns.fallbackFilter.ipcidr = it } }
 
         item {
             EditableMapPreference(
@@ -176,8 +175,8 @@ fun OverrideSettingsScreen(
                 keyAdapter = TextAdapter.String,
                 valueAdapter = TextAdapter.String,
                 placeholder = stringResource(R.string.dont_modify),
-                enabled = dnsEnabled,
-                onValueChange = { configuration.dns.nameserverPolicy = it; bump() },
+                enabled = dnsEnable != false,
+                onValueChange = { configuration.dns.nameserverPolicy = it },
             )
         }
     }
@@ -241,9 +240,12 @@ internal fun <T> SelectablePreference(
     onSelect: (T) -> Unit,
 ) {
     var show by remember { mutableStateOf(false) }
+    // Self-updating state so the row summary reflects the new selection immediately
+    // (re-seeded if the caller passes a different value).
+    var current by remember(selected) { mutableStateOf(selected) }
     PreferenceRow(
         title = title,
-        summary = options.firstOrNull { it.first == selected }?.second,
+        summary = options.firstOrNull { it.first == current }?.second,
         enabled = enabled,
         onClick = { show = true },
     )
@@ -251,8 +253,8 @@ internal fun <T> SelectablePreference(
         SingleChoiceDialog(
             title = title,
             options = options,
-            selected = selected,
-            onSelect = onSelect,
+            selected = current,
+            onSelect = { current = it; onSelect(it) },
             onDismiss = { show = false },
         )
     }

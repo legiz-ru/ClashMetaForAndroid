@@ -34,7 +34,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -105,15 +107,20 @@ fun SwitchPreference(
     @DrawableRes icon: Int? = null,
     enabled: Boolean = true,
 ) {
+    // Self-updating state: seeded from [checked], re-seeded when the caller passes a new
+    // value (hoisted/flow-driven screens), but toggled locally on tap so LazyColumn rows
+    // reflect the change immediately without an external recompose trigger.
+    var current by remember(checked) { mutableStateOf(checked) }
+    val change = { value: Boolean -> current = value; onCheckedChange(value) }
     PreferenceContainer(
         modifier = modifier,
         icon = icon,
         title = title,
         summary = summary,
         enabled = enabled,
-        onClick = { onCheckedChange(!checked) },
+        onClick = { change(!current) },
         trailing = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+            Switch(checked = current, onCheckedChange = change, enabled = enabled)
         },
     )
 }
