@@ -5,7 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import com.github.kr328.clash.common.constants.Intents
-import com.github.kr328.clash.remote.Remote
+import com.github.kr328.clash.remote.StatusClient
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
 import kotlinx.coroutines.CoroutineScope
@@ -36,21 +36,21 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
                 return
             }
 
-            Intents.ACTION_TOGGLE_CLASH -> if(Remote.broadcasts.clashRunning) {
+            Intents.ACTION_TOGGLE_CLASH -> if(isClashRunning()) {
                 stopClash()
             }
             else {
                 startClash()
             }
 
-            Intents.ACTION_START_CLASH -> if(!Remote.broadcasts.clashRunning) {
+            Intents.ACTION_START_CLASH -> if(!isClashRunning()) {
                 startClash()
             }
             else {
                 Toast.makeText(this, R.string.external_control_started, Toast.LENGTH_LONG).show()
             }
 
-            Intents.ACTION_STOP_CLASH -> if(Remote.broadcasts.clashRunning) {
+            Intents.ACTION_STOP_CLASH -> if(isClashRunning()) {
                 stopClash()
             }
             else {
@@ -59,6 +59,12 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
         }
         return finish()
     }
+
+    // Query the authoritative cross-process running state instead of the cached
+    // Remote.broadcasts.clashRunning, which isn't synced yet when this activity is
+    // launched cold from an automation app (Samsung Modes/Routines, Koala, …) —
+    // that race made STOP/TOGGLE no-ops while START worked.
+    private fun isClashRunning(): Boolean = StatusClient(this).currentProfile() != null
 
     private fun startClash() {
 //        if (currentProfile == null) {
