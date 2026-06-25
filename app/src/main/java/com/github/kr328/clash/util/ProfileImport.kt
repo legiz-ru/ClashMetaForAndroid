@@ -148,8 +148,15 @@ private fun isDirectProxyLinks(input: String): Boolean {
  *    - If [forceAutoImport] is true (deeplink flow), auto-imports even without headers.
  *    - During commit, [ProfileProcessor] will auto-detect convertible content (proxy links,
  *      base64-encoded proxy-link lists) and transparently switch the stored type to Converted.
+ *
+ * [ageSecretKey] (optional) is stored on the profile so an age-encrypted config can be
+ * decrypted during commit/load (used by the TV transfer flow to carry the sender's key).
  */
-suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean = false): ProfileImportResult {
+suspend fun Context.importProfileFromUrl(
+    url: String,
+    forceAutoImport: Boolean = false,
+    ageSecretKey: String = "",
+): ProfileImportResult {
     // Direct proxy links — bypass HTTP fetch entirely.
     if (isDirectProxyLinks(url)) {
         return importDirectProxyLinks(url)
@@ -173,7 +180,7 @@ suspend fun Context.importProfileFromUrl(url: String, forceAutoImport: Boolean =
 
     val uuid = withProfile {
         create(Profile.Type.Url, name).also {
-            patch(it, name, url, intervalMs)
+            patch(it, name, url, intervalMs, ageSecretKey)
         }
     }
 

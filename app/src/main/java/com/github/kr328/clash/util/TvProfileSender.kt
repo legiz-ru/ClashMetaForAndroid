@@ -71,15 +71,15 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
 
     val profile = profiles[pendingSelection]
 
-    // Resolve the /submit endpoint – same one the browser web page uses
+    // Use the richer /api/transfer endpoint (typed url/yaml + name + optional
+    // age-secret-key). The browser web page keeps using /submit (untouched).
     val baseUrl = tvUrl.trimEnd('/').removeSuffix("/Prizrak-BoxTVimport")
-    val submitUrl = "$baseUrl/Prizrak-BoxTVimport/submit"
+    val transferUrl = "$baseUrl/Prizrak-BoxTVimport/api/transfer"
 
-    // Content to send: subscription URL for Url/Converted/External,
-    // raw YAML for File profiles (mirrors what a user would paste in the browser)
-    val content: String = when (profile.type) {
+    // Subscription URL for Url/Converted/External; raw YAML for File profiles.
+    val (transferType, contentValue) = when (profile.type) {
         Profile.Type.Url, Profile.Type.Converted, Profile.Type.External ->
-            profile.source
+            "url" to profile.source
 
         Profile.Type.File -> {
             val yaml = withContext(Dispatchers.IO) {
@@ -91,18 +91,23 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
                 Toast.makeText(this, getString(R.string.tv_send_error), Toast.LENGTH_LONG).show()
                 return
             }
-            yaml
+            "yaml" to yaml
         }
     }
 
-    // {"content":"..."} – identical format to the browser web page POST
-    val jsonBody = """{"content":"${escapeJson(content)}"}"""
+    val contentField = if (transferType == "url") "url" else "content"
+    // Carry the profile's age-secret-key so an encrypted config decrypts on the TV.
+    val keyJson = if (profile.ageSecretKey.isNotEmpty())
+        ""","age-secret-key":"${escapeJson(profile.ageSecretKey)}""""
+    else ""
+    val jsonBody =
+        """{"type":"$transferType","$contentField":"${escapeJson(contentValue)}","name":"${escapeJson(profile.name)}"$keyJson}"""
 
     var errorMsg: String? = null
     val success = withContext(Dispatchers.IO) {
         try {
-            Log.d("TvSender", "POST $submitUrl body=${jsonBody.length} chars")
-            val conn = URL(submitUrl).openConnection() as HttpURLConnection
+            Log.d("TvSender", "POST $transferUrl body=${jsonBody.length} chars")
+            val conn = URL(transferUrl).openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             conn.doOutput = true

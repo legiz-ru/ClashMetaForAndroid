@@ -25,6 +25,8 @@ class TvImportServer(val port: Int, private val html: String) {
         val content: String,
         /** Optional profile name from sender */
         val name: String?,
+        /** Optional age-secret-key for decrypting an age-encrypted config */
+        val ageSecretKey: String? = null,
     )
 
     private val importChannel = Channel<ImportData>(capacity = 1)
@@ -145,6 +147,7 @@ class TvImportServer(val port: Int, private val html: String) {
             return
         }
         val name = parseJsonString(body, "name")
+        val ageSecretKey = parseJsonString(body, "age-secret-key")
         val content = when (type) {
             "url" -> parseJsonString(body, "url")
             "yaml" -> parseJsonString(body, "content")
@@ -157,7 +160,7 @@ class TvImportServer(val port: Int, private val html: String) {
             )
             return
         }
-        importChannel.trySend(ImportData(type, content, name))
+        importChannel.trySend(ImportData(type, content, name, ageSecretKey))
         sendResponse(output, 200, "application/json", """{"status":"ok"}""")
     }
 

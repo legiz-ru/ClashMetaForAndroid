@@ -104,7 +104,11 @@ class TvImportActivity : BaseActivity() {
 
     private suspend fun processImport(data: TvImportServer.ImportData) {
         when (data.type) {
-            "url" -> importProfileFromUrl(data.content)
+            "url" -> importProfileFromUrl(
+                data.content,
+                forceAutoImport = true,
+                ageSecretKey = data.ageSecretKey.orEmpty(),
+            )
 
             "yaml" -> {
                 val name = data.name
@@ -114,7 +118,7 @@ class TvImportActivity : BaseActivity() {
                         .also { it.writeText(data.content) }
                 }
                 val uuid = withProfile { create(com.github.kr328.clash.service.model.Profile.Type.File, name) }
-                withProfile { patch(uuid, name, tmpFile.absolutePath, 0L) }
+                withProfile { patch(uuid, name, tmpFile.absolutePath, 0L, data.ageSecretKey.orEmpty()) }
                 try {
                     withProfile { commit(uuid, null) }
                     withProfile { queryByUUID(uuid)?.let { setActive(it) } }
