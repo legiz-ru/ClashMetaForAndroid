@@ -189,8 +189,8 @@ class TvImportServer(
         val ageSecretKey = parseJsonString(json, "age-secret-key")
         val content = when (type) {
             "url" -> parseJsonString(json, "url")
-            "yaml" -> parseJsonString(json, "content")
-            else -> null
+            // "yaml" and "text" (browser web page) both carry the payload in "content".
+            else -> parseJsonString(json, "content")
         }
         if (content.isNullOrBlank()) {
             sendResponse(
