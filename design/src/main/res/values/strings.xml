@@ -483,6 +483,7 @@
     <string name="tv_send_success">Profile sent successfully</string>
     <string name="tv_send_error">Failed to send profile</string>
     <string name="tv_send_no_profiles">No imported profiles to transfer</string>
+    <string name="tv_send_not_open">TV import window is not open or unreachable</string>
     <string name="tv_profile_type_url">URL</string>
     <string name="tv_profile_type_yaml">YAML</string>
 

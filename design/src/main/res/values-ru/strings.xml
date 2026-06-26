@@ -447,6 +447,7 @@
     <string name="tv_send_success">Профиль успешно отправлен</string>
     <string name="tv_send_error">Ошибка отправки профиля</string>
     <string name="tv_send_no_profiles">Нет импортированных профилей для передачи</string>
+    <string name="tv_send_not_open">Окно импорта на TV не открыто или недоступно</string>
     <string name="tv_profile_type_url">URL</string>
     <string name="tv_profile_type_yaml">YAML</string>
 

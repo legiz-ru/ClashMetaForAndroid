@@ -30,11 +30,17 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
         return
     }
 
-    val hostPort = try {
-        val u = URL(tvUrl)
-        "${u.host}:${u.port}"
-    } catch (_: Exception) {
-        tvUrl
+    // Parse the QR URL once. Strip any query (?v=1&t=..&k=..) to derive the base address.
+    val uri = Uri.parse(tvUrl)
+    val baseUrl = "${uri.scheme}://${uri.host}:${uri.port}"
+    val hostPort = "${uri.host}:${uri.port}"
+
+    // Ping the TV import server first: if its import window isn't open (or the device is
+    // unreachable), tell the user up front instead of letting them pick a profile and only
+    // failing on send.
+    if (!pingTv(baseUrl)) {
+        Toast.makeText(this, getString(R.string.tv_send_not_open), Toast.LENGTH_LONG).show()
+        return
     }
 
     val displayItems = profiles.map { p ->
@@ -75,9 +81,6 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
 
     // Use the richer /api/transfer endpoint (typed url/yaml + name + optional
     // age-secret-key). The browser web page keeps using /submit (untouched).
-    // Strip any query (?v=1&t=..&k=..) from the QR URL to derive the base address.
-    val uri = Uri.parse(tvUrl)
-    val baseUrl = "${uri.scheme}://${uri.host}:${uri.port}"
     val transferUrl = "$baseUrl/Prizrak-BoxTVimport/api/transfer"
 
     // Secrets carried in the QR: token (auth) + AES-256-GCM key (payload encryption).
@@ -161,6 +164,26 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
         else getString(R.string.tv_send_error)
     }
     Toast.makeText(this, toastText, Toast.LENGTH_LONG).show()
+}
+
+/**
+ * Quick reachability check: GET /Prizrak-BoxTVimport/api/ping with a short timeout.
+ * Returns true only when the TV import server answers with a 2xx, i.e. its import
+ * window is open and reachable on the LAN.
+ */
+private suspend fun pingTv(baseUrl: String): Boolean = withContext(Dispatchers.IO) {
+    try {
+        val conn = URL("$baseUrl/Prizrak-BoxTVimport/api/ping").openConnection() as HttpURLConnection
+        conn.requestMethod = "GET"
+        conn.connectTimeout = 2_000
+        conn.readTimeout = 2_000
+        val code = conn.responseCode
+        conn.disconnect()
+        code in 200..299
+    } catch (e: Exception) {
+        Log.d("TvSender", "Ping failed: ${e.javaClass.simpleName}: ${e.message}")
+        false
+    }
 }
 
 private fun escapeJson(s: String): String = buildString {
