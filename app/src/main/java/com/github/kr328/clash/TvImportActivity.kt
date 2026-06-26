@@ -79,16 +79,27 @@ class TvImportActivity : BaseActivity() {
             assets.open("tv_import_web.html").bufferedReader().readText()
         }
 
-        val tvServer = TvImportServer(port, html)
+        // One-time token (auth) + AES-256-GCM key (payload encryption) carried only in the
+        // QR code, so a LAN sniffer/MITM can't read or forge the phone → TV transfer.
+        val token = com.github.kr328.clash.tv.TvCrypto.encodeB64(
+            com.github.kr328.clash.tv.TvCrypto.randomBytes(16)
+        )
+        val keyBytes = com.github.kr328.clash.tv.TvCrypto.randomBytes(32)
+        val keyB64 = com.github.kr328.clash.tv.TvCrypto.encodeB64(keyBytes)
+
+        val tvServer = TvImportServer(port, html, token, keyBytes)
         server = tvServer
         tvServer.start(this)
 
-        val url = "http://$localIp:$port/Prizrak-BoxTVimport"
-        val qrBitmap = withContext(Dispatchers.Default) { generateQrCode(url, 512) }
+        val baseUrl = "http://$localIp:$port/Prizrak-BoxTVimport"
+        // QR carries the secrets (consumed by the phone app); the displayed URL stays clean
+        // for manual browser entry (the browser uses /submit and ignores the query).
+        val qrUrl = "$baseUrl?v=1&t=$token&k=$keyB64"
+        val qrBitmap = withContext(Dispatchers.Default) { generateQrCode(qrUrl, 512) }
 
         ipFlow.value = localIp
         portFlow.value = port.toString()
-        urlFlow.value = url
+        urlFlow.value = baseUrl
         qrFlow.value = qrBitmap
 
         // Wait for profile data – suspends until the server receives something

@@ -16,7 +16,18 @@ import java.net.Socket
  * Minimal coroutine-based HTTP server for TV profile import.
  * Listens on [port] and exposes endpoints under /Prizrak-BoxTVimport.
  */
-class TvImportServer(val port: Int, private val html: String) {
+class TvImportServer(
+    val port: Int,
+    private val html: String,
+    /** One-time auth token expected on /api/transfer (empty = no token required). */
+    private val token: String = "",
+    /** AES-256-GCM key for decrypting /api/transfer payloads (null = no decryption). */
+    private val key: ByteArray? = null,
+) {
+
+    /** Set once a valid transfer has been accepted, to reject replays in the open window. */
+    @Volatile
+    private var consumed = false
 
     data class ImportData(
         /** "url", "yaml", or "text" */
@@ -114,7 +125,7 @@ class TvImportServer(val port: Int, private val html: String) {
                         handleSubmit(output, body)
 
                     path == "/Prizrak-BoxTVimport/api/transfer" && method == "POST" ->
-                        handleTransfer(output, body)
+                        handleTransfer(output, body, headers)
 
                     else ->
                         sendResponse(output, 404, "text/plain", "Not Found")
@@ -137,8 +148,36 @@ class TvImportServer(val port: Int, private val html: String) {
         sendResponse(output, 200, "application/json", """{"status":"ok"}""")
     }
 
-    private fun handleTransfer(output: OutputStream, body: String) {
-        val type = parseJsonString(body, "type")
+    private fun handleTransfer(output: OutputStream, body: String, headers: Map<String, String>) {
+        // Secured mode: require the one-time token and decrypt the AES-256-GCM payload.
+        // The browser web page never hits this endpoint (it uses /submit), so the HTML
+        // does not need to change.
+        val json: String = if (token.isNotEmpty()) {
+            if (consumed) {
+                sendResponse(output, 403, "application/json", """{"status":"error","message":"Already used"}""")
+                return
+            }
+            val provided = headers["x-pxa-token"]
+            if (provided == null || !TvCrypto.constantTimeEquals(provided, token)) {
+                sendResponse(output, 403, "application/json", """{"status":"error","message":"Invalid token"}""")
+                return
+            }
+            val k = key
+            val nonce = parseJsonString(body, "nonce")
+            val data = parseJsonString(body, "data")
+            val plaintext = if (k != null && !nonce.isNullOrBlank() && !data.isNullOrBlank())
+                TvCrypto.decrypt(k, nonce, data)
+            else null
+            if (plaintext == null) {
+                sendResponse(output, 400, "application/json", """{"status":"error","message":"Decryption failed"}""")
+                return
+            }
+            plaintext
+        } else {
+            body
+        }
+
+        val type = parseJsonString(json, "type")
         if (type.isNullOrBlank()) {
             sendResponse(
                 output, 400, "application/json",
@@ -146,11 +185,11 @@ class TvImportServer(val port: Int, private val html: String) {
             )
             return
         }
-        val name = parseJsonString(body, "name")
-        val ageSecretKey = parseJsonString(body, "age-secret-key")
+        val name = parseJsonString(json, "name")
+        val ageSecretKey = parseJsonString(json, "age-secret-key")
         val content = when (type) {
-            "url" -> parseJsonString(body, "url")
-            "yaml" -> parseJsonString(body, "content")
+            "url" -> parseJsonString(json, "url")
+            "yaml" -> parseJsonString(json, "content")
             else -> null
         }
         if (content.isNullOrBlank()) {
@@ -160,6 +199,7 @@ class TvImportServer(val port: Int, private val html: String) {
             )
             return
         }
+        consumed = true
         importChannel.trySend(ImportData(type, content, name, ageSecretKey))
         sendResponse(output, 200, "application/json", """{"status":"ok"}""")
     }

@@ -1,11 +1,13 @@
 package com.github.kr328.clash.util
 
 import android.app.Activity
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.service.util.importedDir
+import com.github.kr328.clash.tv.TvCrypto
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -73,8 +75,14 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
 
     // Use the richer /api/transfer endpoint (typed url/yaml + name + optional
     // age-secret-key). The browser web page keeps using /submit (untouched).
-    val baseUrl = tvUrl.trimEnd('/').removeSuffix("/Prizrak-BoxTVimport")
+    // Strip any query (?v=1&t=..&k=..) from the QR URL to derive the base address.
+    val uri = Uri.parse(tvUrl)
+    val baseUrl = "${uri.scheme}://${uri.host}:${uri.port}"
     val transferUrl = "$baseUrl/Prizrak-BoxTVimport/api/transfer"
+
+    // Secrets carried in the QR: token (auth) + AES-256-GCM key (payload encryption).
+    val token = uri.getQueryParameter("t")
+    val keyB64 = uri.getQueryParameter("k")
 
     // Subscription URL for Url/Converted/External; raw YAML for File profiles.
     val (transferType, contentValue) = when (profile.type) {
@@ -103,17 +111,28 @@ suspend fun Activity.sendProfileToTv(tvUrl: String) {
     val jsonBody =
         """{"type":"$transferType","$contentField":"${escapeJson(contentValue)}","name":"${escapeJson(profile.name)}"$keyJson}"""
 
+    // Secured path: authenticate with the token and encrypt the payload with the QR key.
+    // Plain fallback when the QR has no token/key (older TV without the secured channel).
+    val secured = !token.isNullOrEmpty() && !keyB64.isNullOrEmpty()
+    val requestBody = if (secured) {
+        val enc = TvCrypto.encrypt(TvCrypto.decodeB64(keyB64!!), jsonBody)
+        """{"nonce":"${enc.nonce}","data":"${enc.data}"}"""
+    } else {
+        jsonBody
+    }
+
     var errorMsg: String? = null
     val success = withContext(Dispatchers.IO) {
         try {
-            Log.d("TvSender", "POST $transferUrl body=${jsonBody.length} chars")
+            Log.d("TvSender", "POST $transferUrl secured=$secured body=${requestBody.length} chars")
             val conn = URL(transferUrl).openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            if (secured) conn.setRequestProperty("X-PXA-Token", token!!)
             conn.doOutput = true
             conn.connectTimeout = 5_000
             conn.readTimeout = 5_000
-            val bytes = jsonBody.toByteArray(Charsets.UTF_8)
+            val bytes = requestBody.toByteArray(Charsets.UTF_8)
             conn.setRequestProperty("Content-Length", bytes.size.toString())
             conn.outputStream.use { it.write(bytes) }
             val code = conn.responseCode
