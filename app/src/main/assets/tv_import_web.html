@@ -532,6 +532,17 @@
     document.getElementById('content').addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send();
     });
+
+    // Auto-submit: when the link carries ?autosubmit=true and the field is prefilled
+    // (e.g. ?url=…&autosubmit=true&t=…&k=…), send immediately. send() picks the secured
+    // /api/transfer (when t/k are present) or plain /submit, and shows the result text.
+    (function autoSubmit() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('autosubmit') === 'true' &&
+          document.getElementById('content').value.trim()) {
+        send();
+      }
+    })();
   </script>
 </body>
 </html>
