@@ -89,7 +89,7 @@ fun ConnectionDetailSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = maxSheetHeight),
-                contentPadding = PaddingValues(horizontal = 16.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
             ) {
                 item {
                     Row(
