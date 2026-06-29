@@ -2,17 +2,15 @@ package com.github.kr328.clash.design.compose.component
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,11 +19,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -49,7 +45,7 @@ private val PrettyJson = Json { prettyPrint = true; ignoreUnknownKeys = true }
  * routing, network, process, inbound and other metadata for a single
  * connection, with tappable IP/host/process rows and a copy-as-JSON action.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectionDetailSheet(
     connection: Connection,
@@ -72,139 +68,121 @@ fun ConnectionDetailSheet(
         val hasOther = meta.dnsMode.isNotEmpty() || meta.specialProxy.isNotEmpty() ||
             meta.specialRules.isNotEmpty() || meta.dscp > 0
 
-        // The content scrolls inside a LazyColumn rather than a
-        // Column(verticalScroll): a lazy list is the scrollable container
-        // ModalBottomSheet's nested-scroll connection is designed for, so the
-        // fling hand-off between the inner scroll and the sheet's
-        // anchoredDraggable is coordinated correctly and does not oscillate.
-        //
-        // The height cap keeps the sheet's top below the translucent status
-        // bar (with skipPartiallyExpanded the sheet expands to its content
-        // height; reaching the status bar made the settle animation fight the
-        // inset). Disabling overscroll removes the edge jitter when dragging
-        // up while already at the Expanded anchor, which has nothing above it.
-        val maxSheetHeight = LocalConfiguration.current.screenHeightDp.dp * 0.9f
-        CompositionLocalProvider(LocalOverscrollFactory provides null) {
-            LazyColumn(
+        // Fix the sheet to the full available height instead of letting it
+        // wrap its content. With skipPartiallyExpanded the Expanded anchor is
+        // the only open position; when the sheet wraps short content that
+        // anchor sits partway up the screen, leaving a gap above it. Dragging
+        // the handle up into that gap has no anchor to settle on, so the sheet
+        // oscillates against the top/status bar ("колбасит"). Filling the
+        // height makes Expanded coincide with the top limit, removing the gap;
+        // the content scrolls within the fixed-height container.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = maxSheetHeight),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    .padding(bottom = 12.dp),
             ) {
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                    ) {
-                        Text(
-                            text = header,
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.weight(1f),
-                        )
-                        IconButton(onClick = {
-                            val json = runCatching {
-                                PrettyJson.encodeToString(Connection.serializer(), connection)
-                            }.getOrElse { connection.toString() }
-                            context.getSystemService<ClipboardManager>()
-                                ?.setPrimaryClip(ClipData.newPlainText("connection_json", json))
-                        }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_baseline_content_copy),
-                                contentDescription = null,
-                            )
-                        }
-                    }
+                Text(
+                    text = header,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = {
+                    val json = runCatching {
+                        PrettyJson.encodeToString(Connection.serializer(), connection)
+                    }.getOrElse { connection.toString() }
+                    context.getSystemService<ClipboardManager>()
+                        ?.setPrimaryClip(ClipData.newPlainText("connection_json", json))
+                }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_baseline_content_copy),
+                        contentDescription = null,
+                    )
                 }
+            }
 
-                item {
-                    Section(stringResource(R.string.conn_detail_traffic)) {
-                        DetailRow(stringResource(R.string.conn_upload_speed), "—")
-                        DetailRow(stringResource(R.string.conn_download_speed), "—")
-                        DetailRow(stringResource(R.string.conn_upload), connection.upload.toBytesString())
-                        DetailRow(stringResource(R.string.conn_download), connection.download.toBytesString())
-                        DetailRow(stringResource(R.string.conn_duration), duration)
-                    }
+            Section(stringResource(R.string.conn_detail_traffic)) {
+                DetailRow(stringResource(R.string.conn_upload_speed), "—")
+                DetailRow(stringResource(R.string.conn_download_speed), "—")
+                DetailRow(stringResource(R.string.conn_upload), connection.upload.toBytesString())
+                DetailRow(stringResource(R.string.conn_download), connection.download.toBytesString())
+                DetailRow(stringResource(R.string.conn_duration), duration)
+            }
+
+            val ruleText = if (connection.rulePayload.isNotEmpty())
+                "${connection.rule}  ${connection.rulePayload}" else connection.rule
+            Section(stringResource(R.string.conn_detail_routing)) {
+                DetailRow(stringResource(R.string.conn_rule), ruleText)
+                DetailRow(
+                    stringResource(R.string.conn_proxy_chain),
+                    connection.chains.reversed().joinToString(" → "),
+                )
+                DetailRow(
+                    stringResource(R.string.conn_type),
+                    "${meta.network.uppercase()}(${meta.type})",
+                )
+            }
+
+            Section(stringResource(R.string.conn_detail_network)) {
+                DetailRow(stringResource(R.string.conn_host), meta.host) {
+                    showHostMenu(context, meta.host)
                 }
-
-                item {
-                    val ruleText = if (connection.rulePayload.isNotEmpty())
-                        "${connection.rule}  ${connection.rulePayload}" else connection.rule
-                    Section(stringResource(R.string.conn_detail_routing)) {
-                        DetailRow(stringResource(R.string.conn_rule), ruleText)
-                        DetailRow(
-                            stringResource(R.string.conn_proxy_chain),
-                            connection.chains.reversed().joinToString(" → "),
-                        )
-                        DetailRow(
-                            stringResource(R.string.conn_type),
-                            "${meta.network.uppercase()}(${meta.type})",
-                        )
-                    }
+                DetailRow(stringResource(R.string.conn_sniff_host), meta.sniffHost) {
+                    showHostMenu(context, meta.sniffHost)
                 }
-
-                item {
-                    Section(stringResource(R.string.conn_detail_network)) {
-                        DetailRow(stringResource(R.string.conn_host), meta.host) {
-                            showHostMenu(context, meta.host)
-                        }
-                        DetailRow(stringResource(R.string.conn_sniff_host), meta.sniffHost) {
-                            showHostMenu(context, meta.sniffHost)
-                        }
-                        DetailRow(stringResource(R.string.conn_dest_ip), meta.destinationIP) {
-                            showIpMenu(context, meta.destinationIP)
-                        }
-                        DetailRow(stringResource(R.string.conn_dest_geoip), meta.destinationGeoIP.joinToString(", "))
-                        DetailRow(stringResource(R.string.conn_dest_asn), meta.destinationIPASN)
-                        DetailRow(stringResource(R.string.conn_src_ip), meta.sourceIP) {
-                            showIpMenu(context, meta.sourceIP)
-                        }
-                        DetailRow(stringResource(R.string.conn_src_geoip), meta.sourceGeoIP.joinToString(", "))
-                        DetailRow(stringResource(R.string.conn_src_asn), meta.sourceIPASN)
-                        DetailRow(stringResource(R.string.conn_src_port), meta.sourcePort)
-                        DetailRow(stringResource(R.string.conn_dest_port), meta.destinationPort)
-                        DetailRow(stringResource(R.string.conn_remote_dest), meta.remoteDestination) {
-                            showIpMenu(context, meta.remoteDestination)
-                        }
-                    }
+                DetailRow(stringResource(R.string.conn_dest_ip), meta.destinationIP) {
+                    showIpMenu(context, meta.destinationIP)
                 }
-
-                if (!isInner) {
-                    item {
-                        Section(stringResource(R.string.conn_detail_process)) {
-                            val procText = if (meta.uid > 0) "${meta.process} (uid:${meta.uid})" else meta.process
-                            DetailRow(stringResource(R.string.conn_process), procText) {
-                                if (meta.process.isNotEmpty()) showProcessMenu(context, meta.process)
-                            }
-                            DetailRow(stringResource(R.string.conn_process_path), meta.processPath)
-                        }
-                    }
+                DetailRow(stringResource(R.string.conn_dest_geoip), meta.destinationGeoIP.joinToString(", "))
+                DetailRow(stringResource(R.string.conn_dest_asn), meta.destinationIPASN)
+                DetailRow(stringResource(R.string.conn_src_ip), meta.sourceIP) {
+                    showIpMenu(context, meta.sourceIP)
                 }
-
-                if (hasInbound) {
-                    item {
-                        Section(stringResource(R.string.conn_detail_inbound)) {
-                            DetailRow(stringResource(R.string.conn_inbound_ip), meta.inboundIP)
-                            DetailRow(stringResource(R.string.conn_inbound_port), meta.inboundPort)
-                            DetailRow(stringResource(R.string.conn_inbound_name), meta.inboundName)
-                            DetailRow(stringResource(R.string.conn_inbound_user), meta.inboundUser)
-                        }
-                    }
+                DetailRow(stringResource(R.string.conn_src_geoip), meta.sourceGeoIP.joinToString(", "))
+                DetailRow(stringResource(R.string.conn_src_asn), meta.sourceIPASN)
+                DetailRow(stringResource(R.string.conn_src_port), meta.sourcePort)
+                DetailRow(stringResource(R.string.conn_dest_port), meta.destinationPort)
+                DetailRow(stringResource(R.string.conn_remote_dest), meta.remoteDestination) {
+                    showIpMenu(context, meta.remoteDestination)
                 }
+            }
 
-                if (hasOther) {
-                    item {
-                        Section(stringResource(R.string.conn_detail_other)) {
-                            DetailRow(stringResource(R.string.conn_dns_mode), meta.dnsMode)
-                            DetailRow(stringResource(R.string.conn_special_proxy), meta.specialProxy)
-                            DetailRow(stringResource(R.string.conn_special_rules), meta.specialRules)
-                            DetailRow(
-                                stringResource(R.string.conn_dscp),
-                                if (meta.dscp > 0) meta.dscp.toString() else "",
-                            )
-                        }
+            if (!isInner) {
+                Section(stringResource(R.string.conn_detail_process)) {
+                    val procText = if (meta.uid > 0) "${meta.process} (uid:${meta.uid})" else meta.process
+                    DetailRow(stringResource(R.string.conn_process), procText) {
+                        if (meta.process.isNotEmpty()) showProcessMenu(context, meta.process)
                     }
+                    DetailRow(stringResource(R.string.conn_process_path), meta.processPath)
+                }
+            }
+
+            if (hasInbound) {
+                Section(stringResource(R.string.conn_detail_inbound)) {
+                    DetailRow(stringResource(R.string.conn_inbound_ip), meta.inboundIP)
+                    DetailRow(stringResource(R.string.conn_inbound_port), meta.inboundPort)
+                    DetailRow(stringResource(R.string.conn_inbound_name), meta.inboundName)
+                    DetailRow(stringResource(R.string.conn_inbound_user), meta.inboundUser)
+                }
+            }
+
+            if (hasOther) {
+                Section(stringResource(R.string.conn_detail_other)) {
+                    DetailRow(stringResource(R.string.conn_dns_mode), meta.dnsMode)
+                    DetailRow(stringResource(R.string.conn_special_proxy), meta.specialProxy)
+                    DetailRow(stringResource(R.string.conn_special_rules), meta.specialRules)
+                    DetailRow(
+                        stringResource(R.string.conn_dscp),
+                        if (meta.dscp > 0) meta.dscp.toString() else "",
+                    )
                 }
             }
         }
