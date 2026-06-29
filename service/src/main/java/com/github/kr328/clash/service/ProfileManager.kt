@@ -201,7 +201,8 @@ class ProfileManager(private val context: Context) : IProfileManager,
                     download,
                     total,
                     expire,
-                    old?.createdAt ?: System.currentTimeMillis()
+                    old?.createdAt ?: System.currentTimeMillis(),
+                    ageSecretKey = old.ageSecretKey,
                 )
 
                 if (old != null) {
