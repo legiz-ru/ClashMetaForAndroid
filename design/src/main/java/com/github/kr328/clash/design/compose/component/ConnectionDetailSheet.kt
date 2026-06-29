@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -70,15 +72,25 @@ fun ConnectionDetailSheet(
         val hasOther = meta.dnsMode.isNotEmpty() || meta.specialProxy.isNotEmpty() ||
             meta.specialRules.isNotEmpty() || meta.dscp > 0
 
-        // Disable the scroll container's overscroll/stretch effect: at the
-        // Expanded anchor (skipPartiallyExpanded) the sheet has no higher
-        // anchor, so an upward drag leaves the gesture delta to fight between
-        // anchoredDraggable settling back and the overscroll spring relaxing,
-        // which manifests as visible jitter. Removing overscroll resolves it.
+        // Cap the content height so the sheet's top never reaches the
+        // translucent status bar. With skipPartiallyExpanded the sheet
+        // expands to its content height; when that fills the screen the top
+        // edge collides with the status-bar inset, and a fast upward fling
+        // makes the settle animation fight that inset, producing the jumping
+        // near the status bar. Bounding the scroll viewport below the status
+        // bar keeps the expanded anchor stable.
+        //
+        // Disabling the scroll container's overscroll/stretch additionally
+        // stops the edge jitter when dragging up while already at the top:
+        // there is no anchor above Expanded, so the leftover gesture delta
+        // would otherwise oscillate between anchoredDraggable settling back
+        // and the overscroll spring relaxing.
+        val maxSheetHeight = LocalConfiguration.current.screenHeightDp.dp * 0.9f
         CompositionLocalProvider(LocalOverscrollFactory provides null) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = maxSheetHeight)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 16.dp),
