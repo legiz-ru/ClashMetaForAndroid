@@ -557,4 +557,6 @@
     <string name="network_switch">Переключение сети</string>
     <string name="reset_connections">Разрывать соединения при смене сети</string>
     <string name="reset_connections_summary">При переходе между Wi-Fi и мобильным интернетом соединения через старую сеть уже мертвы. Разрыв позволяет приложениям переподключиться сразу, а не ждать таймаута.</string>
+    <string name="app_documentation">Документация приложения</string>
+    <string name="app_documentation_url">https://docs.prizrak.app/ru/</string>
 </resources>
