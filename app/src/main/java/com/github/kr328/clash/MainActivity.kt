@@ -60,6 +60,14 @@ class MainActivity : BaseActivity() {
     private val proxyGroupsFlow = MutableStateFlow<List<Pair<String, ProxyGroup>>>(emptyList())
     private val useDotsFlow = MutableStateFlow(true)
 
+    /**
+     * Proxies whose delay is being measured right now, by proxy name.
+     *
+     * The core keeps one object per name, so a name is enough to key this: the
+     * same node shown in two groups is the same measurement.
+     */
+    private val testingProxiesFlow = MutableStateFlow<Set<String>>(emptySet())
+
     private fun extractInstallConfigUrl(intent: Intent?): String? {
         if (intent?.action != Intent.ACTION_VIEW) return null
         val data = intent.data ?: return null
@@ -98,6 +106,7 @@ class MainActivity : BaseActivity() {
             val latencyTesting by latencyTestingFlow.collectAsStateWithLifecycle()
             val proxyGroups by proxyGroupsFlow.collectAsStateWithLifecycle()
             val useDots by useDotsFlow.collectAsStateWithLifecycle()
+            val testingProxies by testingProxiesFlow.collectAsStateWithLifecycle()
 
             ClashTheme(variant = currentThemeVariant()) {
                 MainScreen(
@@ -112,6 +121,7 @@ class MainActivity : BaseActivity() {
                     latencyTesting = latencyTesting,
                     proxyGroups = proxyGroups,
                     useDots = useDots,
+                    testingProxies = testingProxies,
                     onPowerToggle = ::toggleStatus,
                     onUpdateProfile = ::updateActiveProfile,
                     onManageProfiles = { startActivity(ProfilesActivity::class.intent) },
@@ -126,6 +136,7 @@ class MainActivity : BaseActivity() {
                     onDisconnect = { stopClashService() },
                     onSelectProxy = ::selectProxy,
                     onUrlTest = ::urlTestGroup,
+                    onTestProxy = ::testProxy,
                     onLogoTap = ::onLogoTap,
                 )
             }
@@ -225,8 +236,31 @@ class MainActivity : BaseActivity() {
 
     private fun urlTestGroup(group: String) {
         launch {
-            withClash { healthCheck(group) }
-            fetchProxyGroups()
+            val members = proxyGroupsFlow.value
+                .firstOrNull { it.first == group }
+                ?.second?.proxies?.map { it.name }?.toSet()
+                .orEmpty()
+
+            testingProxiesFlow.value = testingProxiesFlow.value + members
+            try {
+                withClash { healthCheck(group) }
+                fetchProxyGroups()
+            } finally {
+                testingProxiesFlow.value = testingProxiesFlow.value - members
+            }
+        }
+    }
+
+    /** Measure one proxy, triggered by a tap on its delay badge. */
+    private fun testProxy(group: String, name: String) {
+        launch {
+            testingProxiesFlow.value = testingProxiesFlow.value + name
+            try {
+                withClash { healthCheckProxy(group, name) }
+                fetchProxyGroups()
+            } finally {
+                testingProxiesFlow.value = testingProxiesFlow.value - name
+            }
         }
     }
 
@@ -339,10 +373,20 @@ class MainActivity : BaseActivity() {
                 queryProxyGroupNames(uiStore.proxyExcludeNotSelectable).firstOrNull()
             }
             if (firstName != null) {
+                // Simple mode shows that group's nodes inline, so their badges
+                // spin along with the button.
+                val members = proxyGroupsFlow.value
+                    .firstOrNull { it.first == firstName }
+                    ?.second?.proxies?.map { it.name }?.toSet()
+                    .orEmpty()
+
                 latencyTestingFlow.value = true
+                testingProxiesFlow.value = testingProxiesFlow.value + members
                 try {
                     withClash { healthCheck(firstName) }
+                    fetchProxyGroups()
                 } finally {
+                    testingProxiesFlow.value = testingProxiesFlow.value - members
                     latencyTestingFlow.value = false
                 }
             }

@@ -43,7 +43,7 @@ import com.github.kr328.clash.core.model.TunnelState
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.component.ProxyRow
 import com.github.kr328.clash.design.compose.component.SingleChoiceDialog
-import com.github.kr328.clash.design.compose.component.rowDelay
+import com.github.kr328.clash.design.compose.component.rowDelayState
 import kotlinx.coroutines.launch
 
 /**
@@ -63,10 +63,12 @@ fun ProxyScreen(
     sort: ProxySort,
     excludeNotSelectable: Boolean,
     testingGroups: Set<String>,
+    testingProxies: Set<String>,
     initialGroup: String,
     onBack: () -> Unit,
     onSelect: (group: String, proxy: String) -> Unit,
     onUrlTest: (group: String) -> Unit,
+    onTestProxy: (group: String, proxy: String) -> Unit,
     onSetSort: (ProxySort) -> Unit,
     onSetMode: (TunnelState.Mode?) -> Unit,
     onToggleExclude: (Boolean) -> Unit,
@@ -114,8 +116,10 @@ fun ProxyScreen(
                         groupNames = groupNames,
                         groupMap = groupMap,
                         useDots = useDots,
+                        testingProxies = testingProxies,
                         initialPage = initialPage,
                         onSelect = onSelect,
+                        onTestProxy = onTestProxy,
                         onVisibleGroupChanged = {
                             currentGroup = it
                             onGroupChanged(it)
@@ -238,8 +242,10 @@ private fun ProxyPager(
     groupNames: List<String>,
     groupMap: Map<String, ProxyGroup>,
     useDots: Boolean,
+    testingProxies: Set<String>,
     initialPage: Int,
     onSelect: (String, String) -> Unit,
+    onTestProxy: (String, String) -> Unit,
     onVisibleGroupChanged: (String) -> Unit,
 ) {
     val pagerState = rememberPagerState(initialPage = initialPage) { groupNames.size }
@@ -287,7 +293,11 @@ private fun ProxyPager(
                             ProxyRow(
                                 proxy = proxy,
                                 selected = proxy.name == group.now,
-                                delay = rowDelay(groupMap, proxy),
+                                delayState = rowDelayState(
+                                    groupMap,
+                                    proxy,
+                                    proxy.name in testingProxies,
+                                ),
                                 useDots = useDots,
                                 enabled = true,
                                 parentIsSmart = isSmart,
@@ -295,6 +305,7 @@ private fun ProxyPager(
                                 onClick = {
                                     if (isSelector) onSelect(name, proxy.name) else showAuto = true
                                 },
+                                onTestDelay = { onTestProxy(name, proxy.name) },
                             )
                         }
                     }

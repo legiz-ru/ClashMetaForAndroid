@@ -143,6 +143,56 @@ func groupCheckOptions(g checkableGroup) (string, utils.IntRanges[uint16]) {
 	return url, expected
 }
 
+// groupTestOptions returns the check options of the named group, falling back to
+// the mihomo defaults when the group is unknown or carries no options.
+func groupTestOptions(group string) (string, utils.IntRanges[uint16]) {
+	p := tunnel.Proxies()[group]
+	if p == nil {
+		return C.DefaultTestURL, nil
+	}
+
+	g, ok := p.Adapter().(checkableGroup)
+	if !ok {
+		return C.DefaultTestURL, nil
+	}
+
+	return groupCheckOptions(g)
+}
+
+// HealthCheckProxy measures the delay of ONE proxy, the way the group it is
+// shown in would measure it.
+//
+// Backs the tap on a single row's delay badge. Runs a single probe instead of
+// going through the provider: the provider path checks every proxy it holds and
+// is bound to its own interval/lazy settings, while here the user asked about
+// this proxy and asked now.
+//
+// group only supplies the test URL and the expected status — the delay is stored
+// per URL, so probing with anything else would leave the badge unchanged.
+func HealthCheckProxy(group, name string) {
+	p := tunnel.Proxies()[name]
+
+	if p == nil {
+		log.Warnln("Request health check for proxy `%s`: not found", name)
+
+		return
+	}
+
+	url, expectedStatus := groupTestOptions(group)
+
+	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+	defer cancel()
+
+	delay, err := p.URLTest(ctx, url, expectedStatus)
+	if err != nil {
+		log.Infoln("Health check `%s`: %s failed: %s", group, name, err.Error())
+
+		return
+	}
+
+	log.Infoln("Health check `%s`: %s is alive, %d ms", group, name, delay)
+}
+
 // ProbeCurrentNodes probes the CURRENT node of every group, one probe per group.
 //
 // Called after a network change. A full group check (HealthCheck) would be

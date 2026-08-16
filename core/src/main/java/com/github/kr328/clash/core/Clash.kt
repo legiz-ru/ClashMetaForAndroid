@@ -125,6 +125,18 @@ object Clash {
         }
     }
 
+    /**
+     * Measure the delay of a single proxy, the way [group] would measure it.
+     *
+     * [group] only supplies the test URL: the delay is stored per URL, so a
+     * probe with any other one would leave the row unchanged.
+     */
+    fun healthCheckProxy(group: String, name: String): CompletableDeferred<Unit> {
+        return CompletableDeferred<Unit>().apply {
+            Bridge.nativeHealthCheckProxy(this, group, name)
+        }
+    }
+
     fun healthCheckAll() {
         Bridge.nativeHealthCheckAll()
     }

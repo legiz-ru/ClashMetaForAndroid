@@ -26,6 +26,11 @@ object Bridge {
     external fun nativeQueryGroupNames(excludeNotSelectable: Boolean): String
     external fun nativeQueryGroup(name: String, sort: String): String?
     external fun nativeHealthCheck(completable: CompletableDeferred<Unit>, name: String)
+    external fun nativeHealthCheckProxy(
+        completable: CompletableDeferred<Unit>,
+        group: String,
+        name: String,
+    )
     external fun nativeHealthCheckAll()
     external fun nativeNotifyNetworkChanged(closeConnections: Boolean)
     external fun nativeProbeCurrentNodes()

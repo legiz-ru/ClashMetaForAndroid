@@ -2,6 +2,7 @@ package com.github.kr328.clash.design.compose.component
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +61,27 @@ private val DelayRed = Color(0xFFF44336)
 
 enum class ProxySheetSort { Default, Name, Delay }
 
+/**
+ * What mihomo reports as the delay of a proxy with no usable measurement — it
+ * was never tested, or the last test failed. [Proxy.tested] tells the two apart.
+ */
+internal const val DELAY_TIMEOUT = 65535
+
+/** What a row's delay badge shows. */
+internal sealed interface DelayState {
+    /** No test has ever run for this proxy. */
+    data object Untested : DelayState
+
+    /** A test is running right now. */
+    data object Testing : DelayState
+
+    /** A test ran and the proxy did not answer. */
+    data object Timeout : DelayState
+
+    /** A test ran and the proxy answered in [ms]. */
+    data class Value(val ms: Int) : DelayState
+}
+
 private fun delayColor(delay: Int): Color = when {
     delay <= 0 -> Color.Transparent
     delay < 200 -> DelayGreen
@@ -65,21 +89,41 @@ private fun delayColor(delay: Int): Color = when {
     else -> DelayRed
 }
 
-private fun resolveDelay(
+private fun proxyDelayState(proxy: Proxy): DelayState = when {
+    !proxy.tested -> DelayState.Untested
+    proxy.delay <= 0 || proxy.delay >= DELAY_TIMEOUT -> DelayState.Timeout
+    else -> DelayState.Value(proxy.delay)
+}
+
+/**
+ * The best of a load-balance group: its fastest live member, or — when nothing
+ * is live — a timeout if anything in it was tested at all.
+ */
+private fun bestDelayState(proxies: List<Proxy>): DelayState {
+    val best = proxies
+        .filter { it.tested && it.delay in 1 until DELAY_TIMEOUT }
+        .minOfOrNull { it.delay }
+
+    return when {
+        best != null -> DelayState.Value(best)
+        proxies.any { it.tested } -> DelayState.Timeout
+        else -> DelayState.Untested
+    }
+}
+
+private fun resolveDelayState(
     groupMap: Map<String, ProxyGroup>,
     groupName: String,
     now: String,
     visited: MutableSet<String> = mutableSetOf(),
-): Int {
-    if (!visited.add(groupName)) return 0
-    val group = groupMap[groupName] ?: return 0
-    val selected = group.proxies.find { it.name == now } ?: return 0
-    if (!selected.isGroup) return selected.delay
-    val nested = groupMap[selected.name] ?: return selected.delay
-    if (nested.type == "LoadBalance") {
-        return nested.proxies.filter { it.delay in 1..65534 }.minOfOrNull { it.delay } ?: 0
-    }
-    return resolveDelay(groupMap, selected.name, nested.now, visited)
+): DelayState {
+    if (!visited.add(groupName)) return DelayState.Untested
+    val group = groupMap[groupName] ?: return DelayState.Untested
+    val selected = group.proxies.find { it.name == now } ?: return DelayState.Untested
+    if (!selected.isGroup) return proxyDelayState(selected)
+    val nested = groupMap[selected.name] ?: return proxyDelayState(selected)
+    if (nested.type == "LoadBalance") return bestDelayState(nested.proxies)
+    return resolveDelayState(groupMap, selected.name, nested.now, visited)
 }
 
 fun selectedProxyName(groupMap: Map<String, ProxyGroup>, groupName: String, now: String): String {
@@ -88,20 +132,36 @@ fun selectedProxyName(groupMap: Map<String, ProxyGroup>, groupName: String, now:
     return selected.title.ifEmpty { selected.name }
 }
 
-internal fun rowDelay(groupMap: Map<String, ProxyGroup>, proxy: Proxy): Int {
-    if (!proxy.isGroup) return proxy.delay
-    val nested = groupMap[proxy.name] ?: return proxy.delay
+internal fun rowDelayState(
+    groupMap: Map<String, ProxyGroup>,
+    proxy: Proxy,
+    testing: Boolean,
+): DelayState {
+    if (testing) return DelayState.Testing
+    if (!proxy.isGroup) return proxyDelayState(proxy)
+    val nested = groupMap[proxy.name] ?: return proxyDelayState(proxy)
     return if (proxy.type == "LoadBalance") {
-        nested.proxies.filter { it.delay in 1..65534 }.minOfOrNull { it.delay } ?: 0
+        bestDelayState(nested.proxies)
     } else {
-        resolveDelay(groupMap, proxy.name, nested.now)
+        resolveDelayState(groupMap, proxy.name, nested.now)
     }
+}
+
+/**
+ * Sort key for [ProxySheetSort.Delay]: live proxies by their delay, then the
+ * ones that timed out, then the ones never tested. [List.sortedBy] is stable, so
+ * within each band the original order survives.
+ */
+private fun delaySortKey(proxy: Proxy): Int = when {
+    proxy.tested && proxy.delay in 1 until DELAY_TIMEOUT -> proxy.delay
+    proxy.tested -> DELAY_TIMEOUT
+    else -> Int.MAX_VALUE
 }
 
 private fun sortProxies(proxies: List<Proxy>, sort: ProxySheetSort): List<Proxy> = when (sort) {
     ProxySheetSort.Default -> proxies
     ProxySheetSort.Name -> proxies.sortedBy { it.title.ifEmpty { it.name }.lowercase(Locale.getDefault()) }
-    ProxySheetSort.Delay -> proxies.sortedBy { if (it.delay > 0) it.delay else Int.MAX_VALUE }
+    ProxySheetSort.Delay -> proxies.sortedBy(::delaySortKey)
 }
 
 /** Accordion-style card for one proxy group on the Home screen. */
@@ -177,7 +237,9 @@ fun SimpleModeProxyList(
     group: ProxyGroup,
     groupMap: Map<String, ProxyGroup>,
     useDots: Boolean,
+    testingProxies: Set<String>,
     onSelect: (String) -> Unit,
+    onTestProxy: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isSelector = group.type == "Selector"
@@ -187,12 +249,13 @@ fun SimpleModeProxyList(
             ProxyRow(
                 proxy = proxy,
                 selected = proxy.name == group.now,
-                delay = rowDelay(groupMap, proxy),
+                delayState = rowDelayState(groupMap, proxy, proxy.name in testingProxies),
                 useDots = useDots,
                 enabled = isSelector,
                 parentIsSmart = isSmart,
                 groupMap = groupMap,
                 onClick = { if (isSelector) onSelect(proxy.name) },
+                onTestDelay = { onTestProxy(proxy.name) },
             )
         }
     }
@@ -206,8 +269,10 @@ fun ProxySelectionSheet(
     groupMap: Map<String, ProxyGroup>,
     useDots: Boolean,
     isTv: Boolean,
+    testingProxies: Set<String>,
     onSelect: (String) -> Unit,
     onUrlTest: () -> Unit,
+    onTestProxy: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val isSelector = group.type == "Selector"
@@ -272,11 +337,12 @@ fun ProxySelectionSheet(
                     ProxyRow(
                         proxy = proxy,
                         selected = proxy.name == group.now,
-                        delay = rowDelay(groupMap, proxy),
+                        delayState = rowDelayState(groupMap, proxy, proxy.name in testingProxies),
                         useDots = useDots,
                         enabled = true,
                         parentIsSmart = isSmart,
                         groupMap = groupMap,
+                        onTestDelay = { onTestProxy(proxy.name) },
                         onClick = {
                             if (isSelector) {
                                 onSelect(proxy.name)
@@ -375,12 +441,13 @@ private fun SortOption(
 internal fun ProxyRow(
     proxy: Proxy,
     selected: Boolean,
-    delay: Int,
+    delayState: DelayState,
     useDots: Boolean,
     enabled: Boolean,
     parentIsSmart: Boolean,
     groupMap: Map<String, ProxyGroup>,
     onClick: () -> Unit,
+    onTestDelay: (() -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
@@ -470,7 +537,12 @@ internal fun ProxyRow(
                 ShieldIcon(iconRes, tint) { showWeight = true }
             }
 
-            DelayBadge(delay = delay, useDots = useDots)
+            DelayBadge(
+                state = delayState,
+                useDots = useDots,
+                // A test already running is not a second tap target.
+                onTest = onTestDelay.takeIf { delayState != DelayState.Testing },
+            )
         }
     }
 
@@ -506,23 +578,111 @@ private fun ShieldIcon(iconRes: Int, tint: Color, onClick: () -> Unit) {
     }
 }
 
+/**
+ * The delay readout of one row, and the tap target that re-measures it.
+ *
+ * Four states, told apart on purpose: a proxy that was never tested used to look
+ * exactly like one that timed out, because mihomo reports 0xffff for both.
+ *
+ *  * [DelayState.Testing] — a spinner, in both display modes.
+ *  * [DelayState.Untested] — a hollow ring / an em dash: no data, nothing claimed.
+ *  * [DelayState.Timeout] — a filled red dot with a bar across it / "timeout".
+ *  * [DelayState.Value] — a filled dot / the number, coloured by the delay.
+ *
+ * The badge keeps a fixed footprint so the rows do not shift as states change,
+ * and the tap target around it is larger than the mark itself. Only this badge
+ * is clickable — tapping the row still selects the proxy.
+ */
 @Composable
-private fun DelayBadge(delay: Int, useDots: Boolean) {
-    if (delay <= 0) return
+private fun DelayBadge(
+    state: DelayState,
+    useDots: Boolean,
+    onTest: (() -> Unit)?,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val testLabel = stringResource(R.string.delay_test)
+    val slot = Modifier
+        .padding(start = 4.dp)
+        .clip(RoundedCornerShape(50))
+        .then(
+            if (onTest != null) {
+                Modifier.clickable(onClickLabel = testLabel, onClick = onTest)
+            } else {
+                Modifier
+            },
+        )
+
     if (useDots) {
         Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(delayColor(delay)),
-        )
-    } else {
-        val isTimeout = delay == 65535
-        Text(
-            text = if (isTimeout) stringResource(R.string.timeout)
-            else stringResource(R.string.format_delay_ms, delay),
-            style = MaterialTheme.typography.labelMedium,
-            color = if (isTimeout) DelayRed else delayColor(delay),
-        )
+            modifier = slot.size(28.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            when (state) {
+                DelayState.Testing -> CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 1.5.dp,
+                    color = scheme.onSurfaceVariant,
+                )
+                DelayState.Untested -> Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .border(1.5.dp, scheme.onSurfaceVariant.copy(alpha = 0.5f), CircleShape),
+                )
+                DelayState.Timeout -> Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(DelayRed),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // The bar is what separates a timeout from a merely slow
+                    // proxy — both are red, only this one is struck through.
+                    Box(
+                        modifier = Modifier
+                            .size(width = 6.dp, height = 1.5.dp)
+                            .background(Color.White),
+                    )
+                }
+                is DelayState.Value -> Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(delayColor(state.ms)),
+                )
+            }
+        }
+
+        return
+    }
+
+    Box(
+        modifier = slot
+            .widthIn(min = 52.dp)
+            .heightIn(min = 28.dp)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (state) {
+            DelayState.Testing -> CircularProgressIndicator(
+                modifier = Modifier.size(14.dp),
+                strokeWidth = 1.5.dp,
+                color = scheme.onSurfaceVariant,
+            )
+            DelayState.Untested -> Text(
+                text = "—",
+                style = MaterialTheme.typography.labelMedium,
+                color = scheme.onSurfaceVariant,
+            )
+            DelayState.Timeout -> Text(
+                text = stringResource(R.string.timeout),
+                style = MaterialTheme.typography.labelMedium,
+                color = DelayRed,
+            )
+            is DelayState.Value -> Text(
+                text = stringResource(R.string.format_delay_ms, state.ms),
+                style = MaterialTheme.typography.labelMedium,
+                color = delayColor(state.ms),
+            )
+        }
     }
 }
