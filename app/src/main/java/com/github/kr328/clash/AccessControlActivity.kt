@@ -18,6 +18,7 @@ import com.github.kr328.clash.design.model.AppInfo
 import com.github.kr328.clash.design.model.AppInfoSort
 import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.util.toAppInfo
+import com.github.kr328.clash.service.model.AccessControlMode
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
@@ -31,6 +32,7 @@ import kotlinx.coroutines.withContext
 class AccessControlActivity : BaseActivity() {
     private val appsFlow = MutableStateFlow<List<AppInfo>>(emptyList())
     private val selectedFlow = MutableStateFlow<Set<String>>(emptySet())
+    private val modeFlow = MutableStateFlow(AccessControlMode.AcceptAll)
     private val sortFlow = MutableStateFlow(AppInfoSort.Label)
     private val reverseFlow = MutableStateFlow(false)
     private val systemAppsFlow = MutableStateFlow(false)
@@ -42,15 +44,23 @@ class AccessControlActivity : BaseActivity() {
         reverseFlow.value = uiStore.accessControlReverse
         systemAppsFlow.value = uiStore.accessControlSystemApp
 
-        selectedFlow.value = withContext(Dispatchers.IO) {
-            service.accessControlPackages.toSet()
+        withContext(Dispatchers.IO) {
+            selectedFlow.value = service.accessControlPackages.toSet()
+            modeFlow.value = service.accessControlMode
         }
 
         defer {
             withContext(Dispatchers.IO) {
                 val selected = selectedFlow.value
-                val changed = selected != service.accessControlPackages
+                val mode = modeFlow.value
+                // The mode used to live in network settings, where it could only
+                // be changed with the tunnel down. Here it is edited next to the
+                // list it governs, so it gets the same treatment the list always
+                // had: persist, and bounce the service if it is running.
+                val changed = selected != service.accessControlPackages ||
+                    mode != service.accessControlMode
                 service.accessControlPackages = selected
+                service.accessControlMode = mode
                 if (clashRunning && changed) {
                     stopClashService()
                     while (clashRunning) {
@@ -65,16 +75,19 @@ class AccessControlActivity : BaseActivity() {
             ClashTheme(variant = currentThemeVariant()) {
                 val apps by appsFlow.collectAsStateWithLifecycle()
                 val selected by selectedFlow.collectAsStateWithLifecycle()
+                val mode by modeFlow.collectAsStateWithLifecycle()
                 val sort by sortFlow.collectAsStateWithLifecycle()
                 val reverse by reverseFlow.collectAsStateWithLifecycle()
                 val systemApps by systemAppsFlow.collectAsStateWithLifecycle()
                 AccessControlScreen(
                     apps = apps,
                     selected = selected,
+                    mode = mode,
                     sort = sort,
                     reverse = reverse,
                     systemApps = systemApps,
                     onBack = { finish() },
+                    onSetMode = { modeFlow.value = it },
                     onToggle = ::toggle,
                     onSelectAll = ::selectAll,
                     onSelectNone = ::selectNone,

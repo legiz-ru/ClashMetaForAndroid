@@ -20,6 +20,11 @@ import (
 	"github.com/metacubex/mihomo/tunnel"
 )
 
+// DelayTimeout is what mihomo's LastDelayForTestUrl returns when a proxy has no
+// usable delay for a test URL — it was never tested, or the last test failed.
+// The two are told apart by Proxy.Tested, not by this value.
+const DelayTimeout = 0xffff
+
 type SortMode int
 
 const (
@@ -35,8 +40,39 @@ type Proxy struct {
 	Type     string  `json:"type"`
 	IsGroup  bool    `json:"isGroup"`
 	Delay    int     `json:"delay"`
+	Tested   bool    `json:"tested"` // whether a delay test has ever run for this proxy on the group test URL
 	Weight   float64 `json:"weight"` // smart group weight; 0 if not applicable
 	Rank     string  `json:"rank"`   // smart group rank: MostUsed / OccasionalUsed / RarelyUsed
+}
+
+// delayRank orders a proxy for the Delay sort mode: alive first, then the ones
+// that were tested and did not answer, then the ones never tested.
+//
+// Without it a timeout and a never-tested proxy are indistinguishable while
+// sorting: LastDelayForTestUrl returns the same 0xffff for both.
+func delayRank(p *Proxy) int {
+	switch {
+	case p.Tested && p.Delay > 0 && p.Delay < DelayTimeout:
+		return 0
+	case p.Tested:
+		return 1
+	default:
+		return 2
+	}
+}
+
+func lessByDelay(a, b *Proxy) bool {
+	ra, rb := delayRank(a), delayRank(b)
+	if ra != rb {
+		return ra < rb
+	}
+
+	if ra != 0 {
+		// Neither has a delay to compare: keep the original order.
+		return false
+	}
+
+	return a.Delay < b.Delay
 }
 
 type ProxyGroup struct {
@@ -160,7 +196,8 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 			return nil
 		}
 
-		proxies := convertProxies(sg.GetProxies(false), uiSubtitlePattern)
+		smartTestURL, _ := groupCheckOptions(sg)
+		proxies := convertProxies(sg.GetProxies(false), uiSubtitlePattern, smartTestURL)
 
 		// Fetch weights and ranks from the global smart store — same source the
 		// external-controller /group/{name}/weights route uses.
@@ -229,10 +266,7 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 				less: func(a, b *Proxy) bool { return strings.Compare(a.Title, b.Title) < 0 },
 			})
 		case Delay:
-			sort.Sort(&sortableProxyList{
-				list: proxies,
-				less: func(a, b *Proxy) bool { return a.Delay < b.Delay },
-			})
+			sort.Stable(&sortableProxyList{list: proxies, less: lessByDelay})
 		}
 
 		icon := sg.Icon()
@@ -260,7 +294,8 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 		return nil
 	}
 
-	proxies := convertProxies(g.Proxies(), uiSubtitlePattern)
+	groupTestURL, _ := groupCheckOptions(g)
+	proxies := convertProxies(g.Proxies(), uiSubtitlePattern, groupTestURL)
 	// 	proxies := collectProviders(g.Providers(), uiSubtitlePattern)
 
 	switch sortMode {
@@ -274,14 +309,7 @@ func QueryProxyGroup(name string, sortMode SortMode, uiSubtitlePattern *regexp2.
 
 		sort.Sort(wrapper)
 	case Delay:
-		wrapper := &sortableProxyList{
-			list: proxies,
-			less: func(a, b *Proxy) bool {
-				return a.Delay < b.Delay
-			},
-		}
-
-		sort.Sort(wrapper)
+		sort.Stable(&sortableProxyList{list: proxies, less: lessByDelay})
 	case Default:
 	default:
 	}
@@ -370,7 +398,13 @@ func PatchSelector(selector, name string) bool {
 	return true
 }
 
-func convertProxies(proxies []C.Proxy, uiSubtitlePattern *regexp2.Regexp) []*Proxy {
+// convertProxies renders a group's proxies for the UI.
+//
+// groupTestURL is the URL the owning group is checked with (see
+// groupCheckOptions). It matters: the delay is stored per URL, so reading it by
+// any other URL shows nothing for a group that overrides `url:`. When it is
+// empty the old heuristic is used — the first URL the proxy has a history for.
+func convertProxies(proxies []C.Proxy, uiSubtitlePattern *regexp2.Regexp, groupTestURL string) []*Proxy {
 	result := make([]*Proxy, 0, 128)
 
 	for _, p := range proxies {
@@ -388,11 +422,14 @@ func convertProxies(proxies []C.Proxy, uiSubtitlePattern *regexp2.Regexp) []*Pro
 				}
 			}
 		}
-		testURL := "https://www.gstatic.com/generate_204"
-		for k := range p.ExtraDelayHistories() {
-			if len(k) > 0 {
-				testURL = k
-				break
+		testURL := groupTestURL
+		if testURL == "" {
+			testURL = C.DefaultTestURL
+			for k := range p.ExtraDelayHistories() {
+				if len(k) > 0 {
+					testURL = k
+					break
+				}
 			}
 		}
 
@@ -405,6 +442,10 @@ func convertProxies(proxies []C.Proxy, uiSubtitlePattern *regexp2.Regexp) []*Pro
 			Type:     p.Type().String(),
 			IsGroup:  isGroup,
 			Delay:    int(p.LastDelayForTestUrl(testURL)),
+			// A failed test is recorded too (URLTest stores an entry with a zero
+			// delay), so a non-empty history means the proxy WAS tested — which is
+			// what tells a timeout apart from "never checked".
+			Tested: len(p.DelayHistoryForTestUrl(testURL)) > 0,
 		})
 	}
 	return result

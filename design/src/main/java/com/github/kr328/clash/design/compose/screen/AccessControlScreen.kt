@@ -2,6 +2,7 @@ package com.github.kr328.clash.design.compose.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -39,26 +40,38 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.github.kr328.clash.design.R
+import com.github.kr328.clash.design.compose.component.PreferenceRow
 import com.github.kr328.clash.design.compose.component.SingleChoiceDialog
 import com.github.kr328.clash.design.model.AppInfo
 import com.github.kr328.clash.design.model.AppInfoSort
+import com.github.kr328.clash.service.model.AccessControlMode
 
 /**
- * VPN access-control app picker (1:1 with AccessControlDesign, restyled to
- * MD3E). A checkable app list with an inline search, plus an overflow menu for
- * bulk selection (all/none/invert), clipboard import/export, sort order,
- * reverse and system-app visibility. Selection lives in the activity and is
- * persisted on exit.
+ * The whole of access control on one screen: the mode picker and the app list
+ * it governs.
+ *
+ * They used to be two separate rows in network settings — a mode buried in a
+ * dialog, and a package list somewhere below it — which read as two unrelated
+ * settings even though neither means anything without the other. Here the mode
+ * sits at the top of the very list it applies to, and switching it to "allow
+ * all" says outright that the checkboxes underneath stop mattering.
+ *
+ * The list itself is unchanged: a checkable app list with an inline search,
+ * plus an overflow menu for bulk selection (all/none/invert), clipboard
+ * import/export, sort order, reverse and system-app visibility. Both the mode
+ * and the selection live in the activity and are persisted on exit.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccessControlScreen(
     apps: List<AppInfo>,
     selected: Set<String>,
+    mode: AccessControlMode,
     sort: AppInfoSort,
     reverse: Boolean,
     systemApps: Boolean,
     onBack: () -> Unit,
+    onSetMode: (AccessControlMode) -> Unit,
     onToggle: (String) -> Unit,
     onSelectAll: () -> Unit,
     onSelectNone: () -> Unit,
@@ -72,6 +85,13 @@ fun AccessControlScreen(
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var showSort by remember { mutableStateOf(false) }
+    var showMode by remember { mutableStateOf(false) }
+
+    val modeOptions = listOf(
+        AccessControlMode.AcceptAll to stringResource(R.string.allow_all_apps),
+        AccessControlMode.AcceptSelected to stringResource(R.string.allow_selected_apps),
+        AccessControlMode.DenySelected to stringResource(R.string.deny_selected_apps),
+    )
 
     val visibleApps = remember(apps, searching, query) {
         if (!searching || query.isBlank()) apps
@@ -114,6 +134,36 @@ fun AccessControlScreen(
                     .fillMaxSize()
                     .padding(inner),
             ) {
+                // Hidden while searching: the query is about the list, and a
+                // setting pinned above the results would just be in the way.
+                if (!searching) {
+                    item(key = "mode") {
+                        Column {
+                            PreferenceRow(
+                                title = stringResource(R.string.access_control_mode),
+                                summary = modeOptions.firstOrNull { it.first == mode }?.second,
+                                icon = R.drawable.ic_baseline_vpn_lock,
+                                onClick = { showMode = true },
+                            )
+
+                            if (mode == AccessControlMode.AcceptAll) {
+                                Text(
+                                    text = stringResource(R.string.access_control_all_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        bottom = 12.dp,
+                                    ),
+                                )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        }
+                    }
+                }
+
                 items(items = visibleApps, key = { it.packageName }) { app ->
                     AppRow(
                         app = app,
@@ -125,6 +175,15 @@ fun AccessControlScreen(
         }
     }
 
+    if (showMode) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.access_control_mode),
+            options = modeOptions,
+            selected = mode,
+            onSelect = onSetMode,
+            onDismiss = { showMode = false },
+        )
+    }
     if (showSort) {
         SingleChoiceDialog(
             title = stringResource(R.string.sort),
@@ -160,7 +219,7 @@ private fun AccessControlTopBar(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     TopAppBar(
-        title = { Text(stringResource(R.string.access_control_packages)) },
+        title = { Text(stringResource(R.string.access_control_apps)) },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(

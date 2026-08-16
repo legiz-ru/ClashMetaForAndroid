@@ -86,6 +86,7 @@ fun MainScreen(
     latencyTesting: Boolean,
     proxyGroups: List<Pair<String, ProxyGroup>>,
     useDots: Boolean,
+    testingProxies: Set<String>,
     onPowerToggle: () -> Unit,
     onUpdateProfile: () -> Unit,
     onManageProfiles: () -> Unit,
@@ -100,6 +101,7 @@ fun MainScreen(
     onDisconnect: () -> Unit,
     onSelectProxy: (String, String) -> Unit,
     onUrlTest: (String) -> Unit,
+    onTestProxy: (String, String) -> Unit,
     onLogoTap: () -> Unit = {},
     isTv: Boolean = false,
 ) {
@@ -188,7 +190,9 @@ fun MainScreen(
                                     group = firstGroup,
                                     groupMap = groupMap,
                                     useDots = useDots,
+                                    testingProxies = testingProxies,
                                     onSelect = { proxy -> onSelectProxy(firstName, proxy) },
+                                    onTestProxy = { proxy -> onTestProxy(firstName, proxy) },
                                 )
                             } else {
                                 for ((name, group) in visibleGroups) {
@@ -254,8 +258,10 @@ fun MainScreen(
             groupMap = groupMap,
             useDots = useDots,
             isTv = isTv,
+            testingProxies = testingProxies,
             onSelect = { proxy -> onSelectProxy(opened, proxy) },
             onUrlTest = { onUrlTest(opened) },
+            onTestProxy = { proxy -> onTestProxy(opened, proxy) },
             onDismiss = { openedGroup = null },
         )
     }

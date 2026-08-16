@@ -74,6 +74,9 @@ fun HelpScreen(
 
         item { SettingsCategory(stringResource(R.string.document)) }
         item { LinkRow(R.string.clash_meta_wiki, R.string.clash_meta_wiki_url, onOpenLink) }
+        // The URL is a localized resource: the Russian docs live under /ru/,
+        // everyone else lands on the root.
+        item { LinkRow(R.string.app_documentation, R.string.app_documentation_url, onOpenLink) }
 
         item { SettingsCategory(stringResource(R.string.sources)) }
         item { LinkRow(R.string.clash_meta_core, R.string.clash_meta_core_url, onOpenLink) }
@@ -188,7 +191,9 @@ private fun DeveloperCard(onGithub: () -> Unit, onTelegram: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Placeholder avatar (ghost) until the real image is dropped in.
+                // The avatar is a square vector that paints its own brand
+                // backdrop, so it fills the circular crop edge to edge; the
+                // container colour only shows if the drawable fails to load.
                 Box(
                     modifier = Modifier
                         .size(56.dp)

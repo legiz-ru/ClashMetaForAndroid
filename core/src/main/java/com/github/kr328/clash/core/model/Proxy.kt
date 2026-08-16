@@ -12,6 +12,13 @@ data class Proxy(
     val subtitle: String,
     val type: String,
     val delay: Int,
+    /**
+     * Whether a delay test has ever run for this proxy on its group's test URL.
+     *
+     * Without it a timeout and a never-tested proxy cannot be told apart: mihomo
+     * returns the same 0xffff [delay] for both.
+     */
+    val tested: Boolean = false,
     val weight: Double = 0.0,
     val rank: String = "",
     var isGroup: Boolean = false,
