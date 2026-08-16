@@ -190,7 +190,7 @@
             android:name=".AccessControlActivity"
             android:configChanges="uiMode"
             android:exported="false"
-            android:label="@string/access_control_packages" />
+            android:label="@string/access_control_apps" />
         <activity
             android:name=".HelpActivity"
             android:configChanges="uiMode"

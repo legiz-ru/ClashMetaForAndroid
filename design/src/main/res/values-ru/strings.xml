@@ -131,8 +131,6 @@
     <string name="system_proxy">Системный прокси</string>
     <string name="system_proxy_summary">Дополнительно запустить HTTP прокси, помимо VPN</string>
     <string name="access_control_mode">Режим контроля доступа</string>
-    <string name="access_control_packages">Приложения с контролируемым доступом</string>
-    <string name="access_control_packages_summary">Настройте доступ для приложения</string>
 
     <string name="options_unavailable">Настройки недоступны, пока Prizrak-Box не будет остановлен</string>
 
@@ -559,4 +557,7 @@
     <string name="reset_connections_summary">При переходе между Wi-Fi и мобильным интернетом соединения через старую сеть уже мертвы. Разрыв позволяет приложениям переподключиться сразу, а не ждать таймаута.</string>
     <string name="app_documentation">Документация приложения</string>
     <string name="app_documentation_url">https://docs.prizrak.app/ru/</string>
+    <string name="access_control_apps">Приложения</string>
+    <string name="access_control_apps_summary">Контроль доступа — какие приложения идут через туннель</string>
+    <string name="access_control_all_hint">Через туннель идут все приложения — отметки ниже ни на что не влияют, пока не выбран другой режим.</string>
 </resources>

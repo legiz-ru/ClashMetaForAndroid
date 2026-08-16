@@ -14,7 +14,6 @@ import com.github.kr328.clash.design.compose.component.SettingsCategory
 import com.github.kr328.clash.design.compose.component.SingleChoiceDialog
 import com.github.kr328.clash.design.compose.component.SwitchPreference
 import com.github.kr328.clash.design.store.UiStore
-import com.github.kr328.clash.service.model.AccessControlMode
 import com.github.kr328.clash.service.store.ServiceStore
 
 /**
@@ -30,13 +29,11 @@ fun NetworkSettingsScreen(
     onAccessControlPackages: () -> Unit,
 ) {
     var showTunStack by remember { mutableStateOf(false) }
-    var showAclMode by remember { mutableStateOf(false) }
 
     // Snapshot state mirrors of the persisted stores so rows reflect changes immediately
     // (read inside each item) without a rev/bump recompose trigger.
     var enableVpn by remember { mutableStateOf(uiStore.enableVpn) }
     var tunStackMode by remember { mutableStateOf(srvStore.tunStackMode) }
-    var aclMode by remember { mutableStateOf(srvStore.accessControlMode) }
     var resetConnections by remember { mutableStateOf(srvStore.resetConnectionsOnNetworkChange) }
 
     val vpnEnabled = !running
@@ -45,11 +42,6 @@ fun NetworkSettingsScreen(
         "system" to stringResource(R.string.tun_stack_system),
         "gvisor" to stringResource(R.string.tun_stack_gvisor),
         "mixed" to stringResource(R.string.tun_stack_mixed),
-    )
-    val aclOptions = listOf(
-        AccessControlMode.AcceptAll to stringResource(R.string.allow_all_apps),
-        AccessControlMode.AcceptSelected to stringResource(R.string.allow_selected_apps),
-        AccessControlMode.DenySelected to stringResource(R.string.deny_selected_apps),
     )
 
     PreferenceScaffold(title = stringResource(R.string.network), onBack = onBack) {
@@ -120,18 +112,14 @@ fun NetworkSettingsScreen(
                 onClick = { showTunStack = true },
             )
         }
+        // One entry, not two: the mode and the app list are the same setting,
+        // and the mode moved onto the list screen where it applies. Not gated on
+        // `running` — that screen restarts the tunnel itself when something
+        // changed.
         item {
             PreferenceRow(
-                title = stringResource(R.string.access_control_mode),
-                summary = aclOptions.firstOrNull { it.first == aclMode }?.second,
-                enabled = enableVpn && !running,
-                onClick = { showAclMode = true },
-            )
-        }
-        item {
-            PreferenceRow(
-                title = stringResource(R.string.access_control_packages),
-                summary = stringResource(R.string.access_control_packages_summary),
+                title = stringResource(R.string.access_control_apps),
+                summary = stringResource(R.string.access_control_apps_summary),
                 onClick = onAccessControlPackages,
             )
         }
@@ -158,15 +146,6 @@ fun NetworkSettingsScreen(
             selected = tunStackMode,
             onSelect = { srvStore.tunStackMode = it; tunStackMode = it },
             onDismiss = { showTunStack = false },
-        )
-    }
-    if (showAclMode) {
-        SingleChoiceDialog(
-            title = stringResource(R.string.access_control_mode),
-            options = aclOptions,
-            selected = aclMode,
-            onSelect = { srvStore.accessControlMode = it; aclMode = it },
-            onDismiss = { showAclMode = false },
         )
     }
 }

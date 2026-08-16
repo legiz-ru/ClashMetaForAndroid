@@ -139,8 +139,6 @@
     <string name="system_proxy">System Proxy</string>
     <string name="system_proxy_summary">Attach http proxy to VpnService</string>
     <string name="access_control_mode">Access Control Mode</string>
-    <string name="access_control_packages">Access Control Packages</string>
-    <string name="access_control_packages_summary">Configure access permission for apps</string>
 
     <string name="options_unavailable">Options Unavailable until Prizrak-Box Stopped</string>
 
@@ -595,4 +593,7 @@
     <string name="reset_connections_summary">Switching between Wi-Fi and mobile data kills the connections that went through the old one. Dropping them right away lets apps reconnect instead of waiting out a timeout.</string>
     <string name="app_documentation">App documentation</string>
     <string name="app_documentation_url">https://docs.prizrak.app</string>
+    <string name="access_control_apps">Apps</string>
+    <string name="access_control_apps_summary">Access control — which apps go through the tunnel</string>
+    <string name="access_control_all_hint">All apps go through the tunnel — the checkboxes below change nothing until you pick another mode.</string>
 </resources>
