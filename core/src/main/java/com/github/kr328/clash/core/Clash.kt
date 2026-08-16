@@ -129,6 +129,29 @@ object Clash {
         Bridge.nativeHealthCheckAll()
     }
 
+    /**
+     * The phone moved to another network.
+     *
+     * The core does not learn about it on its own and tears no live connection
+     * down — see `native/tunnel/network.go` for the details. The call is cheap
+     * and does not touch the network: it flushes the interface cache, drops the
+     * DNS transport connections and, when allowed, closes live connections.
+     */
+    fun notifyNetworkChanged(closeConnections: Boolean) {
+        Bridge.nativeNotifyNetworkChanged(closeConnections)
+    }
+
+    /**
+     * Probe the current node of every group after a network change.
+     *
+     * Kept apart from [notifyNetworkChanged] because the reset is cheap and is
+     * always done, while a probe costs a request and is deferred until the
+     * screen turns on.
+     */
+    fun probeCurrentNodes() {
+        Bridge.nativeProbeCurrentNodes()
+    }
+
     fun patchSelector(selector: String, name: String): Boolean {
         return Bridge.nativePatchSelector(selector, name)
     }

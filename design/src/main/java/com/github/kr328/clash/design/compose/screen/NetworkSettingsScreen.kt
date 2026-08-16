@@ -37,6 +37,7 @@ fun NetworkSettingsScreen(
     var enableVpn by remember { mutableStateOf(uiStore.enableVpn) }
     var tunStackMode by remember { mutableStateOf(srvStore.tunStackMode) }
     var aclMode by remember { mutableStateOf(srvStore.accessControlMode) }
+    var resetConnections by remember { mutableStateOf(srvStore.resetConnectionsOnNetworkChange) }
 
     val vpnEnabled = !running
 
@@ -132,6 +133,20 @@ fun NetworkSettingsScreen(
                 title = stringResource(R.string.access_control_packages),
                 summary = stringResource(R.string.access_control_packages_summary),
                 onClick = onAccessControlPackages,
+            )
+        }
+
+        // A section of its own and NOT gated on `running`: everything else on
+        // this screen describes how to bring the tunnel up and only changes
+        // while it is down. This one is read on the fly, at the moment of the
+        // network change — so it can be flipped on the go too.
+        item { SettingsCategory(stringResource(R.string.network_switch)) }
+        item {
+            SwitchPreference(
+                title = stringResource(R.string.reset_connections),
+                summary = stringResource(R.string.reset_connections_summary),
+                checked = resetConnections,
+                onCheckedChange = { srvStore.resetConnectionsOnNetworkChange = it; resetConnections = it },
             )
         }
     }

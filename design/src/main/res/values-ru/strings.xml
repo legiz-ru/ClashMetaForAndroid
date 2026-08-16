@@ -554,4 +554,7 @@
     <string name="age_key_required_set">Указать ключ</string>
     <string name="age_regenerate">Перегенерировать</string>
     <string name="age_copy_key">Скопировать ключ</string>
+    <string name="network_switch">Переключение сети</string>
+    <string name="reset_connections">Разрывать соединения при смене сети</string>
+    <string name="reset_connections_summary">При переходе между Wi-Fi и мобильным интернетом соединения через старую сеть уже мертвы. Разрыв позволяет приложениям переподключиться сразу, а не ждать таймаута.</string>
 </resources>

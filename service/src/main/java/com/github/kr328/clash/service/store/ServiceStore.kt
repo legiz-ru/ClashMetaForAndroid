@@ -56,6 +56,26 @@ class ServiceStore(context: Context) {
         defaultValue = false
     )
 
+    /**
+     * Whether live connections should be dropped on a network change
+     * (Wi-Fi <-> LTE and back).
+     *
+     * A connection opened over a vanished interface is dead either way: the only
+     * difference is whether the app learns about it right away or after the OS
+     * timeout — a minute and more. All that time the user sees "the internet is
+     * there but nothing loads".
+     *
+     * On by default. Turning it off makes sense for someone downloading large
+     * files in an app without resume support: there a break is more noticeable
+     * than the wait. The interface cache and the DNS connections are reset in
+     * any case — that tears nothing down for the user, and without it names stop
+     * resolving.
+     */
+    var resetConnectionsOnNetworkChange by store.boolean(
+        key = "reset_connections_on_network_change",
+        defaultValue = true
+    )
+
     var tunStackMode by store.string(
         key = "tun_stack_mode",
         defaultValue = "system"

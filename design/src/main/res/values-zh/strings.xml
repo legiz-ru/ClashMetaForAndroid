@@ -279,4 +279,7 @@
     <string name="age_key_required_set">设置私钥</string>
     <string name="age_regenerate">重新生成</string>
     <string name="age_copy_key">复制密钥</string>
+    <string name="network_switch">网络切换</string>
+    <string name="reset_connections">切换网络时断开连接</string>
+    <string name="reset_connections_summary">在 Wi-Fi 与移动数据之间切换后，经由旧网络建立的连接已经失效。立即断开可让应用马上重连，而不必等待超时。</string>
 </resources>

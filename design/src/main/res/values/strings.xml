@@ -590,4 +590,7 @@
     <string name="age_key_required_set">Set key</string>
     <string name="age_regenerate">Regenerate</string>
     <string name="age_copy_key">Copy key</string>
+    <string name="network_switch">Network switching</string>
+    <string name="reset_connections">Drop connections when the network changes</string>
+    <string name="reset_connections_summary">Switching between Wi-Fi and mobile data kills the connections that went through the old one. Dropping them right away lets apps reconnect instead of waiting out a timeout.</string>
 </resources>
