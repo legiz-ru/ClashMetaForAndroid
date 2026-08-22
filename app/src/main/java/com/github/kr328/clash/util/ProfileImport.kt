@@ -34,7 +34,87 @@ private val PROXY_SCHEMES = listOf(
     "hysteria://", "hysteria2://", "hy2://", "tuic://", "anytls://", "wireguard://"
 )
 
+private const val HWID_DOCS_URL = "https://docs.rw/features/hwid-device-limit#hwid-headers-sent-by-remnawave"
+
 private enum class HwidIssue { None, NotSupported, MaxDevicesReached }
+
+private sealed class FetchIssue {
+    object None : FetchIssue()
+    object NoConnectivity : FetchIssue()
+    data class HostUnreachable(val detail: String?) : FetchIssue()
+    data class Timeout(val detail: String?) : FetchIssue()
+    data class TlsError(val detail: String?) : FetchIssue()
+    data class HttpError(val code: Int) : FetchIssue()
+    data class Unknown(val detail: String?) : FetchIssue()
+}
+
+private fun resolveFetchImportIssue(exception: Throwable): FetchIssue {
+    var current: Throwable? = exception
+    while (current != null) {
+        when (current) {
+            is ProfileProcessor.FetchNoConnectivityException -> return FetchIssue.NoConnectivity
+            is ProfileProcessor.FetchHostUnreachableException -> return FetchIssue.HostUnreachable(current.detail)
+            is ProfileProcessor.FetchTimeoutException -> return FetchIssue.Timeout(current.detail)
+            is ProfileProcessor.FetchTlsErrorException -> return FetchIssue.TlsError(current.detail)
+            is ProfileProcessor.FetchHttpErrorException -> return FetchIssue.HttpError(current.code)
+            is ProfileProcessor.FetchUnknownException -> return FetchIssue.Unknown(current.detail)
+        }
+        val message = current.message.orEmpty()
+        when {
+            message.equals("FETCH_NO_CONNECTIVITY", ignoreCase = true) -> return FetchIssue.NoConnectivity
+            message.startsWith("FETCH_HOST_UNREACHABLE", ignoreCase = true) -> return FetchIssue.HostUnreachable(null)
+            message.startsWith("FETCH_TIMEOUT", ignoreCase = true) -> return FetchIssue.Timeout(null)
+            message.startsWith("FETCH_TLS_ERROR", ignoreCase = true) -> return FetchIssue.TlsError(null)
+            message.startsWith("FETCH_HTTP_ERROR", ignoreCase = true) -> {
+                val code = message.substringAfter(":", "").toIntOrNull() ?: 0
+                return FetchIssue.HttpError(code)
+            }
+            message.startsWith("FETCH_UNKNOWN", ignoreCase = true) -> return FetchIssue.Unknown(null)
+        }
+        current = current.cause
+    }
+    return FetchIssue.None
+}
+
+private suspend fun Context.showFetchErrorImportDialog(issue: FetchIssue) {
+    if (issue is FetchIssue.None) return
+
+    val message = when (issue) {
+        FetchIssue.NoConnectivity -> getString(com.github.kr328.clash.design.R.string.fetch_no_connectivity)
+        is FetchIssue.HostUnreachable -> getString(com.github.kr328.clash.design.R.string.fetch_host_unreachable)
+        is FetchIssue.Timeout -> getString(com.github.kr328.clash.design.R.string.fetch_timeout)
+        is FetchIssue.TlsError -> getString(com.github.kr328.clash.design.R.string.fetch_tls_error)
+        is FetchIssue.HttpError -> getString(com.github.kr328.clash.design.R.string.fetch_http_error, issue.code)
+        is FetchIssue.Unknown -> getString(com.github.kr328.clash.design.R.string.fetch_unknown)
+        FetchIssue.None -> return
+    }
+    val detail = when (issue) {
+        is FetchIssue.HostUnreachable -> issue.detail
+        is FetchIssue.Timeout -> issue.detail
+        is FetchIssue.TlsError -> issue.detail
+        is FetchIssue.Unknown -> issue.detail
+        else -> null
+    }
+    val fullMessage = if (!detail.isNullOrBlank()) {
+        message + "\n\n" + getString(com.github.kr328.clash.design.R.string.fetch_error_detail, detail)
+    } else {
+        message
+    }
+
+    withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine<Unit> { cont ->
+            val dialog = MaterialAlertDialogBuilder(this@showFetchErrorImportDialog)
+                .setTitle(com.github.kr328.clash.design.R.string.fetch_error_title)
+                .setMessage(fullMessage)
+                .setPositiveButton(com.github.kr328.clash.design.R.string.ok) { _, _ ->
+                    if (cont.isActive) cont.resume(Unit)
+                }
+                .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
+                .show()
+            cont.invokeOnCancellation { dialog.dismiss() }
+        }
+    }
+}
 
 private fun resolveHwidImportIssue(exception: Throwable): Pair<HwidIssue, String> {
     var current: Throwable? = exception
@@ -63,6 +143,15 @@ private suspend fun Context.showHwidNotSupportedImportDialog() {
                 .setMessage(com.github.kr328.clash.design.R.string.hwid_not_supported_msg)
                 .setPositiveButton(com.github.kr328.clash.design.R.string.ok) { _, _ ->
                     if (cont.isActive) cont.resume(Unit)
+                }
+                .setNeutralButton(com.github.kr328.clash.design.R.string.hwid_docs_btn) { _, _ ->
+                    if (cont.isActive) cont.resume(Unit)
+                    try {
+                        startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(HWID_DOCS_URL))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    } catch (_: Exception) {}
                 }
                 .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
                 .show()
@@ -190,6 +279,7 @@ suspend fun Context.importProfileFromUrl(
     if (autoImported) {
         var hwidIssue = HwidIssue.None
         var hwidSupportUrl = ""
+        var fetchIssue: FetchIssue = FetchIssue.None
         var committed = false
         var ageKeyRequired = false
 
@@ -218,12 +308,17 @@ suspend fun Context.importProfileFromUrl(
                 hwidIssue = issue
                 hwidSupportUrl = supportUrl
                 if (issue == HwidIssue.None) {
-                    Toast.makeText(
-                        this@importProfileFromUrl,
-                        getString(com.github.kr328.clash.design.R.string.import_profile_failed),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                    val fi = resolveFetchImportIssue(e)
+                    if (fi != FetchIssue.None) {
+                        fetchIssue = fi
+                    } else {
+                        Toast.makeText(
+                            this@importProfileFromUrl,
+                            getString(com.github.kr328.clash.design.R.string.import_profile_failed),
+                            Toast.LENGTH_LONG
+                        ).show()
+                        startActivity(PropertiesActivity::class.intent.setUUID(uuid))
+                    }
                 }
                 return@withModelProgressBar
             }
@@ -240,6 +335,8 @@ suspend fun Context.importProfileFromUrl(
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 )
+            } else if (fetchIssue != FetchIssue.None) {
+                showFetchErrorImportDialog(fetchIssue)
             }
         }
     } else {

@@ -564,6 +564,15 @@
     <string name="hwid_max_devices_title">Device limit reached</string>
     <string name="hwid_max_devices_msg">You have reached the maximum number of devices for this subscription.</string>
     <string name="hwid_support_btn">Support</string>
+    <string name="hwid_docs_btn">Learn more</string>
+    <string name="fetch_error_title">Update failed</string>
+    <string name="fetch_no_connectivity">No internet connection. Check your connection and try again.</string>
+    <string name="fetch_host_unreachable">The server could not be reached. It may be temporarily unavailable, or blocked on this network.</string>
+    <string name="fetch_timeout">The server took too long to respond. Try again later.</string>
+    <string name="fetch_tls_error">A secure connection to the server could not be established.</string>
+    <string name="fetch_http_error">The server returned an error (code %1$d).</string>
+    <string name="fetch_unknown">The subscription could not be fetched.</string>
+    <string name="fetch_error_detail">Details: %1$s</string>
 
     <!-- Profile card shortcut icons -->
     <string name="mode_selector_title">Connection Mode</string>

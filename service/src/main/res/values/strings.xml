@@ -10,6 +10,15 @@
     <string name="update_failure">Update Failure</string>
     <string name="format_update_complete">Update %s completed</string>
     <string name="format_update_failure">Update %1$s: %2$s</string>
+    <string name="fetch_no_connectivity">no internet connection</string>
+    <string name="fetch_host_unreachable">server unreachable</string>
+    <string name="fetch_timeout">server timed out</string>
+    <string name="fetch_tls_error">secure connection failed</string>
+    <string name="fetch_http_error">server returned error %1$d</string>
+    <string name="fetch_unknown">fetch failed</string>
+    <string name="hwid_not_supported_short">HWID transmission required</string>
+    <string name="hwid_max_devices_short">device limit reached</string>
+    <string name="age_key_required_short">encrypted config, key required</string>
     <string name="running">Running</string>
     <string name="loading">Loading</string>
     <string name="clash_meta_for_android">Prizrak-Box</string>

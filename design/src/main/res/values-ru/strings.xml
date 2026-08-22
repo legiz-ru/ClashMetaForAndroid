@@ -528,6 +528,15 @@
     <string name="hwid_max_devices_title">Достигнут лимит устройств</string>
     <string name="hwid_max_devices_msg">Вы достигли максимального количества устройств для этой подписки.</string>
     <string name="hwid_support_btn">Поддержка</string>
+    <string name="hwid_docs_btn">Подробнее</string>
+    <string name="fetch_error_title">Не удалось обновить</string>
+    <string name="fetch_no_connectivity">Нет подключения к интернету. Проверьте соединение и попробуйте снова.</string>
+    <string name="fetch_host_unreachable">Не удалось подключиться к серверу. Возможно, он временно недоступен или заблокирован в этой сети.</string>
+    <string name="fetch_timeout">Сервер не ответил вовремя. Попробуйте позже.</string>
+    <string name="fetch_tls_error">Не удалось установить защищённое соединение с сервером.</string>
+    <string name="fetch_http_error">Сервер вернул ошибку (код %1$d).</string>
+    <string name="fetch_unknown">Не удалось получить подписку.</string>
+    <string name="fetch_error_detail">Подробности: %1$s</string>
 
     <!-- Profile card shortcut icons -->
     <string name="mode_selector_title">Режим подключения</string>

@@ -41,6 +41,100 @@ object ProfileProcessor {
     class AgeKeyRequiredException : IOException("AGE_KEY_REQUIRED")
 
     /**
+     * A subscription fetch failed for a distinguishable reason.
+     *
+     * [message] is a short code, not prose — same convention as
+     * [HwidNotSupportedException]/[AgeKeyRequiredException]: `sendProfileUpdateFailed`
+     * carries only a plain `String` across the service boundary, so the type
+     * information these classes give directly is only available to a caller
+     * standing right next to the throw (e.g. PropertiesActivity's own update
+     * button); everyone else has to recover the reason from the message text,
+     * hence a fixed code rather than a sentence. [detail] is the underlying
+     * exception's own message, kept separate so callers can show it as a
+     * secondary, technical line without it drowning out the plain-language one.
+     */
+    open class FetchFailedException(message: String, val detail: String? = null) : IOException(message)
+
+    /** No active network at all — checked before the request is even attempted. */
+    class FetchNoConnectivityException : FetchFailedException("FETCH_NO_CONNECTIVITY")
+
+    /** DNS didn't resolve, or the connection was refused/unreachable. */
+    class FetchHostUnreachableException(detail: String?) : FetchFailedException("FETCH_HOST_UNREACHABLE", detail)
+
+    /** Connect or read timed out. */
+    class FetchTimeoutException(detail: String?) : FetchFailedException("FETCH_TIMEOUT", detail)
+
+    /** TLS handshake or certificate validation failed. */
+    class FetchTlsErrorException(detail: String?) : FetchFailedException("FETCH_TLS_ERROR", detail)
+
+    /** The server answered, but not with 2xx. [code] is folded into the message
+     *  (`FETCH_HTTP_ERROR:404`) since it has to survive the same string-only
+     *  boundary as the rest of this hierarchy. */
+    class FetchHttpErrorException(val code: Int) : FetchFailedException("FETCH_HTTP_ERROR:$code")
+
+    /** Catch-all for a failure that doesn't fit any of the above. */
+    class FetchUnknownException(detail: String?) : FetchFailedException("FETCH_UNKNOWN", detail)
+
+    /**
+     * Whether the device currently has a network with general internet access.
+     *
+     * Checked before a subscription fetch so "you're offline" can be reported
+     * as itself, distinct from what a request over a dead connection would
+     * otherwise surface (a timeout, or a DNS failure once the OS falls back to
+     * a cached/no resolver) — both technically true, neither as useful to read
+     * as "no connection" would be.
+     *
+     * Deliberately not conditioned on `NET_CAPABILITY_VALIDATED`: that flag
+     * changes on its own timeline (see NetworkObserveModule) and a network that
+     * simply hasn't been re-validated yet is not the same claim as "offline" —
+     * a request over it should be allowed to run and fail on its own terms.
+     */
+    private fun hasActiveConnectivity(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            ?: return true // Fail open: don't block a fetch on our own uncertainty about the API.
+        val network = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /**
+     * Turns the coded [reason] string carried by a failed-update broadcast
+     * (`FETCH_*`, `HWID_*`, `AGE_KEY_REQUIRED`, or an arbitrary raw message
+     * from before these codes existed) into a short, human-readable phrase
+     * for the "Update failed" notification. Unknown codes and plain messages
+     * pass through unchanged.
+     */
+    fun describeFetchFailureReason(context: Context, reason: String?): String {
+        val r = reason.orEmpty()
+        if (r == "FETCH_NO_CONNECTIVITY") return context.getString(R.string.fetch_no_connectivity)
+        if (r == "HWID_NOT_SUPPORTED") return context.getString(R.string.hwid_not_supported_short)
+        if (r == "HWID_MAX_DEVICES_REACHED") return context.getString(R.string.hwid_max_devices_short)
+        if (r == "AGE_KEY_REQUIRED") return context.getString(R.string.age_key_required_short)
+        if (r.startsWith("FETCH_HOST_UNREACHABLE")) return context.getString(R.string.fetch_host_unreachable)
+        if (r.startsWith("FETCH_TIMEOUT")) return context.getString(R.string.fetch_timeout)
+        if (r.startsWith("FETCH_TLS_ERROR")) return context.getString(R.string.fetch_tls_error)
+        if (r.startsWith("FETCH_HTTP_ERROR")) {
+            val code = r.substringAfter(":", "").toIntOrNull() ?: 0
+            return context.getString(R.string.fetch_http_error, code)
+        }
+        if (r.startsWith("FETCH_UNKNOWN")) return context.getString(R.string.fetch_unknown)
+        return r
+    }
+
+    /** Maps an exception caught around an OkHttp call to the typed reason it represents. */
+    private fun classifyFetchException(e: Exception): FetchFailedException {
+        return when (e) {
+            is FetchFailedException -> e
+            is java.net.UnknownHostException, is java.net.ConnectException ->
+                FetchHostUnreachableException(e.message)
+            is java.net.SocketTimeoutException -> FetchTimeoutException(e.message)
+            is javax.net.ssl.SSLException -> FetchTlsErrorException(e.message)
+            else -> FetchUnknownException(e.message)
+        }
+    }
+
+    /**
      * Detects whether [content] is an age-encrypted payload (ASCII-armored or binary header).
      * Such configs can only be parsed by the core when a matching age-secret-key is present
      * (written to age-secret-key.txt alongside config.yaml).
@@ -93,7 +187,6 @@ object ProfileProcessor {
     // -------------------------------------------------------------------------
 
     private data class PrefetchResult(
-        val success: Boolean,
         val headers: okhttp3.Headers? = null,
     )
 
@@ -115,7 +208,11 @@ object ProfileProcessor {
     // -------------------------------------------------------------------------
 
     private fun prefetchProfileConfig(context: Context, source: String, targetConfigFile: File): PrefetchResult {
-        return try {
+        if (!hasActiveConnectivity(context)) {
+            throw FetchNoConnectivityException()
+        }
+
+        try {
             val request = buildProfileRequest(context, source)
             val client = OkHttpClient.Builder()
                 .connectTimeout(20, TimeUnit.SECONDS)
@@ -125,21 +222,25 @@ object ProfileProcessor {
             client.newCall(request).execute().use { response ->
                 throwIfHwidBlocked(response.headers)
 
-                if (!response.isSuccessful) return PrefetchResult(false)
+                if (!response.isSuccessful) throw FetchHttpErrorException(response.code)
 
-                val body = response.body ?: return PrefetchResult(false)
+                val body = response.body ?: throw FetchUnknownException("Empty response body")
                 targetConfigFile.parentFile?.mkdirs()
                 targetConfigFile.outputStream().use { output ->
                     body.byteStream().use { input ->
                         input.copyTo(output)
                     }
                 }
-                PrefetchResult(true, response.headers)
+                return PrefetchResult(response.headers)
             }
-        } catch (_: IOException) {
-            PrefetchResult(false)
-        } catch (_: Exception) {
-            PrefetchResult(false)
+        } catch (e: HwidNotSupportedException) {
+            throw e
+        } catch (e: HwidMaxDevicesReachedException) {
+            throw e
+        } catch (e: FetchFailedException) {
+            throw e
+        } catch (e: Exception) {
+            throw classifyFetchException(e)
         }
     }
 
@@ -154,23 +255,38 @@ object ProfileProcessor {
         ) {
             return FetchedSource(source) // Direct proxy-link text, no headers
         }
-        val request = buildProfileRequest(context, source)
-        val client = OkHttpClient.Builder()
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
-        client.newCall(request).execute().use { response ->
-            throwIfHwidBlocked(response.headers)
 
-            if (!response.isSuccessful) {
-                throw IOException("Failed to fetch profile: HTTP ${response.code}")
+        if (!hasActiveConnectivity(context)) {
+            throw FetchNoConnectivityException()
+        }
+
+        try {
+            val request = buildProfileRequest(context, source)
+            val client = OkHttpClient.Builder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .build()
+            client.newCall(request).execute().use { response ->
+                throwIfHwidBlocked(response.headers)
+
+                if (!response.isSuccessful) {
+                    throw FetchHttpErrorException(response.code)
+                }
+                val body = response.body?.string() ?: throw FetchUnknownException("Empty response body")
+                val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
+                val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
+                // Template selection is allowed unless the server locks it via pxa-template.
+                val allowTemplateSelection = pxaTemplateUrl == null && pxaTemplateScheme == null
+                return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme, headersAvailable = true, rawHeaders = response.headers)
             }
-            val body = response.body?.string() ?: throw IOException("Empty response body")
-            val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
-            val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
-            // Template selection is allowed unless the server locks it via pxa-template.
-            val allowTemplateSelection = pxaTemplateUrl == null && pxaTemplateScheme == null
-            return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme, headersAvailable = true, rawHeaders = response.headers)
+        } catch (e: HwidNotSupportedException) {
+            throw e
+        } catch (e: HwidMaxDevicesReachedException) {
+            throw e
+        } catch (e: FetchFailedException) {
+            throw e
+        } catch (e: Exception) {
+            throw classifyFetchException(e)
         }
     }
 
@@ -645,10 +761,7 @@ object ProfileProcessor {
         if (type == Profile.Type.Url && isHttpUrl) {
             if (!alreadyPrefetched) {
                 val localConfig = context.processingDir.resolve("config.yaml")
-                val result = prefetchProfileConfig(context, downloadUrlOverride ?: source, localConfig)
-                if (!result.success) {
-                    throw IOException("Unable to fetch url profile with HWID headers")
-                }
+                prefetchProfileConfig(context, downloadUrlOverride ?: source, localConfig)
             }
             return FetchTarget(context.processingDir.resolve("config.yaml").toURI().toString(), false)
         }
@@ -748,9 +861,6 @@ object ProfileProcessor {
                 ) {
                     val localConfig = context.processingDir.resolve("config.yaml")
                     val prefetchResult = prefetchProfileConfig(context, downloadUrl ?: snapshot.source, localConfig)
-                    if (!prefetchResult.success) {
-                        throw IOException("Unable to fetch url profile with HWID headers")
-                    }
                     alreadyPrefetched = true
 
                     if (localConfig.exists()) {

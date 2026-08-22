@@ -204,7 +204,11 @@ class ProfileWorker : BaseService() {
         if (ServiceStore(this).notifySubscriptionErrors) {
             val id = UndefinedIds.next()
 
-            val content = getString(R.string.format_update_failure, name, reason)
+            val content = getString(
+                R.string.format_update_failure,
+                name,
+                ProfileProcessor.describeFetchFailureReason(this, reason)
+            )
 
             val notification = resultBuilder(id, uuid)
                 .setContentTitle(getString(R.string.update_failure))

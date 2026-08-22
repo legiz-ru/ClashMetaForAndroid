@@ -44,6 +44,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 class PropertiesActivity : BaseActivity() {
+    companion object {
+        private const val HWID_DOCS_URL = "https://docs.rw/features/hwid-device-limit#hwid-headers-sent-by-remnawave"
+    }
+
     private var canceled: Boolean = false
     private lateinit var original: Profile
 
@@ -424,7 +428,14 @@ class PropertiesActivity : BaseActivity() {
                         when (issue) {
                             HwidIssue.NotSupported -> showHwidNotSupportedDialog()
                             HwidIssue.MaxDevicesReached -> showHwidMaxDevicesDialog(supportUrl)
-                            HwidIssue.None -> Toast.makeText(this, e.message ?: "Unknown", Toast.LENGTH_LONG).show()
+                            HwidIssue.None -> {
+                                val fetchIssue = resolveFetchIssue(e)
+                                if (fetchIssue != FetchIssue.None) {
+                                    showFetchErrorDialog(fetchIssue)
+                                } else {
+                                    Toast.makeText(this, e.message ?: "Unknown", Toast.LENGTH_LONG).show()
+                                }
+                            }
                         }
                     }
                 }
@@ -494,6 +505,96 @@ class PropertiesActivity : BaseActivity() {
                     .setMessage(R.string.hwid_not_supported_msg)
                     .setPositiveButton(R.string.ok) { _, _ -> cont.resume(Unit) }
                     .setNegativeButton(R.string.cancel) { _, _ -> cont.resume(Unit) }
+                    .setNeutralButton(R.string.hwid_docs_btn) { _, _ ->
+                        cont.resume(Unit)
+                        try {
+                            startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(HWID_DOCS_URL))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } catch (_: Exception) {}
+                    }
+                    .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
+                    .show()
+
+                cont.invokeOnCancellation { dialog.dismiss() }
+            }
+        }
+    }
+
+    private sealed class FetchIssue {
+        object None : FetchIssue()
+        object NoConnectivity : FetchIssue()
+        data class HostUnreachable(val detail: String?) : FetchIssue()
+        data class Timeout(val detail: String?) : FetchIssue()
+        data class TlsError(val detail: String?) : FetchIssue()
+        data class HttpError(val code: Int) : FetchIssue()
+        data class Unknown(val detail: String?) : FetchIssue()
+    }
+
+    private fun resolveFetchIssue(exception: Throwable): FetchIssue {
+        var current: Throwable? = exception
+
+        while (current != null) {
+            when (current) {
+                is ProfileProcessor.FetchNoConnectivityException -> return FetchIssue.NoConnectivity
+                is ProfileProcessor.FetchHostUnreachableException -> return FetchIssue.HostUnreachable(current.detail)
+                is ProfileProcessor.FetchTimeoutException -> return FetchIssue.Timeout(current.detail)
+                is ProfileProcessor.FetchTlsErrorException -> return FetchIssue.TlsError(current.detail)
+                is ProfileProcessor.FetchHttpErrorException -> return FetchIssue.HttpError(current.code)
+                is ProfileProcessor.FetchUnknownException -> return FetchIssue.Unknown(current.detail)
+            }
+
+            val message = current.message.orEmpty()
+            when {
+                message.equals("FETCH_NO_CONNECTIVITY", ignoreCase = true) -> return FetchIssue.NoConnectivity
+                message.startsWith("FETCH_HOST_UNREACHABLE", ignoreCase = true) -> return FetchIssue.HostUnreachable(null)
+                message.startsWith("FETCH_TIMEOUT", ignoreCase = true) -> return FetchIssue.Timeout(null)
+                message.startsWith("FETCH_TLS_ERROR", ignoreCase = true) -> return FetchIssue.TlsError(null)
+                message.startsWith("FETCH_HTTP_ERROR", ignoreCase = true) -> {
+                    val code = message.substringAfter(":", "").toIntOrNull() ?: 0
+                    return FetchIssue.HttpError(code)
+                }
+                message.startsWith("FETCH_UNKNOWN", ignoreCase = true) -> return FetchIssue.Unknown(null)
+            }
+
+            current = current.cause
+        }
+
+        return FetchIssue.None
+    }
+
+    private suspend fun showFetchErrorDialog(issue: FetchIssue) {
+        if (issue is FetchIssue.None) return
+
+        val message = when (issue) {
+            FetchIssue.NoConnectivity -> getString(R.string.fetch_no_connectivity)
+            is FetchIssue.HostUnreachable -> getString(R.string.fetch_host_unreachable)
+            is FetchIssue.Timeout -> getString(R.string.fetch_timeout)
+            is FetchIssue.TlsError -> getString(R.string.fetch_tls_error)
+            is FetchIssue.HttpError -> getString(R.string.fetch_http_error, issue.code)
+            is FetchIssue.Unknown -> getString(R.string.fetch_unknown)
+            FetchIssue.None -> return
+        }
+        val detail = when (issue) {
+            is FetchIssue.HostUnreachable -> issue.detail
+            is FetchIssue.Timeout -> issue.detail
+            is FetchIssue.TlsError -> issue.detail
+            is FetchIssue.Unknown -> issue.detail
+            else -> null
+        }
+        val fullMessage = if (!detail.isNullOrBlank()) {
+            message + "\n\n" + getString(R.string.fetch_error_detail, detail)
+        } else {
+            message
+        }
+
+        withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine<Unit> { cont ->
+                val dialog = MaterialAlertDialogBuilder(this@PropertiesActivity)
+                    .setTitle(R.string.fetch_error_title)
+                    .setMessage(fullMessage)
+                    .setPositiveButton(R.string.ok) { _, _ -> cont.resume(Unit) }
                     .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
                     .show()
 
