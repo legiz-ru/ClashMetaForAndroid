@@ -13,17 +13,19 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.componentName
+import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.design.R
 import com.github.kr328.clash.design.compose.screen.AppSettingsScreen
+import com.github.kr328.clash.design.compose.screen.NotificationPermissionStatus
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
 import com.github.kr328.clash.design.model.Behavior
 import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
 import com.github.kr328.clash.service.TemplateManager
-import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.util.ApplicationObserver
 import com.github.kr328.clash.util.GetContentCompat
+import com.github.kr328.clash.util.notificationPermissionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
@@ -31,14 +33,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AppSettingsActivity : BaseActivity(), Behavior {
-    private val srvStore by lazy { ServiceStore(this) }
-
     private val autoRestartFlow = MutableStateFlow(false)
     private val darkModeFlow = MutableStateFlow(DarkMode.Auto)
     private val delayDotsFlow = MutableStateFlow(false)
     private val hideIconFlow = MutableStateFlow(false)
     private val hideRecentsFlow = MutableStateFlow(false)
-    private val dynamicNotificationFlow = MutableStateFlow(false)
+    private val notificationsSummaryFlow = MutableStateFlow("")
     private val sendHwidFlow = MutableStateFlow(false)
     private val languageSummaryFlow = MutableStateFlow("")
 
@@ -48,7 +48,7 @@ class AppSettingsActivity : BaseActivity(), Behavior {
         delayDotsFlow.value = uiStore.delayDisplayDots
         hideIconFlow.value = uiStore.hideAppIcon
         hideRecentsFlow.value = uiStore.hideFromRecents
-        dynamicNotificationFlow.value = srvStore.dynamicNotification
+        notificationsSummaryFlow.value = notificationsSummary()
         sendHwidFlow.value = uiStore.sendHwid
         languageSummaryFlow.value = getLanguageDisplayName()
 
@@ -58,7 +58,7 @@ class AppSettingsActivity : BaseActivity(), Behavior {
             val delayDots by delayDotsFlow.collectAsStateWithLifecycle()
             val hideIcon by hideIconFlow.collectAsStateWithLifecycle()
             val hideRecents by hideRecentsFlow.collectAsStateWithLifecycle()
-            val dynamicNotification by dynamicNotificationFlow.collectAsStateWithLifecycle()
+            val notificationsSummary by notificationsSummaryFlow.collectAsStateWithLifecycle()
             val sendHwid by sendHwidFlow.collectAsStateWithLifecycle()
             val languageSummary by languageSummaryFlow.collectAsStateWithLifecycle()
 
@@ -101,11 +101,9 @@ class AppSettingsActivity : BaseActivity(), Behavior {
                         hideRecentsFlow.value = it
                         recreateAll()
                     },
-                    dynamicNotification = dynamicNotification,
-                    dynamicNotificationEnabled = !clashRunning,
-                    onDynamicNotification = {
-                        srvStore.dynamicNotification = it
-                        dynamicNotificationFlow.value = it
+                    notificationsSummary = notificationsSummary,
+                    onNotifications = {
+                        startActivity(NotificationSettingsActivity::class.intent)
                     },
                     sendHwid = sendHwid,
                     onSendHwid = { uiStore.sendHwid = it; sendHwidFlow.value = it },
@@ -117,7 +115,10 @@ class AppSettingsActivity : BaseActivity(), Behavior {
         while (isActive) {
             when (events.receive()) {
                 Event.ClashStart, Event.ClashStop, Event.ServiceRecreated -> recreate()
-                Event.ActivityStart -> languageSummaryFlow.value = getLanguageDisplayName()
+                Event.ActivityStart -> {
+                    languageSummaryFlow.value = getLanguageDisplayName()
+                    notificationsSummaryFlow.value = notificationsSummary()
+                }
                 else -> Unit
             }
         }
@@ -180,6 +181,13 @@ class AppSettingsActivity : BaseActivity(), Behavior {
             newState,
             PackageManager.DONT_KILL_APP
         )
+    }
+
+    private fun notificationsSummary(): String {
+        return when (notificationPermissionStatus()) {
+            NotificationPermissionStatus.Blocked -> getString(R.string.notification_permission_blocked_short)
+            else -> getString(R.string.notifications_summary)
+        }
     }
 
     private fun getLanguageDisplayName(): String {

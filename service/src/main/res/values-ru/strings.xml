@@ -18,4 +18,16 @@
     <string name="provider_files">Файлы провайдера</string>
     <string name="profile_updater">Обновление профиля</string>
     <string name="profile_updating">Профиль обновляется</string>
+
+    <string name="notify_expiring_soon_channel">Подписка скоро истекает</string>
+    <string name="notify_expired_channel">Подписка истекла</string>
+    <string name="notify_traffic_used_channel">Расход трафика</string>
+    <string name="subscription_expired">Подписка истекла</string>
+    <string name="subscription_traffic_used">Израсходовано %1$d%% трафика</string>
+    <plurals name="subscription_expires_in_days">
+        <item quantity="one">Подписка истекает через %d день</item>
+        <item quantity="few">Подписка истекает через %d дня</item>
+        <item quantity="many">Подписка истекает через %d дней</item>
+        <item quantity="other">Подписка истекает через %d дня</item>
+    </plurals>
 </resources>

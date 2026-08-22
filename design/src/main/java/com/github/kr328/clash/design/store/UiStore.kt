@@ -115,6 +115,17 @@ class UiStore(context: Context) {
         defaultValue = false,
     )
 
+    /**
+     * Whether the app has already asked for POST_NOTIFICATIONS once (Android
+     * 13+). Not "granted" — set on an explicit "Allow" AND on an explicit
+     * "Not now", cleared never. The point is to ask exactly once, at the first
+     * connect attempt, instead of blindly on every cold start.
+     */
+    var notificationsAsked: Boolean by store.boolean(
+        key = "notifications_asked",
+        defaultValue = false,
+    )
+
     companion object {
         private const val PREFERENCE_NAME = "ui"
 

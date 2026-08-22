@@ -16,4 +16,13 @@
     <string name="profile_updating">配置更新中</string>
     <string name="profile_service_status">配置文件服务状态</string>
     <string name="profile_process_result">配置文件处理结果</string>
+
+    <string name="notify_expiring_soon_channel">订阅即将到期</string>
+    <string name="notify_expired_channel">订阅已到期</string>
+    <string name="notify_traffic_used_channel">流量消耗</string>
+    <string name="subscription_expired">订阅已到期</string>
+    <string name="subscription_traffic_used">已使用 %1$d%% 流量</string>
+    <plurals name="subscription_expires_in_days">
+        <item quantity="other">订阅将在 %d 天后到期</item>
+    </plurals>
 </resources>

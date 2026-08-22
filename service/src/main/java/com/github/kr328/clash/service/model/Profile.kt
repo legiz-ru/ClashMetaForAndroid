@@ -41,6 +41,17 @@ data class Profile(
     val rpMp: Boolean = false,
     val simpleMode: Boolean = false,
     val ageSecretKey: String = "",
+    /**
+     * How far ahead the panel's clock is of the device's, in milliseconds
+     * (already sign-corrected — add it to [System.currentTimeMillis] to land on
+     * the panel's idea of "now"). 0 when there is no usable measurement.
+     *
+     * Device clocks drift — a wrong timezone, a manual change, a sync that
+     * hasn't run yet since boot — and [expire] is compared against the device
+     * clock everywhere it's read. Without this, "expires in 3 days" can read a
+     * day off in either direction on a phone with bad time.
+     */
+    val clockSkewMillis: Long = 0,
 ) : Parcelable {
     enum class Type {
         File, Url, External,

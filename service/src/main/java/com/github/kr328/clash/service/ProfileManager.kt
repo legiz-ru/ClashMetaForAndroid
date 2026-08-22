@@ -312,6 +312,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.rpMp,
             hdrs.simpleMode,
             ageSecretKey = ageSecretKey,
+            clockSkewMillis = hdrs.clockSkewMillis(),
         )
     }
 

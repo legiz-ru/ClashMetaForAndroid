@@ -33,9 +33,8 @@ fun AppSettingsScreen(
     onHideIcon: (Boolean) -> Unit,
     hideRecents: Boolean,
     onHideRecents: (Boolean) -> Unit,
-    dynamicNotification: Boolean,
-    dynamicNotificationEnabled: Boolean,
-    onDynamicNotification: (Boolean) -> Unit,
+    notificationsSummary: String,
+    onNotifications: () -> Unit,
     sendHwid: Boolean,
     onSendHwid: (Boolean) -> Unit,
     onCustomTemplate: () -> Unit,
@@ -99,15 +98,13 @@ fun AppSettingsScreen(
             )
         }
 
-        item { SettingsCategory(stringResource(R.string.service)) }
+        item { SettingsCategory(stringResource(R.string.notifications)) }
         item {
-            SwitchPreference(
-                title = stringResource(R.string.show_traffic),
-                summary = stringResource(R.string.show_traffic_summary),
-                icon = R.drawable.ic_baseline_domain,
-                checked = dynamicNotification,
-                enabled = dynamicNotificationEnabled,
-                onCheckedChange = onDynamicNotification,
+            PreferenceRow(
+                title = stringResource(R.string.notifications),
+                summary = notificationsSummary,
+                icon = R.drawable.ic_baseline_notifications,
+                onClick = onNotifications,
             )
         }
 

@@ -85,4 +85,53 @@ class ServiceStore(context: Context) {
         key = "dynamic_notification",
         defaultValue = true
     )
+
+    /**
+     * The transient "Updating <profile>" notification shown while a
+     * subscription update is in flight (service/clash/module unrelated —
+     * posted directly by ProfileWorker, not tied to any foreground-service
+     * contract, so unlike the tunnel status notification this one really can
+     * be turned off).
+     */
+    var notifySubscriptionProgress by store.boolean(
+        key = "notify_subscription_progress",
+        defaultValue = true
+    )
+
+    /**
+     * The "Update failed" notification, posted when a scheduled or manual
+     * subscription update errors out. On by default: it is the only channel
+     * through which a silently-broken subscription (expired key, dead URL,
+     * network change) becomes visible to the user at all.
+     */
+    var notifySubscriptionErrors by store.boolean(
+        key = "notify_subscription_errors",
+        defaultValue = true
+    )
+
+    /**
+     * "Subscription expires in N days" reminders, thresholds set by the panel
+     * via the `notify-expire-days` header (see SubscriptionAlerts). Separate
+     * from [notifyExpired]: someone may want the early warning but not care
+     * once the moment has actually passed, or vice versa.
+     */
+    var notifyExpiringSoon by store.boolean(
+        key = "notify_expiring_soon",
+        defaultValue = true
+    )
+
+    /** "Subscription expired" — the terminal alert once the countdown hits zero. */
+    var notifyExpired by store.boolean(
+        key = "notify_expired",
+        defaultValue = true
+    )
+
+    /**
+     * "N% of traffic used" reminders, thresholds set by the panel via the
+     * `notify-traffic-percent` header.
+     */
+    var notifyTrafficUsed by store.boolean(
+        key = "notify_traffic_used",
+        defaultValue = true
+    )
 }

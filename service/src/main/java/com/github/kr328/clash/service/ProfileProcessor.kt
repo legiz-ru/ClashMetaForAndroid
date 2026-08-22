@@ -23,7 +23,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.github.kr328.clash.service.subscription.SubscriptionAlerts
 import android.provider.Settings
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -1143,10 +1145,99 @@ object ProfileProcessor {
         val simpleMode: Boolean = false,
         val fallbackUrl: String = "",
         val fallbackDomain: String = "",
-    )
+        /**
+         * Reminder thresholds from `notify-expire-days`/`notify-traffic-percent`.
+         *
+         * `null` and `emptyList()` mean different things and must stay
+         * distinguishable: `null` is "the panel said nothing, use the built-in
+         * defaults" ([SubscriptionAlerts.DEFAULT_EXPIRE_DAYS] /
+         * [SubscriptionAlerts.DEFAULT_TRAFFIC_PERCENT]); an empty list is "the
+         * panel explicitly turned this kind of reminder off" — silence, not a
+         * fallback to defaults.
+         */
+        val notifyExpireDays: List<Int>? = null,
+        val notifyTrafficPercent: List<Int>? = null,
+        /**
+         * How far the panel's clock is ahead of the device's, in seconds, and
+         * when that was measured (device time). See [clockSkewMillis].
+         */
+        val clockSkewSeconds: Long = 0,
+        val clockSkewAtSeconds: Long = 0,
+    ) {
+        /**
+         * The clock-skew correction in milliseconds, or 0 when there is none to
+         * apply.
+         *
+         * A measurement older than 30 days is discarded rather than used: what
+         * is dangerous is not crystal drift (seconds a month) but the device
+         * clock having been corrected since — by the user, or by time sync after
+         * a reboot — which turns a stale correction into an error of its own
+         * size. A negative age (measured "in the future") means the same thing
+         * and is discarded the same way.
+         */
+        fun clockSkewMillis(): Long {
+            if (clockSkewSeconds == 0L || clockSkewAtSeconds == 0L) return 0
+
+            val ageSeconds = System.currentTimeMillis() / 1000 - clockSkewAtSeconds
+
+            return if (ageSeconds in 0..MAX_CLOCK_SKEW_AGE_SECONDS) clockSkewSeconds * 1000 else 0
+        }
+    }
+
+    private const val MAX_CLOCK_SKEW_AGE_SECONDS = 30L * 24 * 60 * 60
+
+    /**
+     * Parses a comma-separated list of reminder thresholds, e.g. `"7,3,1"`.
+     *
+     * Returns `null` when the panel said nothing usable (header absent, blank,
+     * or unparseable) — the caller should fall back to its own defaults then.
+     * Returns an ([lo]..[hi])-bounded, deduplicated, sorted, size-capped list
+     * otherwise, or an explicit empty list for `"off"`/`"false"` — the panel
+     * turning this kind of reminder off on purpose, not the same as staying
+     * silent about it.
+     */
+    private fun parseThresholds(raw: String?, lo: Int, hi: Int): List<Int>? {
+        val trimmed = raw?.trim().orEmpty()
+        if (trimmed.isEmpty()) return null
+
+        if (trimmed.equals("off", ignoreCase = true) || trimmed.equals("false", ignoreCase = true)) {
+            return emptyList()
+        }
+
+        val values = trimmed.split(",")
+            .mapNotNull { it.trim().toIntOrNull() }
+            .filter { it in lo..hi }
+            .distinct()
+            .sorted()
+
+        if (values.isEmpty()) return null
+
+        // A malformed or hostile panel listing a thousand thresholds is a
+        // thousand notifications, not a courtesy — cap it.
+        return values.take(MAX_THRESHOLDS)
+    }
+
+    private const val MAX_THRESHOLDS = 10
 
     fun saveProfileHeaders(profileDir: File, headers: okhttp3.Headers) {
         try {
+            val file = profileDir.resolve("profile_links.json")
+
+            // Unlike every other field below, an absent `Date` header does not
+            // mean "clear the clock-skew correction" — it means this particular
+            // response said nothing about the server's clock, and the last real
+            // measurement (if any) is still the best one available.
+            val previousSkew = if (file.exists()) {
+                try {
+                    val prev = JSONObject(file.readText())
+                    prev.optLong("clock_skew", 0) to prev.optLong("clock_skew_at", 0)
+                } catch (_: Exception) {
+                    0L to 0L
+                }
+            } else {
+                0L to 0L
+            }
+
             val json = JSONObject()
             headers["support-url"]?.let { if (it.isNotBlank()) json.put("support_url", it) }
             headers["profile-web-page-url"]?.let { if (it.isNotBlank()) json.put("profile_web_page_url", it) }
@@ -1175,7 +1266,38 @@ object ProfileProcessor {
             // Subscription fallback endpoints (absent header => not written => cleared on read).
             headers["fallback-url"]?.trim()?.let { if (it.isNotBlank()) json.put("fallback_url", it) }
             headers["fallback-domain"]?.trim()?.let { if (it.isNotBlank()) json.put("fallback_domain", it) }
-            profileDir.resolve("profile_links.json").writeText(json.toString())
+
+            // Reminder thresholds. Written WITHOUT the isNotBlank()-style skip used
+            // above: null (key absent) and [] (empty array) mean different things
+            // here and both must be representable — see ProfileHeaders' kdoc.
+            var expireDays = parseThresholds(headers["notify-expire-days"], 1, 365)
+            if (expireDays == null && isHeaderTrue(headers, "notification-subs-expire")) {
+                // Bare toggle, no explicit list — Happ-style panels only send
+                // this. Falling back to our own defaults keeps them working.
+                expireDays = SubscriptionAlerts.DEFAULT_EXPIRE_DAYS
+            }
+            if (expireDays != null) {
+                json.put("notify_expire_days", JSONArray(expireDays))
+            }
+
+            val trafficPercent = parseThresholds(headers["notify-traffic-percent"], 1, 100)
+            if (trafficPercent != null) {
+                json.put("notify_traffic_percent", JSONArray(trafficPercent))
+            }
+
+            // `Date` is a standard header, so no suffix search or base64 decoding
+            // (the way most other panel headers are read) applies to it.
+            val servedAt = headers.date("Date")?.time
+            if (servedAt != null) {
+                val nowSeconds = System.currentTimeMillis() / 1000
+                json.put("clock_skew", servedAt / 1000 - nowSeconds)
+                json.put("clock_skew_at", nowSeconds)
+            } else if (previousSkew.first != 0L || previousSkew.second != 0L) {
+                json.put("clock_skew", previousSkew.first)
+                json.put("clock_skew_at", previousSkew.second)
+            }
+
+            file.writeText(json.toString())
         } catch (_: Exception) {}
     }
 
@@ -1199,10 +1321,23 @@ object ProfileProcessor {
                     simpleMode = json.optBoolean("pxa_simple_mode", false),
                     fallbackUrl = json.optString("fallback_url", ""),
                     fallbackDomain = json.optString("fallback_domain", ""),
+                    // has() before reading: an absent key must come back null
+                    // (caller falls back to its own defaults), not [] (caller
+                    // stays silent) — see ProfileHeaders' kdoc.
+                    notifyExpireDays = if (json.has("notify_expire_days")) {
+                        json.getJSONArray("notify_expire_days").toIntList()
+                    } else null,
+                    notifyTrafficPercent = if (json.has("notify_traffic_percent")) {
+                        json.getJSONArray("notify_traffic_percent").toIntList()
+                    } else null,
+                    clockSkewSeconds = json.optLong("clock_skew", 0),
+                    clockSkewAtSeconds = json.optLong("clock_skew_at", 0),
                 )
             } else ProfileHeaders()
         } catch (_: Exception) { ProfileHeaders() }
     }
+
+    private fun JSONArray.toIntList(): List<Int> = List(length()) { getInt(it) }
 
     data class UrlHeaders(
         val title: String = "",

@@ -106,6 +106,10 @@ fun SwitchPreference(
     summary: String? = null,
     @DrawableRes icon: Int? = null,
     enabled: Boolean = true,
+    // Opens that notification's own system channel settings (sound, vibration,
+    // importance) — only meaningful for a toggle backed by its own channel, so
+    // callers pass it in rather than it being inferred here.
+    onOpenChannelSettings: (() -> Unit)? = null,
 ) {
     // Self-updating state: seeded from [checked], re-seeded when the caller passes a new
     // value (hoisted/flow-driven screens), but toggled locally on tap so LazyColumn rows
@@ -120,6 +124,17 @@ fun SwitchPreference(
         enabled = enabled,
         onClick = { change(!current) },
         trailing = {
+            if (onOpenChannelSettings != null) {
+                IconButton(onClick = onOpenChannelSettings, enabled = enabled) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_baseline_settings),
+                        contentDescription = stringResource(R.string.open_channel_settings),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
             Switch(checked = current, onCheckedChange = change, enabled = enabled)
         },
     )
