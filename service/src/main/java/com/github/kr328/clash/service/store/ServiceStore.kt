@@ -91,22 +91,26 @@ class ServiceStore(context: Context) {
      * subscription update is in flight (service/clash/module unrelated —
      * posted directly by ProfileWorker, not tied to any foreground-service
      * contract, so unlike the tunnel status notification this one really can
-     * be turned off).
+     * be turned off). Off by default: a subscription refreshes in the
+     * background every few hours, and a notification for each pass is more
+     * noise than signal for most people.
      */
     var notifySubscriptionProgress by store.boolean(
         key = "notify_subscription_progress",
-        defaultValue = true
+        defaultValue = false
     )
 
     /**
      * The "Update failed" notification, posted when a scheduled or manual
-     * subscription update errors out. On by default: it is the only channel
-     * through which a silently-broken subscription (expired key, dead URL,
-     * network change) becomes visible to the user at all.
+     * subscription update errors out. Off by default: a single failed refresh
+     * is usually transient (the panel was briefly unreachable, the network
+     * changed mid-request) and resolves itself on the next scheduled attempt,
+     * so alerting on every one of them is more noise than signal. Someone who
+     * wants to know can turn it on here.
      */
     var notifySubscriptionErrors by store.boolean(
         key = "notify_subscription_errors",
-        defaultValue = true
+        defaultValue = false
     )
 
     /**
