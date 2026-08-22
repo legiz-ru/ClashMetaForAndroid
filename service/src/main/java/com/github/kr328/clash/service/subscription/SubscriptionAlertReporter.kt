@@ -21,37 +21,27 @@ import java.util.UUID
 
 private const val STATE_FILE = "alerts.json"
 
-const val EXPIRING_SOON_CHANNEL = "subscription_expiring_channel"
-const val EXPIRED_CHANNEL = "subscription_expired_channel"
-const val TRAFFIC_CHANNEL = "subscription_traffic_channel"
+const val SUBSCRIPTION_ALERT_CHANNEL = "subscription_alert_channel"
 
 /**
- * Channels for the three subscription-alert kinds, created eagerly at app
- * startup (see MainApplication) so the per-alert "open channel settings"
- * shortcut always has a channel to point at, even before the first alert of
- * that kind has ever fired.
+ * One channel for all three subscription-alert kinds — "expiring soon",
+ * "expired", "traffic used" — matching the one switch that gates all three
+ * (see ServiceStore.notifySubscriptionAlerts): they're the same underlying
+ * thing to the user ("the subscription needs attention"), so one place to
+ * tune their sound/vibration in system settings is the right granularity,
+ * same as the one place to turn them off in-app.
  *
- * Three channels, not one: each backs an independently switchable alert (see
- * ServiceStore.notifyExpiringSoon/notifyExpired/notifyTrafficUsed), and the
- * whole point of splitting them is that the user can give each its own sound,
- * vibration or importance in system settings — one shared channel would make
- * that impossible.
+ * Created eagerly at app startup (see MainApplication), not lazily on first
+ * alert, so the "open channel settings" shortcut in the notification
+ * settings screen always has a channel to point at.
  */
 fun Context.createSubscriptionAlertChannels() {
     NotificationManagerCompat.from(this).createNotificationChannelsCompat(
         listOf(
             NotificationChannelCompat.Builder(
-                EXPIRING_SOON_CHANNEL,
+                SUBSCRIPTION_ALERT_CHANNEL,
                 NotificationManagerCompat.IMPORTANCE_DEFAULT,
-            ).setName(getString(R.string.notify_expiring_soon_channel)).build(),
-            NotificationChannelCompat.Builder(
-                EXPIRED_CHANNEL,
-                NotificationManagerCompat.IMPORTANCE_DEFAULT,
-            ).setName(getString(R.string.notify_expired_channel)).build(),
-            NotificationChannelCompat.Builder(
-                TRAFFIC_CHANNEL,
-                NotificationManagerCompat.IMPORTANCE_DEFAULT,
-            ).setName(getString(R.string.notify_traffic_used_channel)).build(),
+            ).setName(getString(R.string.subscription_alert_channel)).build(),
         ),
     )
 }
@@ -111,24 +101,13 @@ suspend fun Context.reportSubscriptionAlerts(uuid: UUID) {
 
     if (outcome.alerts.isEmpty()) return
 
-    val store = ServiceStore(this)
+    // The toggle is applied here, AFTER evaluate() rather than by feeding it
+    // empty threshold lists: the calculation and the state write above always
+    // run, so a threshold crossed while the toggle was off is still marked
+    // "shown" and will not flood the user the moment they turn it back on.
+    if (!ServiceStore(this).notifySubscriptionAlerts) return
 
-    // Per-category toggles are applied here, AFTER evaluate() rather than by
-    // feeding it empty threshold lists: the calculation and the state write
-    // above always run, so a threshold crossed while its toggle was off is
-    // still marked "shown" and will not flood the user the moment they turn
-    // the toggle back on.
-    val allowed = outcome.alerts.filter { alert ->
-        when (alert) {
-            is SubscriptionAlert.ExpiresIn -> store.notifyExpiringSoon
-            is SubscriptionAlert.Expired -> store.notifyExpired
-            is SubscriptionAlert.TrafficUsed -> store.notifyTrafficUsed
-        }
-    }
-
-    if (allowed.isEmpty()) return
-
-    allowed.forEach { notifyAlert(it, imported.name) }
+    outcome.alerts.forEach { notifyAlert(it, imported.name) }
 }
 
 private fun stateFile(profileDir: File): File = profileDir.resolve(STATE_FILE)
@@ -169,10 +148,15 @@ private fun writeState(profileDir: File, value: Map<String, Long>) {
 }
 
 private fun Context.notifyAlert(alert: SubscriptionAlert, profileName: String) {
-    val (id, channel) = when (alert) {
-        is SubscriptionAlert.ExpiresIn -> R.id.nf_subscription_expiring to EXPIRING_SOON_CHANNEL
-        is SubscriptionAlert.Expired -> R.id.nf_subscription_expired to EXPIRED_CHANNEL
-        is SubscriptionAlert.TrafficUsed -> R.id.nf_subscription_traffic to TRAFFIC_CHANNEL
+    // One shared channel (see createSubscriptionAlertChannels), but still a
+    // distinct notification id per kind — so a fresh "expires in 3 days"
+    // replaces a stale "expires in 7 days" instead of stacking, while an
+    // unrelated "traffic used" alert for the same profile stays a separate
+    // notification rather than clobbering it.
+    val id = when (alert) {
+        is SubscriptionAlert.ExpiresIn -> R.id.nf_subscription_expiring
+        is SubscriptionAlert.Expired -> R.id.nf_subscription_expired
+        is SubscriptionAlert.TrafficUsed -> R.id.nf_subscription_traffic
     }
 
     val title = when (alert) {
@@ -192,7 +176,7 @@ private fun Context.notifyAlert(alert: SubscriptionAlert, profileName: String) {
         pendingIntentFlags(PendingIntent.FLAG_UPDATE_CURRENT),
     )
 
-    val notification = NotificationCompat.Builder(this, channel)
+    val notification = NotificationCompat.Builder(this, SUBSCRIPTION_ALERT_CHANNEL)
         .setColor(getColorCompat(R.color.color_clash))
         .setSmallIcon(R.drawable.ic_logo_service)
         .setContentTitle(title)

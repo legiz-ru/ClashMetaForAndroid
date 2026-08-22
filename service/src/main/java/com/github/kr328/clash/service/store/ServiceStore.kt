@@ -110,28 +110,17 @@ class ServiceStore(context: Context) {
     )
 
     /**
-     * "Subscription expires in N days" reminders, thresholds set by the panel
-     * via the `notify-expire-days` header (see SubscriptionAlerts). Separate
-     * from [notifyExpired]: someone may want the early warning but not care
-     * once the moment has actually passed, or vice versa.
+     * Expiry and traffic reminders — "expires in N days", "expired",
+     * "N% of traffic used" — thresholds set by the panel via the
+     * `notify-expire-days`/`notify-traffic-percent` headers (see
+     * SubscriptionAlerts). One switch, not three: all three are the same
+     * underlying thing — the subscription's state needs attention — and the
+     * panel already controls which of them fire at all by what thresholds it
+     * sends (or "off" for none). Splitting the local switch further on top of
+     * that would be control over a distinction nobody asked for.
      */
-    var notifyExpiringSoon by store.boolean(
-        key = "notify_expiring_soon",
-        defaultValue = true
-    )
-
-    /** "Subscription expired" — the terminal alert once the countdown hits zero. */
-    var notifyExpired by store.boolean(
-        key = "notify_expired",
-        defaultValue = true
-    )
-
-    /**
-     * "N% of traffic used" reminders, thresholds set by the panel via the
-     * `notify-traffic-percent` header.
-     */
-    var notifyTrafficUsed by store.boolean(
-        key = "notify_traffic_used",
+    var notifySubscriptionAlerts by store.boolean(
+        key = "notify_subscription_alerts",
         defaultValue = true
     )
 }

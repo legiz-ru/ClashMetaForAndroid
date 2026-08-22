@@ -63,15 +63,9 @@ fun NotificationSettingsScreen(
     notifySubscriptionErrors: Boolean,
     onNotifySubscriptionErrors: (Boolean) -> Unit,
     onOpenErrorsChannelSettings: () -> Unit,
-    notifyExpiringSoon: Boolean,
-    onNotifyExpiringSoon: (Boolean) -> Unit,
-    onOpenExpiringSoonChannelSettings: () -> Unit,
-    notifyExpired: Boolean,
-    onNotifyExpired: (Boolean) -> Unit,
-    onOpenExpiredChannelSettings: () -> Unit,
-    notifyTrafficUsed: Boolean,
-    onNotifyTrafficUsed: (Boolean) -> Unit,
-    onOpenTrafficChannelSettings: () -> Unit,
+    notifySubscriptionAlerts: Boolean,
+    onNotifySubscriptionAlerts: (Boolean) -> Unit,
+    onOpenSubscriptionAlertsChannelSettings: () -> Unit,
 ) {
     // Individual toggles are disabled while permission is missing: leaving them
     // tappable would let the user "turn on" something that cannot possibly show
@@ -136,35 +130,13 @@ fun NotificationSettingsScreen(
         item { SettingsCategory(stringResource(R.string.notifications_subscription_alerts)) }
         item {
             SwitchPreference(
-                title = stringResource(R.string.notify_expiring_soon),
-                summary = stringResource(R.string.notify_expiring_soon_summary),
+                title = stringResource(R.string.notify_subscription_alerts),
+                summary = stringResource(R.string.notify_subscription_alerts_summary),
                 icon = R.drawable.ic_baseline_notifications,
-                checked = notifyExpiringSoon,
+                checked = notifySubscriptionAlerts,
                 enabled = rowsEnabled,
-                onCheckedChange = onNotifyExpiringSoon,
-                onOpenChannelSettings = onOpenExpiringSoonChannelSettings,
-            )
-        }
-        item {
-            SwitchPreference(
-                title = stringResource(R.string.notify_expired),
-                summary = stringResource(R.string.notify_expired_summary),
-                icon = R.drawable.ic_baseline_notifications,
-                checked = notifyExpired,
-                enabled = rowsEnabled,
-                onCheckedChange = onNotifyExpired,
-                onOpenChannelSettings = onOpenExpiredChannelSettings,
-            )
-        }
-        item {
-            SwitchPreference(
-                title = stringResource(R.string.notify_traffic_used),
-                summary = stringResource(R.string.notify_traffic_used_summary),
-                icon = R.drawable.ic_baseline_notifications,
-                checked = notifyTrafficUsed,
-                enabled = rowsEnabled,
-                onCheckedChange = onNotifyTrafficUsed,
-                onOpenChannelSettings = onOpenTrafficChannelSettings,
+                onCheckedChange = onNotifySubscriptionAlerts,
+                onOpenChannelSettings = onOpenSubscriptionAlertsChannelSettings,
             )
         }
         item {

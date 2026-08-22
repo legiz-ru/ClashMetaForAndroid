@@ -12,9 +12,7 @@ import com.github.kr328.clash.design.compose.theme.ClashTheme
 import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
 import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.service.store.ServiceStore
-import com.github.kr328.clash.service.subscription.EXPIRED_CHANNEL
-import com.github.kr328.clash.service.subscription.EXPIRING_SOON_CHANNEL
-import com.github.kr328.clash.service.subscription.TRAFFIC_CHANNEL
+import com.github.kr328.clash.service.subscription.SUBSCRIPTION_ALERT_CHANNEL
 import com.github.kr328.clash.util.notificationPermissionStatus
 import com.github.kr328.clash.util.openSystemNotificationSettings
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,27 +30,21 @@ class NotificationSettingsActivity : BaseActivity() {
     private val dynamicNotificationFlow = MutableStateFlow(false)
     private val notifySubscriptionProgressFlow = MutableStateFlow(true)
     private val notifySubscriptionErrorsFlow = MutableStateFlow(true)
-    private val notifyExpiringSoonFlow = MutableStateFlow(true)
-    private val notifyExpiredFlow = MutableStateFlow(true)
-    private val notifyTrafficUsedFlow = MutableStateFlow(true)
+    private val notifySubscriptionAlertsFlow = MutableStateFlow(true)
 
     override suspend fun main() {
         refreshPermissionStatus()
         dynamicNotificationFlow.value = srvStore.dynamicNotification
         notifySubscriptionProgressFlow.value = srvStore.notifySubscriptionProgress
         notifySubscriptionErrorsFlow.value = srvStore.notifySubscriptionErrors
-        notifyExpiringSoonFlow.value = srvStore.notifyExpiringSoon
-        notifyExpiredFlow.value = srvStore.notifyExpired
-        notifyTrafficUsedFlow.value = srvStore.notifyTrafficUsed
+        notifySubscriptionAlertsFlow.value = srvStore.notifySubscriptionAlerts
 
         setContent {
             val permissionStatus by permissionStatusFlow.collectAsStateWithLifecycle()
             val dynamicNotification by dynamicNotificationFlow.collectAsStateWithLifecycle()
             val notifySubscriptionProgress by notifySubscriptionProgressFlow.collectAsStateWithLifecycle()
             val notifySubscriptionErrors by notifySubscriptionErrorsFlow.collectAsStateWithLifecycle()
-            val notifyExpiringSoon by notifyExpiringSoonFlow.collectAsStateWithLifecycle()
-            val notifyExpired by notifyExpiredFlow.collectAsStateWithLifecycle()
-            val notifyTrafficUsed by notifyTrafficUsedFlow.collectAsStateWithLifecycle()
+            val notifySubscriptionAlerts by notifySubscriptionAlertsFlow.collectAsStateWithLifecycle()
 
             ClashTheme(variant = currentThemeVariant()) {
                 NotificationSettingsScreen(
@@ -82,29 +74,13 @@ class NotificationSettingsActivity : BaseActivity() {
                     onOpenErrorsChannelSettings = {
                         openSystemNotificationSettings(ProfileWorker.RESULT_CHANNEL)
                     },
-                    notifyExpiringSoon = notifyExpiringSoon,
-                    onNotifyExpiringSoon = {
-                        srvStore.notifyExpiringSoon = it
-                        notifyExpiringSoonFlow.value = it
+                    notifySubscriptionAlerts = notifySubscriptionAlerts,
+                    onNotifySubscriptionAlerts = {
+                        srvStore.notifySubscriptionAlerts = it
+                        notifySubscriptionAlertsFlow.value = it
                     },
-                    onOpenExpiringSoonChannelSettings = {
-                        openSystemNotificationSettings(EXPIRING_SOON_CHANNEL)
-                    },
-                    notifyExpired = notifyExpired,
-                    onNotifyExpired = {
-                        srvStore.notifyExpired = it
-                        notifyExpiredFlow.value = it
-                    },
-                    onOpenExpiredChannelSettings = {
-                        openSystemNotificationSettings(EXPIRED_CHANNEL)
-                    },
-                    notifyTrafficUsed = notifyTrafficUsed,
-                    onNotifyTrafficUsed = {
-                        srvStore.notifyTrafficUsed = it
-                        notifyTrafficUsedFlow.value = it
-                    },
-                    onOpenTrafficChannelSettings = {
-                        openSystemNotificationSettings(TRAFFIC_CHANNEL)
+                    onOpenSubscriptionAlertsChannelSettings = {
+                        openSystemNotificationSettings(SUBSCRIPTION_ALERT_CHANNEL)
                     },
                 )
             }
