@@ -29,6 +29,11 @@ import (
 // without resume support "now" means a broken download, so the decision is left
 // to the user via a toggle.
 func OnNetworkChanged(closeConnections bool) {
+	// Hold off the probes this change is about to trigger (ProbeCurrentNodes,
+	// RecoverDeadNodes) until the network has had a moment to settle — see
+	// settle.go for what this does and doesn't cover.
+	NoteNetworkChange()
+
 	// The interface cache lives for twenty seconds, and all that time the core
 	// resolves routes over an interface that no longer exists.
 	iface.FlushCache()

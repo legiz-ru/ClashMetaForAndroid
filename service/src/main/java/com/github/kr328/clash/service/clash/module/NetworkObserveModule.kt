@@ -56,12 +56,26 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     private val networkChanges: Channel<Unit> = Channel(Channel.CONFLATED)
 
     /**
+     * The current network confirmed it has internet — the callbacks drop a
+     * signal in here, same conflated-channel shape as [networkChanges].
+     */
+    private val networkReady: Channel<Unit> = Channel(Channel.CONFLATED)
+
+    /**
      * The network we consider current. Compared by object: the system hands out
      * a new [Network] for every connection, so even coming back to the same
      * Wi-Fi after a drop is a network change and cannot skip the reset.
      */
     @Volatile
     private var currentNetwork: Network? = null
+
+    /**
+     * Whether [currentNetwork] has been seen validated since it became current.
+     * Reset alongside it — a network's own validation says nothing about the
+     * next one's.
+     */
+    @Volatile
+    private var currentValidatedSeen = false
 
     /**
      * The first network we see is not a change: there is nothing to tear down
@@ -82,6 +96,10 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     /** A change landed inside the throttle window — a retry at its close is already scheduled. */
     @Volatile
     private var retriggerScheduled = false
+
+    /** A dead-node recovery pass is already scheduled — no need for a second one. */
+    @Volatile
+    private var recoverScheduled = false
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -109,6 +127,10 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             }
 
             onNetworkMaybeChanged(network)
+
+            if (network == currentNetwork) {
+                networkReady.trySend(Unit)
+            }
         }
 
         override fun onLosing(network: Network, maxMsToLive: Int) {
@@ -225,6 +247,7 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
         }
 
         currentNetwork = network
+        currentValidatedSeen = false
 
         if (!networkKnown) {
             networkKnown = true
@@ -276,8 +299,20 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
 
         Clash.notifyNetworkChanged(store.resetConnectionsOnNetworkChange)
 
+        // Already validated by the time the reset ran (the common case: a
+        // network that was already up when it became preferred) — shorten the
+        // core's settle window instead of making the probe below sit out the
+        // full five seconds for nothing.
+        if (isCurrentNetworkValidated()) {
+            currentValidatedSeen = true
+
+            Clash.notifyNetworkReady()
+        }
+
         if (isInteractive()) {
             Clash.probeCurrentNodes()
+
+            scheduleRecover(scope)
         } else {
             probePending = true
         }
@@ -285,6 +320,36 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
 
     private fun isInteractive(): Boolean =
         service.getSystemService<PowerManager>()?.isInteractive ?: true
+
+    private fun isCurrentNetworkValidated(): Boolean {
+        val network = currentNetwork ?: return false
+        val capabilities = connectivity.getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    /**
+     * A dead node isn't necessarily dead — it may just have been unlucky about
+     * when it was last checked, mid network handover. Scheduled once per
+     * change/ready cycle, [RECOVER_DELAY_MS] after the network is confirmed:
+     * long enough that routes and DNS have had a moment too, on top of the
+     * core's own settle window (see settle.go on the Go side).
+     */
+    private fun scheduleRecover(scope: CoroutineScope) {
+        if (recoverScheduled) return
+
+        recoverScheduled = true
+
+        scope.launch {
+            delay(RECOVER_DELAY_MS)
+
+            recoverScheduled = false
+
+            if (isInteractive()) {
+                Clash.recoverDeadNodes()
+            }
+        }
+    }
 
     /**
      * The network the phone is using right now: the one with the lowest weight
@@ -348,6 +413,25 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
                         networkChanges.onReceive {
                             handleNetworkChanged(scope)
                         }
+                        networkReady.onReceive {
+                            Clash.notifyNetworkReady()
+
+                            // The reset already ran (handleNetworkChanged), but the
+                            // network wasn't validated yet at that point — this is
+                            // the catch-up: it came alive a beat later, and the
+                            // probe that was skipped back then runs now instead.
+                            if (!currentValidatedSeen) {
+                                currentValidatedSeen = true
+
+                                if (isInteractive()) {
+                                    Clash.probeCurrentNodes()
+
+                                    scheduleRecover(scope)
+                                } else {
+                                    probePending = true
+                                }
+                            }
+                        }
                         screenOn.onReceive {
                             if (probePending) {
                                 probePending = false
@@ -356,6 +440,8 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
 
                                 Clash.probeCurrentNodes()
                             }
+
+                            Clash.recoverDeadNodes()
                         }
                     }
                 }
@@ -380,5 +466,13 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
          * doesn't get lost either.
          */
         private const val RESET_THROTTLE_MS = 5_000L
+
+        /**
+         * Delay before [Clash.recoverDeadNodes] after a change/ready cycle —
+         * long enough for the post-network-change probe above to have already
+         * cleared the easy cases, so recovery only has to deal with nodes that
+         * are still down.
+         */
+        private const val RECOVER_DELAY_MS = 5_000L
     }
 }
