@@ -11,8 +11,12 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.asSocketAddressText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import java.net.InetAddress
@@ -74,6 +78,10 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     /** The screen was off at the moment of the change — the probe has to catch up. */
     @Volatile
     private var probePending = false
+
+    /** A change landed inside the throttle window — a retry at its close is already scheduled. */
+    @Volatile
+    private var retriggerScheduled = false
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -164,6 +172,22 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
         return false
     }
 
+    /**
+     * Penalty for a network that hasn't confirmed it has internet behind it.
+     *
+     * Wi-Fi stuck behind a captive portal (or a router that fell over) stays
+     * connected and, transport-for-transport, still outranks cellular — even
+     * though the phone has been routing through LTE for a while. On API 28+
+     * such a network is usually pushed to the background by the system itself
+     * and we get an `onLost` via the `FOREGROUND` capability, but that
+     * capability isn't requested below 28 — and without this penalty a dead
+     * network would keep being treated as current there: no reset, and DNS
+     * still taken from it.
+     */
+    private fun unvalidatedPenalty(capabilities: NetworkCapabilities): Int {
+        return if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) 0 else 10
+    }
+
     private fun networkToInt(entry: Map.Entry<Network, NetworkInfo>): Int {
         val capabilities = connectivity.getNetworkCapabilities(entry.key)
         // calculate priority based on transport type, available state
@@ -180,7 +204,8 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_SATELLITE) -> 5
             // TRANSPORT_LOWPAN / TRANSPORT_THREAD / TRANSPORT_WIFI_AWARE are not for general internet access, which will not set as default route.
             else -> 20
-        } + (if (entry.value.isAvailable()) 0 else 10)
+        } + (if (entry.value.isAvailable()) 0 else 10) +
+            (if (capabilities == null) 0 else unvalidatedPenalty(capabilities))
     }
 
     /**
@@ -220,10 +245,29 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
      * costs a request, so with the screen off it is deferred until it turns on:
      * waking the radio for a number nobody is there to see is pointless.
      */
-    private fun handleNetworkChanged() {
+    private fun handleNetworkChanged(scope: CoroutineScope) {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastResetAt < RESET_THROTTLE_MS) {
-            Log.d("NetworkObserve reset throttled")
+        val sinceReset = now - lastResetAt
+        if (sinceReset < RESET_THROTTLE_MS) {
+            // A change landing inside the throttle window used to be lost for
+            // good. A move between networks is rarely one step: the system
+            // announces an intermediate network, the real one shows up a couple
+            // seconds later — and the network the phone actually ends up on
+            // never got its reset at all. So the window now has a trailing
+            // edge: the signal is redelivered once it closes.
+            if (!retriggerScheduled) {
+                retriggerScheduled = true
+
+                scope.launch {
+                    delay(RESET_THROTTLE_MS - sinceReset)
+
+                    retriggerScheduled = false
+
+                    networkChanges.trySend(Unit)
+                }
+            }
+
+            Log.d("NetworkObserve reset throttled, retry after window")
 
             return
         }
@@ -250,9 +294,33 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     private fun preferredNetwork(): Network? =
         networkInfos.asSequence().minByOrNull { networkToInt(it) }?.key
 
+    /**
+     * System resolvers to hand the core, from the FIRST-by-priority network
+     * that actually has a non-empty list — not simply the highest-priority one.
+     *
+     * The difference shows up exactly when it matters most: a new network is
+     * already up, but its `onLinkPropertiesChanged` hasn't arrived yet (or the
+     * carrier never hands out resolvers at all). Taking the top network's list
+     * unconditionally would come back empty, the update below would be
+     * dropped by its own guard, and the core would keep the departed
+     * network's resolvers until the next callback — domains routed DIRECT by
+     * rule don't resolve at all in the meantime.
+     *
+     * The `isNotEmpty` guard itself must stay: an empty list zeroes the core's
+     * `systemResolver`, which falls back to 114.114.114.114 and 8.8.8.8 for
+     * that case (`dns/system.go`) — a guaranteed timeout instead of a resolve
+     * for this audience.
+     */
+    private fun preferredDnsList(): List<InetAddress> {
+        return networkInfos.asSequence()
+            .sortedBy { networkToInt(it) }
+            .map { it.value.dnsList }
+            .firstOrNull { it.isNotEmpty() }
+            ?: emptyList()
+    }
+
     private fun notifyDnsChange() {
-        val dnsList = (networkInfos.asSequence().minByOrNull { networkToInt(it) }?.value?.dnsList
-            ?: emptyList()).map { x -> x.asSocketAddressText(53) }
+        val dnsList = preferredDnsList().map { x -> x.asSocketAddressText(53) }
         val prevDnsList = curDnsList
         if (dnsList.isNotEmpty() && prevDnsList != dnsList) {
             Log.i("notifyDnsChange $prevDnsList -> $dnsList")
@@ -269,21 +337,25 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
         }
 
         try {
-            while (true) {
-                select<Unit> {
-                    networks.onReceive {
-                        enqueueEvent(it)
-                    }
-                    networkChanges.onReceive {
-                        handleNetworkChanged()
-                    }
-                    screenOn.onReceive {
-                        if (probePending) {
-                            probePending = false
+            coroutineScope {
+                val scope = this
 
-                            Log.i("NetworkObserve deferred probe after screen on")
+                while (true) {
+                    select<Unit> {
+                        networks.onReceive {
+                            enqueueEvent(it)
+                        }
+                        networkChanges.onReceive {
+                            handleNetworkChanged(scope)
+                        }
+                        screenOn.onReceive {
+                            if (probePending) {
+                                probePending = false
 
-                            Clash.probeCurrentNodes()
+                                Log.i("NetworkObserve deferred probe after screen on")
+
+                                Clash.probeCurrentNodes()
+                            }
                         }
                     }
                 }
@@ -301,9 +373,11 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     companion object {
         /**
          * The system shows a move from network to network as a burst of
-         * callbacks within a fraction of a second. Five seconds on the leading
-         * edge: the first signal fires right away, the rest of the burst is
-         * skipped.
+         * callbacks within a fraction of a second. Five seconds: the first
+         * signal fires right away, the rest of the burst collapses into one
+         * redelivery once the window closes — so a burst doesn't turn into
+         * five resets in a row, but a real change landing inside the window
+         * doesn't get lost either.
          */
         private const val RESET_THROTTLE_MS = 5_000L
     }
