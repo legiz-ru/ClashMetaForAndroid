@@ -70,12 +70,18 @@ suspend fun Context.reportSubscriptionAlerts(uuid: UUID) {
     val profileDir = importedDir.resolve(uuid.toString())
     val headers = ProfileProcessor.readProfileHeaders(profileDir)
 
-    val expireDays = headers.notifyExpireDays ?: SubscriptionAlerts.DEFAULT_EXPIRE_DAYS
-    val trafficPercent = headers.notifyTrafficPercent ?: SubscriptionAlerts.DEFAULT_TRAFFIC_PERCENT
+    // null means the panel sent no notify-* header at all for this kind of
+    // reminder — not "use our own defaults", but "this panel doesn't opt in
+    // to it". SubscriptionAlerts.DEFAULT_EXPIRE_DAYS/DEFAULT_TRAFFIC_PERCENT
+    // only fill in the *thresholds* when the panel opted in with a bare
+    // `notification-subs-expire: true` (see ProfileProcessor.saveProfileHeaders);
+    // they are never a substitute for the header being absent entirely.
+    val expireDays = headers.notifyExpireDays ?: emptyList()
+    val trafficPercent = headers.notifyTrafficPercent ?: emptyList()
 
     if (expireDays.isEmpty() && trafficPercent.isEmpty()) {
-        // The panel turned both kinds of reminder off — nothing to track, and a
-        // leftover state file would just be dead weight.
+        // The panel sent no reminder headers (or explicitly turned both off) —
+        // nothing to track, and a leftover state file would just be dead weight.
         stateFile(profileDir).delete()
 
         return

@@ -1259,11 +1259,14 @@ object ProfileProcessor {
          * Reminder thresholds from `notify-expire-days`/`notify-traffic-percent`.
          *
          * `null` and `emptyList()` mean different things and must stay
-         * distinguishable: `null` is "the panel said nothing, use the built-in
-         * defaults" ([SubscriptionAlerts.DEFAULT_EXPIRE_DAYS] /
-         * [SubscriptionAlerts.DEFAULT_TRAFFIC_PERCENT]); an empty list is "the
-         * panel explicitly turned this kind of reminder off" — silence, not a
-         * fallback to defaults.
+         * distinguishable: `null` is "the panel sent no header for this kind of
+         * reminder at all" — this panel doesn't opt in, so no reminder of this
+         * kind fires, full stop; an empty list is "the panel explicitly turned
+         * this kind of reminder off" via an empty list value. Neither one falls
+         * back to [SubscriptionAlerts.DEFAULT_EXPIRE_DAYS] /
+         * [SubscriptionAlerts.DEFAULT_TRAFFIC_PERCENT] — those only fill in
+         * thresholds for the bare `notification-subs-expire: true` toggle,
+         * which is itself a header the panel had to send.
          */
         val notifyExpireDays: List<Int>? = null,
         val notifyTrafficPercent: List<Int>? = null,
