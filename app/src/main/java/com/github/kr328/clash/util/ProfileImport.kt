@@ -121,7 +121,7 @@ private fun resolveHwidImportIssue(exception: Throwable): Pair<HwidIssue, String
     while (current != null) {
         when (current) {
             is ProfileProcessor.HwidNotSupportedException ->
-                return HwidIssue.NotSupported to ""
+                return HwidIssue.NotSupported to current.supportUrl
             is ProfileProcessor.HwidMaxDevicesReachedException ->
                 return HwidIssue.MaxDevicesReached to current.supportUrl
         }
@@ -135,20 +135,26 @@ private fun resolveHwidImportIssue(exception: Throwable): Pair<HwidIssue, String
     return HwidIssue.None to ""
 }
 
-private suspend fun Context.showHwidNotSupportedImportDialog() {
+private suspend fun Context.showHwidNotSupportedImportDialog(supportUrl: String = "") {
     withContext(Dispatchers.Main) {
         suspendCancellableCoroutine<Unit> { cont ->
+            val linkUrl = supportUrl.ifEmpty { HWID_DOCS_URL }
             val dialog = MaterialAlertDialogBuilder(this@showHwidNotSupportedImportDialog)
                 .setTitle(com.github.kr328.clash.design.R.string.hwid_not_supported_title)
                 .setMessage(com.github.kr328.clash.design.R.string.hwid_not_supported_msg)
                 .setPositiveButton(com.github.kr328.clash.design.R.string.ok) { _, _ ->
                     if (cont.isActive) cont.resume(Unit)
                 }
-                .setNeutralButton(com.github.kr328.clash.design.R.string.hwid_docs_btn) { _, _ ->
+                .setNeutralButton(
+                    if (supportUrl.isEmpty())
+                        com.github.kr328.clash.design.R.string.hwid_docs_btn
+                    else
+                        com.github.kr328.clash.design.R.string.hwid_support_btn
+                ) { _, _ ->
                     if (cont.isActive) cont.resume(Unit)
                     try {
                         startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(HWID_DOCS_URL))
+                            Intent(Intent.ACTION_VIEW, Uri.parse(linkUrl))
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
                     } catch (_: Exception) {}
@@ -256,7 +262,7 @@ suspend fun Context.importProfileFromUrl(
 
     // Show HWID dialog immediately if the server already signals an error — no profile created.
     if (headers.hwidNotSupported) {
-        showHwidNotSupportedImportDialog()
+        showHwidNotSupportedImportDialog(headers.supportUrl)
         return ProfileImportResult(java.util.UUID.randomUUID(), false)
     }
     if (headers.hwidMaxDevicesReached) {
@@ -327,7 +333,7 @@ suspend fun Context.importProfileFromUrl(
         if (ageKeyRequired) {
             showAgeKeyRequiredImportDialog(uuid)
         } else when (hwidIssue) {
-            HwidIssue.NotSupported -> showHwidNotSupportedImportDialog()
+            HwidIssue.NotSupported -> showHwidNotSupportedImportDialog(hwidSupportUrl)
             HwidIssue.MaxDevicesReached -> showHwidMaxDevicesImportDialog(hwidSupportUrl)
             HwidIssue.None -> if (committed) {
                 startActivity(

@@ -426,7 +426,7 @@ class PropertiesActivity : BaseActivity() {
                     } else {
                         val (issue, supportUrl) = resolveHwidIssue(e)
                         when (issue) {
-                            HwidIssue.NotSupported -> showHwidNotSupportedDialog()
+                            HwidIssue.NotSupported -> showHwidNotSupportedDialog(supportUrl)
                             HwidIssue.MaxDevicesReached -> showHwidMaxDevicesDialog(supportUrl)
                             HwidIssue.None -> {
                                 val fetchIssue = resolveFetchIssue(e)
@@ -478,7 +478,7 @@ class PropertiesActivity : BaseActivity() {
 
         while (current != null) {
             when (current) {
-                is ProfileProcessor.HwidNotSupportedException -> return HwidIssue.NotSupported to ""
+                is ProfileProcessor.HwidNotSupportedException -> return HwidIssue.NotSupported to current.supportUrl
                 is ProfileProcessor.HwidMaxDevicesReachedException -> return HwidIssue.MaxDevicesReached to current.supportUrl
             }
 
@@ -497,19 +497,20 @@ class PropertiesActivity : BaseActivity() {
         return HwidIssue.None to ""
     }
 
-    private suspend fun showHwidNotSupportedDialog() {
+    private suspend fun showHwidNotSupportedDialog(supportUrl: String) {
         withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { cont ->
+                val linkUrl = supportUrl.ifEmpty { HWID_DOCS_URL }
                 val dialog = MaterialAlertDialogBuilder(this@PropertiesActivity)
                     .setTitle(R.string.hwid_not_supported_title)
                     .setMessage(R.string.hwid_not_supported_msg)
                     .setPositiveButton(R.string.ok) { _, _ -> cont.resume(Unit) }
                     .setNegativeButton(R.string.cancel) { _, _ -> cont.resume(Unit) }
-                    .setNeutralButton(R.string.hwid_docs_btn) { _, _ ->
+                    .setNeutralButton(if (supportUrl.isEmpty()) R.string.hwid_docs_btn else R.string.hwid_support_btn) { _, _ ->
                         cont.resume(Unit)
                         try {
                             startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse(HWID_DOCS_URL))
+                                Intent(Intent.ACTION_VIEW, Uri.parse(linkUrl))
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             )
                         } catch (_: Exception) {}

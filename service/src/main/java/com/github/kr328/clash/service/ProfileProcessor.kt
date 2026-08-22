@@ -34,7 +34,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object ProfileProcessor {
-    class HwidNotSupportedException : IOException("HWID_NOT_SUPPORTED")
+    class HwidNotSupportedException(val supportUrl: String = "") : IOException("HWID_NOT_SUPPORTED")
     class HwidMaxDevicesReachedException(val supportUrl: String = "") : IOException("HWID_MAX_DEVICES_REACHED")
 
     /** Thrown when a fetched config is age-encrypted but the profile has no age-secret-key set. */
@@ -151,7 +151,7 @@ object ProfileProcessor {
 
     private fun throwIfHwidBlocked(headers: okhttp3.Headers) {
         if (isHeaderTrue(headers, "x-hwid-not-supported")) {
-            throw HwidNotSupportedException()
+            throw HwidNotSupportedException(headers["support-url"]?.trim() ?: "")
         }
 
         if (isHeaderTrue(headers, "x-hwid-max-devices-reached")) {
