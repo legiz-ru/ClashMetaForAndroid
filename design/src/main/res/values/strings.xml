@@ -617,7 +617,7 @@
     <string name="notifications_subscription_alerts">Subscription alerts</string>
     <string name="notify_subscription_alerts">Expiry and traffic alerts</string>
     <string name="notify_subscription_alerts_summary">Remind before the subscription runs out, once it has, and when traffic use crosses a threshold — all set by the panel</string>
-    <string name="notifications_subscription_alerts_hint">Thresholds come from the panel; if it never sends any, the built-in defaults apply (1, 3, 7 days and 80%, 90%, 100% of traffic).</string>
+    <string name="notifications_subscription_alerts_hint">Requires the panel to send expiry/traffic reminder headers; if it never sends any, no reminders are shown, regardless of this switch.</string>
     <string name="open_channel_settings">Sound and vibration for this notification</string>
     <string name="notification_permission_ask_title">Show notifications?</string>
     <string name="notification_permission_ask_later">Not now</string>

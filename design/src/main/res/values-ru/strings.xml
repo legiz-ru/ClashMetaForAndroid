@@ -581,7 +581,7 @@
     <string name="notifications_subscription_alerts">Напоминания о подписке</string>
     <string name="notify_subscription_alerts">Срок и трафик</string>
     <string name="notify_subscription_alerts_summary">Напоминания о скором и фактическом окончании подписки и о расходе трафика — пороги задаёт панель</string>
-    <string name="notifications_subscription_alerts_hint">Пороги задаёт панель; если она их не присылает — действуют умолчания (1, 3, 7 дней и 80%, 90%, 100% трафика).</string>
+    <string name="notifications_subscription_alerts_hint">Работает только если панель подписки присылает заголовки напоминаний об истечении/трафике; если она их не отправляет, напоминаний не будет вне зависимости от этого переключателя.</string>
     <string name="open_channel_settings">Звук и вибрация для этого уведомления</string>
     <string name="notification_permission_ask_title">Показывать уведомления?</string>
     <string name="notification_permission_ask_later">Не сейчас</string>

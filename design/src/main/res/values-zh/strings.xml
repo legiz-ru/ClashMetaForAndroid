@@ -297,7 +297,7 @@
     <string name="notifications_subscription_alerts">订阅提醒</string>
     <string name="notify_subscription_alerts">到期与流量提醒</string>
     <string name="notify_subscription_alerts_summary">订阅即将到期、已经到期，以及流量达到阈值时提醒 —— 阈值均由面板设置</string>
-    <string name="notifications_subscription_alerts_hint">阈值由面板提供；如果面板从未发送，则使用内置默认值（1、3、7 天和 80%、90%、100% 流量）。</string>
+    <string name="notifications_subscription_alerts_hint">需要订阅面板发送到期/流量提醒相关的请求头；如果面板从未发送，则不会显示任何提醒，无论此开关是否打开。</string>
     <string name="open_channel_settings">该通知的声音与振动</string>
     <string name="notification_permission_ask_title">是否显示通知？</string>
     <string name="notification_permission_ask_later">暂不</string>
