@@ -52,6 +52,15 @@ data class Profile(
      * day off in either direction on a phone with bad time.
      */
     val clockSkewMillis: Long = 0,
+    /**
+     * Expiry/traffic reminder thresholds the panel opted this profile into
+     * via `notify-expire-days`/`notify-traffic-percent`/`notification-subs-expire`
+     * (see ProfileProcessor.ProfileHeaders). `null` means the panel sent no
+     * such header at all — the profile editor's notification-info icon is
+     * shown only when at least one of these is non-null.
+     */
+    val notifyExpireDays: List<Int>? = null,
+    val notifyTrafficPercent: List<Int>? = null,
 ) : Parcelable {
     enum class Type {
         File, Url, External,

@@ -27,6 +27,7 @@ import com.github.kr328.clash.design.util.ValidatorNotBlank
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.util.GetContentCompat
 import com.github.kr328.clash.util.withProfile
@@ -93,6 +94,7 @@ class PropertiesActivity : BaseActivity() {
                         onEditUrl = { launch { inputUrl() } },
                         onEditInterval = { launch { inputInterval() } },
                         onEditAgeKey = { launch { inputAgeKey() } },
+                        onShowSubscriptionAlertInfo = { showSubscriptionAlertInfoDialog(p) },
                         onBrowseFiles = { startActivity(FilesActivity::class.intent.setUUID(uuid)) },
                         onSelectTemplate = { launch { selectAndApplyTemplate() } },
                         onAddProxyLinks = { launch { addProxyLinks() } },
@@ -471,6 +473,39 @@ class PropertiesActivity : BaseActivity() {
                 cont.invokeOnCancellation { dialog.dismiss() }
             }
         }
+    }
+
+    /**
+     * The bell icon in [PropertiesScreen]'s top bar is shown only when the
+     * panel opted this profile into expiry/traffic reminders (see
+     * [Profile.notifyExpireDays]/[Profile.notifyTrafficPercent]) — this
+     * dialog just explains what that means and, when relevant, that the
+     * local switch for showing them is currently off.
+     */
+    private fun showSubscriptionAlertInfoDialog(profile: Profile) {
+        val lines = mutableListOf(getString(R.string.subscription_alert_info_body))
+
+        profile.notifyExpireDays?.takeIf { it.isNotEmpty() }?.let { days ->
+            lines += getString(
+                R.string.subscription_alert_info_expire,
+                days.sorted().joinToString(", "),
+            )
+        }
+        profile.notifyTrafficPercent?.takeIf { it.isNotEmpty() }?.let { percents ->
+            lines += getString(
+                R.string.subscription_alert_info_traffic,
+                percents.sorted().joinToString(", "),
+            )
+        }
+        if (!ServiceStore(this).notifySubscriptionAlerts) {
+            lines += getString(R.string.subscription_alert_info_disabled_locally)
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.subscription_alert_info_title)
+            .setMessage(lines.joinToString("\n\n"))
+            .setPositiveButton(R.string.ok, null)
+            .show()
     }
 
     private fun resolveHwidIssue(exception: Throwable): Pair<HwidIssue, String> {

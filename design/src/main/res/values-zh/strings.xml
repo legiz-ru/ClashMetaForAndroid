@@ -286,6 +286,11 @@
     <string name="access_control_apps_summary">访问控制 — 哪些应用经由隧道</string>
     <string name="access_control_all_hint">所有应用都经由隧道 — 在切换到其他模式之前，下面的勾选不起任何作用。</string>
     <string name="notifications">通知</string>
+    <string name="subscription_alert_info_title">订阅提醒</string>
+    <string name="subscription_alert_info_body">该订阅面板已为此配置文件设置了到期/流量提醒。</string>
+    <string name="subscription_alert_info_expire">到期提醒：订阅到期前 %1$s 天。</string>
+    <string name="subscription_alert_info_traffic">流量提醒：已用流量达到 %1$s%% 时。</string>
+    <string name="subscription_alert_info_disabled_locally">当前应用通知设置中已关闭此类提醒的显示。</string>
     <string name="notifications_summary">管理应用可以通知你的内容</string>
     <string name="notifications_tunnel_status">隧道状态</string>
     <string name="notifications_tunnel_status_locked">常驻通知本身无法关闭 —— VPN 运行期间 Android 要求保留它。</string>

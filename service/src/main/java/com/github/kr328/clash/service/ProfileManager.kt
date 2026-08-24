@@ -313,6 +313,8 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.simpleMode,
             ageSecretKey = ageSecretKey,
             clockSkewMillis = hdrs.clockSkewMillis(),
+            notifyExpireDays = hdrs.notifyExpireDays,
+            notifyTrafficPercent = hdrs.notifyTrafficPercent,
         )
     }
 

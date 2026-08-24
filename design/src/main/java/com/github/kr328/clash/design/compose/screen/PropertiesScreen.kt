@@ -44,6 +44,7 @@ fun PropertiesScreen(
     onEditUrl: () -> Unit,
     onEditInterval: () -> Unit,
     onEditAgeKey: () -> Unit,
+    onShowSubscriptionAlertInfo: () -> Unit,
     onBrowseFiles: () -> Unit,
     onSelectTemplate: () -> Unit,
     onAddProxyLinks: () -> Unit,
@@ -61,11 +62,21 @@ fun PropertiesScreen(
     val showHwid = profile.hwidActive
     val showAgeKey = profile.type == Profile.Type.File || profile.type == Profile.Type.Url
     val ageKeyActive = profile.ageSecretKey.isNotEmpty()
+    val showSubscriptionAlertInfo = profile.notifyExpireDays != null || profile.notifyTrafficPercent != null
 
     PreferenceScaffold(
         title = stringResource(R.string.properties),
         onBack = onBack,
         actions = {
+            if (showSubscriptionAlertInfo) {
+                IconButton(onClick = onShowSubscriptionAlertInfo) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_baseline_notifications),
+                        contentDescription = stringResource(R.string.notifications),
+                        tint = scheme.primary,
+                    )
+                }
+            }
             if (showAgeKey) {
                 IconButton(onClick = onEditAgeKey) {
                     Icon(
