@@ -45,6 +45,7 @@ fun PropertiesScreen(
     onEditInterval: () -> Unit,
     onEditAgeKey: () -> Unit,
     onShowSubscriptionAlertInfo: () -> Unit,
+    onRenewSubscription: () -> Unit,
     onBrowseFiles: () -> Unit,
     onSelectTemplate: () -> Unit,
     onAddProxyLinks: () -> Unit,
@@ -103,6 +104,16 @@ fun PropertiesScreen(
             }
         },
     ) {
+        if (profile.renewUrl.isNotEmpty()) {
+            item {
+                PreferenceRow(
+                    title = stringResource(R.string.renew_subscription),
+                    icon = R.drawable.ic_mdi_credit_card_outline,
+                    onClick = onRenewSubscription,
+                )
+            }
+        }
+
         item {
             PreferenceRow(
                 title = stringResource(R.string.name),

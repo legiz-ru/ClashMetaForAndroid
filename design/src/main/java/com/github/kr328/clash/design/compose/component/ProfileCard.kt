@@ -62,6 +62,7 @@ fun ProfileCard(
     onAnnounce: () -> Unit,
     onSupport: () -> Unit,
     onWebPage: () -> Unit,
+    onRenew: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -201,6 +202,9 @@ fun ProfileCard(
 
                 if (profile.announce.isNotEmpty()) {
                     CardActionIcon(R.drawable.ic_mdi_bullhorn_variant_outline, null, onAnnounce)
+                }
+                if (profile.renewUrl.isNotEmpty()) {
+                    CardActionIcon(R.drawable.ic_mdi_credit_card_outline, null, onRenew)
                 }
                 if (profile.supportUrl.isNotEmpty()) {
                     CardActionIcon(R.drawable.ic_mdi_face_agent, null, onSupport)

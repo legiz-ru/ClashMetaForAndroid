@@ -570,6 +570,7 @@
     <string name="subscription_alert_info_expire">Expiry reminder: %1$s days before the subscription expires.</string>
     <string name="subscription_alert_info_traffic">Traffic reminder: at %1$s%% of traffic used.</string>
     <string name="subscription_alert_info_disabled_locally">Showing these reminders is currently turned off in the app\'s notification settings.</string>
+    <string name="renew_subscription">Renew subscription</string>
     <string name="fetch_error_title">Update failed</string>
     <string name="fetch_no_connectivity">No internet connection. Check your connection and try again.</string>
     <string name="fetch_host_unreachable">The server could not be reached. It may be temporarily unavailable, or blocked on this network.</string>

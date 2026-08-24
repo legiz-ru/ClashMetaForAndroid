@@ -113,7 +113,21 @@ suspend fun Context.reportSubscriptionAlerts(uuid: UUID) {
     // "shown" and will not flood the user the moment they turn it back on.
     if (!ServiceStore(this).notifySubscriptionAlerts) return
 
-    outcome.alerts.forEach { notifyAlert(it, imported.name) }
+    outcome.alerts.forEach { notifyAlert(imported.uuid, it, imported.name) }
+}
+
+/** Intent extras carried by a subscription-alert notification's tap target. */
+const val EXTRA_SUBSCRIPTION_ALERT_UUID = "subscription_alert_uuid"
+const val EXTRA_SUBSCRIPTION_ALERT_KIND = "subscription_alert_kind"
+
+/** Same coded-string convention as the rest of this codebase's cross-boundary
+ *  reasons (HwidNotSupportedException, FETCH_* — see ProfileProcessor): a
+ *  plain Intent extra can't carry a sealed type, so the tap target on the
+ *  other side (MainActivity) recovers the alert kind from this string. */
+private fun SubscriptionAlert.toKindCode(): String = when (this) {
+    is SubscriptionAlert.Expired -> "EXPIRED"
+    is SubscriptionAlert.ExpiresIn -> "EXPIRES_IN:$days"
+    is SubscriptionAlert.TrafficUsed -> "TRAFFIC_USED:$percent"
 }
 
 private fun stateFile(profileDir: File): File = profileDir.resolve(STATE_FILE)
@@ -153,7 +167,7 @@ private fun writeState(profileDir: File, value: Map<String, Long>) {
     }
 }
 
-private fun Context.notifyAlert(alert: SubscriptionAlert, profileName: String) {
+private fun Context.notifyAlert(uuid: UUID, alert: SubscriptionAlert, profileName: String) {
     // One shared channel (see createSubscriptionAlertChannels), but still a
     // distinct notification id per kind — so a fresh "expires in 3 days"
     // replaces a stale "expires in 7 days" instead of stacking, while an
@@ -178,7 +192,9 @@ private fun Context.notifyAlert(alert: SubscriptionAlert, profileName: String) {
     val intent = PendingIntent.getActivity(
         this,
         id,
-        Intent().setComponent(Components.MAIN_ACTIVITY),
+        Intent().setComponent(Components.MAIN_ACTIVITY)
+            .putExtra(EXTRA_SUBSCRIPTION_ALERT_UUID, uuid.toString())
+            .putExtra(EXTRA_SUBSCRIPTION_ALERT_KIND, alert.toKindCode()),
         pendingIntentFlags(PendingIntent.FLAG_UPDATE_CURRENT),
     )
 

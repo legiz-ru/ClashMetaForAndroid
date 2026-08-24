@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,9 +65,11 @@ import com.github.kr328.clash.design.util.elapsedIntervalString
 import com.github.kr328.clash.design.util.toBytesString
 import com.github.kr328.clash.core.model.ProxyGroup
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.service.subscription.SubscriptionAlerts
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * Home screen (stage 5a). Mirrors the static `design_main.xml`: header, loading,
@@ -95,6 +98,7 @@ fun MainScreen(
     onOpenProviders: () -> Unit,
     onOpenSupport: (String) -> Unit,
     onOpenWebPage: (String) -> Unit,
+    onOpenRenew: (String) -> Unit,
     onAdd: (AddProfileAction) -> Unit,
     onNavigate: (SettingsNavTarget) -> Unit,
     onLatencyTest: () -> Unit,
@@ -169,6 +173,7 @@ fun MainScreen(
                             onProviders = onOpenProviders,
                             onSupport = onOpenSupport,
                             onWebPage = onOpenWebPage,
+                            onRenew = onOpenRenew,
                         )
                     }
 
@@ -460,6 +465,7 @@ private fun MainProfileCard(
     onProviders: () -> Unit,
     onSupport: (String) -> Unit,
     onWebPage: (String) -> Unit,
+    onRenew: (String) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     Card(
@@ -522,9 +528,10 @@ private fun MainProfileCard(
             // Link icons row
             val supportUrl = profile?.supportUrl.orEmpty()
             val webPageUrl = profile?.profileWebPageUrl.orEmpty()
+            val renewUrl = profile?.renewUrl.orEmpty()
             val showShortcuts = clashRunning &&
                 (profile?.globalModeMp == true || profile?.connsViewMp == true || profile?.rpMp == true)
-            if (supportUrl.isNotEmpty() || webPageUrl.isNotEmpty() || showShortcuts) {
+            if (supportUrl.isNotEmpty() || webPageUrl.isNotEmpty() || renewUrl.isNotEmpty() || showShortcuts) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -541,6 +548,9 @@ private fun MainProfileCard(
                         MainCardIcon(R.drawable.ic_mdi_database, null, onProviders)
                     }
                     Spacer(modifier = Modifier.weight(1f))
+                    if (renewUrl.isNotEmpty()) {
+                        MainCardIcon(R.drawable.ic_mdi_credit_card_outline, null, { onRenew(renewUrl) })
+                    }
                     if (supportUrl.isNotEmpty()) {
                         MainCardIcon(R.drawable.ic_mdi_face_agent, null, { onSupport(supportUrl) })
                     }
@@ -562,9 +572,55 @@ private fun MainProfileCard(
                         .padding(top = 10.dp),
                 )
             }
+
+            // Renew nudge — independent of the "Subscription alerts" notification
+            // switch (this is a UI element, not a push notification) and of
+            // whether SubscriptionAlerts has already "shown" a threshold before:
+            // it just reflects whether a threshold is crossed right now.
+            //
+            // Expiry uses the panel's own notify-expire-days when present, but
+            // falls back to the built-in defaults when the panel sent nothing —
+            // unlike the push-notification path, which stays silent without an
+            // explicit header. Traffic only evaluates when the panel actually
+            // sent notify-traffic-percent; there is no sensible default percent.
+            if (renewUrl.isNotEmpty() && profile != null) {
+                val nowMillis = System.currentTimeMillis() + profile.clockSkewMillis
+                val expireDays = profile.notifyExpireDays ?: SubscriptionAlerts.DEFAULT_EXPIRE_DAYS
+                val expireSoon = profile.expire != 0L && expireDays.isNotEmpty() &&
+                    (profile.expire - nowMillis).let { remaining ->
+                        remaining <= 0L || expireDays.any { remaining <= it * DAY_MILLIS }
+                    }
+                val trafficSoon = profile.total > 0 && !profile.notifyTrafficPercent.isNullOrEmpty() &&
+                    (profile.upload + profile.download).coerceAtLeast(0).let { used ->
+                        profile.notifyTrafficPercent.any { threshold ->
+                            val whole = used / profile.total * 100
+                            val rest = used % profile.total * 100 / profile.total
+                            whole + rest >= threshold
+                        }
+                    }
+
+                if (expireSoon || trafficSoon) {
+                    Button(
+                        onClick = { onRenew(renewUrl) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_mdi_credit_card_outline),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.renew_subscription))
+                    }
+                }
+            }
         }
     }
 }
+
+private val DAY_MILLIS = TimeUnit.DAYS.toMillis(1)
 
 @Composable
 private fun MainInfoRow(

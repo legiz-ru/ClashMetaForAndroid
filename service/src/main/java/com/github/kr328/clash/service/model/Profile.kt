@@ -29,6 +29,8 @@ data class Profile(
     val pending: Boolean,
     val supportUrl: String = "",
     val profileWebPageUrl: String = "",
+    /** `subscription-renew-url` — where to send the user to renew this subscription. */
+    val renewUrl: String = "",
     val profileTitle: String = "",
     val profileLogo: String = "",
     val profileUpdateInterval: Int = 0,

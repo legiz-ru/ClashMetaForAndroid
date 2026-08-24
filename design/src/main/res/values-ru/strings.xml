@@ -534,6 +534,7 @@
     <string name="subscription_alert_info_expire">Напоминание об истечении: за %1$s дней до истечения подписки.</string>
     <string name="subscription_alert_info_traffic">Напоминание о трафике: при использовании %1$s%% трафика.</string>
     <string name="subscription_alert_info_disabled_locally">Показ таких уведомлений сейчас выключен в настройках приложения.</string>
+    <string name="renew_subscription">Продлить подписку</string>
     <string name="fetch_error_title">Не удалось обновить</string>
     <string name="fetch_no_connectivity">Нет подключения к интернету. Проверьте соединение и попробуйте снова.</string>
     <string name="fetch_host_unreachable">Не удалось подключиться к серверу. Возможно, он временно недоступен или заблокирован в этой сети.</string>

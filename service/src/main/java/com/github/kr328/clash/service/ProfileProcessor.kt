@@ -1263,6 +1263,8 @@ object ProfileProcessor {
     data class ProfileHeaders(
         val supportUrl: String = "",
         val profileWebPageUrl: String = "",
+        /** `subscription-renew-url` — where to send the user to renew this subscription. */
+        val renewUrl: String = "",
         val profileTitle: String = "",
         val profileLogo: String = "",
         val profileUpdateInterval: Int = 0,
@@ -1374,6 +1376,7 @@ object ProfileProcessor {
             val json = JSONObject()
             headers["support-url"]?.let { if (it.isNotBlank()) json.put("support_url", it) }
             headers["profile-web-page-url"]?.let { if (it.isNotBlank()) json.put("profile_web_page_url", it) }
+            headers["subscription-renew-url"]?.let { if (it.isNotBlank()) json.put("renew_url", it) }
             headers["profile-title"]?.let { if (it.isNotBlank()) json.put("profile_title", decodeHeaderValue(it)) }
             headers["profile-logo"]?.let { if (it.isNotBlank()) json.put("profile_logo", it) }
             headers["profile-update-interval"]?.let {
@@ -1442,6 +1445,7 @@ object ProfileProcessor {
                 ProfileHeaders(
                     supportUrl = json.optString("support_url", ""),
                     profileWebPageUrl = json.optString("profile_web_page_url", ""),
+                    renewUrl = json.optString("renew_url", ""),
                     profileTitle = json.optString("profile_title", ""),
                     profileLogo = json.optString("profile_logo", ""),
                     profileUpdateInterval = json.optInt("profile_update_interval", 0),

@@ -291,6 +291,7 @@
     <string name="subscription_alert_info_expire">到期提醒：订阅到期前 %1$s 天。</string>
     <string name="subscription_alert_info_traffic">流量提醒：已用流量达到 %1$s%% 时。</string>
     <string name="subscription_alert_info_disabled_locally">当前应用通知设置中已关闭此类提醒的显示。</string>
+    <string name="renew_subscription">续费订阅</string>
     <string name="notifications_summary">管理应用可以通知你的内容</string>
     <string name="notifications_tunnel_status">隧道状态</string>
     <string name="notifications_tunnel_status_locked">常驻通知本身无法关闭 —— VPN 运行期间 Android 要求保留它。</string>

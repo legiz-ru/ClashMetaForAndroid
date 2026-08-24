@@ -95,6 +95,7 @@ class PropertiesActivity : BaseActivity() {
                         onEditInterval = { launch { inputInterval() } },
                         onEditAgeKey = { launch { inputAgeKey() } },
                         onShowSubscriptionAlertInfo = { showSubscriptionAlertInfoDialog(p) },
+                        onRenewSubscription = { openUrl(p.renewUrl) },
                         onBrowseFiles = { startActivity(FilesActivity::class.intent.setUUID(uuid)) },
                         onSelectTemplate = { launch { selectAndApplyTemplate() } },
                         onAddProxyLinks = { launch { addProxyLinks() } },
@@ -472,6 +473,14 @@ class PropertiesActivity : BaseActivity() {
                     .show()
                 cont.invokeOnCancellation { dialog.dismiss() }
             }
+        }
+    }
+
+    private fun openUrl(url: String) {
+        if (url.isEmpty()) return
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: Exception) {
         }
     }
 

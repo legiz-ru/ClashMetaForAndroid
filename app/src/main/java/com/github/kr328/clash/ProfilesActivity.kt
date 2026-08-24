@@ -97,6 +97,7 @@ class ProfilesActivity : BaseActivity() {
                     onProfileAnnounce = ::showAnnounce,
                     onProfileSupport = { openUrl(it.supportUrl) },
                     onProfileWebPage = { openUrl(it.profileWebPageUrl) },
+                    onProfileRenew = { openUrl(it.renewUrl) },
                     onProfileEdit = { startActivity(PropertiesActivity::class.intent.setUUID(it.uuid)) },
                     onProfileDelete = ::confirmDelete,
                     onNavigate = ::navigate,

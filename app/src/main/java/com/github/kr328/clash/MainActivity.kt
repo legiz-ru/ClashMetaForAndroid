@@ -41,6 +41,8 @@ import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.update.UpdateChecker
 import com.github.kr328.clash.service.data.ImportedDao
+import com.github.kr328.clash.service.subscription.EXTRA_SUBSCRIPTION_ALERT_KIND
+import com.github.kr328.clash.service.subscription.EXTRA_SUBSCRIPTION_ALERT_UUID
 import com.github.kr328.clash.service.subscription.reportSubscriptionAlerts
 import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.startClashService
@@ -55,6 +57,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @Composable
@@ -172,6 +175,7 @@ class MainActivity : BaseActivity() {
                     onOpenProviders = { startActivity(ProvidersActivity::class.intent) },
                     onOpenSupport = ::openUrl,
                     onOpenWebPage = ::openUrl,
+                    onOpenRenew = ::openUrl,
                     onAdd = ::add,
                     onNavigate = ::navigate,
                     onLatencyTest = ::latencyTestSimpleMode,
@@ -202,6 +206,7 @@ class MainActivity : BaseActivity() {
             importProfileFromUrl(it, forceAutoImport = true)
         }
         intent?.let { handleUpdateIntent(it) }
+        intent?.let { handleSubscriptionAlertIntent(it) }
         if (UpdateChecker.shouldCheck(this)) {
             launch { runUpdateCheckSilent() }
         }
@@ -531,9 +536,49 @@ class MainActivity : BaseActivity() {
             .show()
     }
 
+    private fun handleSubscriptionAlertIntent(intent: Intent) {
+        val uuid = intent.getStringExtra(EXTRA_SUBSCRIPTION_ALERT_UUID)?.let {
+            try { UUID.fromString(it) } catch (_: Exception) { null }
+        } ?: return
+        val kind = intent.getStringExtra(EXTRA_SUBSCRIPTION_ALERT_KIND) ?: return
+        launch { showSubscriptionAlertDialog(uuid, kind) }
+    }
+
+    private suspend fun showSubscriptionAlertDialog(uuid: UUID, kind: String) {
+        val profile = withProfile { queryByUUID(uuid) } ?: return
+
+        val message = when {
+            kind == "EXPIRED" ->
+                getString(com.github.kr328.clash.service.R.string.subscription_expired)
+            kind.startsWith("EXPIRES_IN:") -> {
+                val days = kind.removePrefix("EXPIRES_IN:").toIntOrNull() ?: return
+                resources.getQuantityString(
+                    com.github.kr328.clash.service.R.plurals.subscription_expires_in_days,
+                    days,
+                    days,
+                )
+            }
+            kind.startsWith("TRAFFIC_USED:") -> {
+                val percent = kind.removePrefix("TRAFFIC_USED:").toIntOrNull() ?: return
+                getString(com.github.kr328.clash.service.R.string.subscription_traffic_used, percent)
+            }
+            else -> return
+        }
+
+        val builder = MaterialAlertDialogBuilder(this)
+            .setTitle(profile.name)
+            .setMessage(message)
+            .setNegativeButton(R.string.ok, null)
+        if (profile.renewUrl.isNotEmpty()) {
+            builder.setPositiveButton(R.string.renew_subscription) { _, _ -> openUrl(profile.renewUrl) }
+        }
+        builder.show()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleSubscriptionAlertIntent(intent)
         val url = extractInstallConfigUrl(intent) ?: return
         lifecycleScope.launch {
             importProfileFromUrl(url, forceAutoImport = true)
