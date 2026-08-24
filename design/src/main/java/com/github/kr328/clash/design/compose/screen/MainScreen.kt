@@ -590,9 +590,10 @@ private fun MainProfileCard(
                     (profile.expire - nowMillis).let { remaining ->
                         remaining <= 0L || expireDays.any { remaining <= it * DAY_MILLIS }
                     }
-                val trafficSoon = profile.total > 0 && !profile.notifyTrafficPercent.isNullOrEmpty() &&
+                val trafficThresholds = profile.notifyTrafficPercent
+                val trafficSoon = profile.total > 0 && !trafficThresholds.isNullOrEmpty() &&
                     (profile.upload + profile.download).coerceAtLeast(0).let { used ->
-                        profile.notifyTrafficPercent.any { threshold ->
+                        trafficThresholds.any { threshold ->
                             val whole = used / profile.total * 100
                             val rest = used % profile.total * 100 / profile.total
                             whole + rest >= threshold
