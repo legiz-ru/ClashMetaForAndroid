@@ -530,7 +530,7 @@
     <string name="hwid_support_btn">Поддержка</string>
     <string name="hwid_docs_btn">Подробнее</string>
     <string name="subscription_alert_info_title">Напоминания о подписке</string>
-    <string name="subscription_alert_info_body">У этого профиля настроены напоминания об истечении подписки/трафике со стороны панели.</string>
+    <string name="subscription_alert_info_body">У этого профиля настроены напоминания об истечении подписки/трафике со стороны продавца.</string>
     <string name="subscription_alert_info_expire">Напоминание об истечении: за %1$s дней до истечения подписки.</string>
     <string name="subscription_alert_info_traffic">Напоминание о трафике: при использовании %1$s%% трафика.</string>
     <string name="subscription_alert_info_disabled_locally">Показ таких уведомлений сейчас выключен в настройках приложения.</string>
