@@ -11,12 +11,14 @@ import com.github.kr328.clash.design.compose.screen.NotificationSettingsScreen
 import com.github.kr328.clash.design.compose.theme.ClashTheme
 import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
 import com.github.kr328.clash.design.model.DarkMode
+import com.github.kr328.clash.service.ProfileWorker
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.subscription.SUBSCRIPTION_ALERT_CHANNEL
 import com.github.kr328.clash.util.notificationPermissionStatus
 import com.github.kr328.clash.util.openSystemNotificationSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * Everything the app can notify the user about, in one place: the permission
@@ -26,7 +28,8 @@ import kotlinx.coroutines.isActive
 class NotificationSettingsActivity : BaseActivity() {
     private val srvStore by lazy { ServiceStore(this) }
 
-    private val permissionStatusFlow = MutableStateFlow(NotificationPermissionStatus.Granted)
+    private val permissionStatusFlow =
+        MutableStateFlow<NotificationPermissionStatus>(NotificationPermissionStatus.Granted)
     private val dynamicNotificationFlow = MutableStateFlow(false)
     private val notifySubscriptionProgressFlow = MutableStateFlow(true)
     private val notifySubscriptionErrorsFlow = MutableStateFlow(true)
@@ -50,7 +53,7 @@ class NotificationSettingsActivity : BaseActivity() {
                 NotificationSettingsScreen(
                     onBack = { finish() },
                     permissionStatus = permissionStatus,
-                    onRequestPermission = ::requestPermission,
+                    onRequestPermission = { launch { requestPermission() } },
                     onOpenSystemNotificationSettings = { openSystemNotificationSettings() },
                     dynamicNotification = dynamicNotification,
                     dynamicNotificationEnabled = !clashRunning,

@@ -149,6 +149,26 @@ object ProfileProcessor {
         return headers[name]?.trim()?.equals("true", ignoreCase = true) == true
     }
 
+    // RFC 1123 ("EEE, dd MMM yyyy HH:mm:ss zzz") is the format the standard
+    // `Date` response header is sent in. Parsed by hand instead of via
+    // okhttp3.Headers.date(name) so this doesn't depend on that Kotlin-only
+    // API resolving correctly across OkHttp/Kotlin toolchain combinations;
+    // java.time is avoided since it needs desugaring below API 26.
+    private val httpDateFormat = ThreadLocal.withInitial {
+        java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("GMT")
+        }
+    }
+
+    private fun parseHttpDateMillis(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            httpDateFormat.get()!!.parse(value)?.time
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun throwIfHwidBlocked(headers: okhttp3.Headers) {
         if (isHeaderTrue(headers, "x-hwid-not-supported")) {
             throw HwidNotSupportedException(headers["support-url"]?.trim() ?: "")
@@ -1400,7 +1420,7 @@ object ProfileProcessor {
 
             // `Date` is a standard header, so no suffix search or base64 decoding
             // (the way most other panel headers are read) applies to it.
-            val servedAt = headers.date("Date")?.time
+            val servedAt = parseHttpDateMillis(headers["Date"])
             if (servedAt != null) {
                 val nowSeconds = System.currentTimeMillis() / 1000
                 json.put("clock_skew", servedAt / 1000 - nowSeconds)

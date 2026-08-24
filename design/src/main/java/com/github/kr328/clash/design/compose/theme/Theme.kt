@@ -2,8 +2,7 @@ package com.github.kr328.clash.design.compose.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -131,7 +130,6 @@ object ClashTheme {
  *
  * @param variant explicit variant; when null it is derived from [darkTheme].
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ClashTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -149,7 +147,7 @@ fun ClashTheme(
     CompositionLocalProvider(
         LocalClashExtraColors provides ClashExtraColors(),
     ) {
-        MaterialExpressiveTheme(
+        MaterialTheme(
             colorScheme = colorScheme,
             content = content,
         )
