@@ -74,7 +74,7 @@ fun PropertiesScreen(
                     Icon(
                         painter = painterResource(R.drawable.ic_baseline_notifications),
                         contentDescription = stringResource(R.string.notifications),
-                        tint = scheme.primary,
+                        tint = scheme.onSurfaceVariant,
                     )
                 }
             }
