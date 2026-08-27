@@ -9,7 +9,6 @@ import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
-import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.kr328.clash.common.util.componentName
@@ -25,6 +24,7 @@ import com.github.kr328.clash.design.store.UiStore.Companion.mainActivityAlias
 import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.util.ApplicationObserver
 import com.github.kr328.clash.util.GetContentCompat
+import com.github.kr328.clash.util.applyDynamicShortcuts
 import com.github.kr328.clash.util.notificationPermissionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -173,9 +173,10 @@ class AppSettingsActivity : BaseActivity(), Behavior {
         } else {
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         }
-        if (hide) {
-            ShortcutManagerCompat.removeAllDynamicShortcuts(this)
-        }
+        // Hiding the icon should also disable any copy the user dragged onto
+        // their home screen — a pinned shortcut isn't dynamic, so it survives
+        // removeAllDynamicShortcuts() on its own. Un-hiding restores both.
+        applyDynamicShortcuts(hide)
         packageManager.setComponentEnabledSetting(
             mainActivityAlias,
             newState,

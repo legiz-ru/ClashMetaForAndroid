@@ -18,12 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
-import androidx.core.content.pm.ShortcutInfoCompat
-import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
@@ -44,6 +40,7 @@ import com.github.kr328.clash.service.data.ImportedDao
 import com.github.kr328.clash.service.subscription.EXTRA_SUBSCRIPTION_ALERT_KIND
 import com.github.kr328.clash.service.subscription.EXTRA_SUBSCRIPTION_ALERT_UUID
 import com.github.kr328.clash.service.subscription.reportSubscriptionAlerts
+import com.github.kr328.clash.util.applyDynamicShortcuts
 import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
@@ -635,49 +632,7 @@ class MainActivity : BaseActivity() {
     }
 
     private fun setupShortcuts() {
-        if (uiStore.hideAppIcon) return
-
-        val flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-            Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
-            Intent.FLAG_ACTIVITY_NO_ANIMATION
-
-        val toggle = ShortcutInfoCompat.Builder(this, "toggle_clash")
-            .setShortLabel(getString(R.string.shortcut_toggle_short))
-            .setLongLabel(getString(R.string.shortcut_toggle_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_all))
-            .setIntent(
-                Intent(Intents.ACTION_TOGGLE_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(0)
-            .build()
-
-        val start = ShortcutInfoCompat.Builder(this, "start_clash")
-            .setShortLabel(getString(R.string.shortcut_start_short))
-            .setLongLabel(getString(R.string.shortcut_start_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_on))
-            .setIntent(
-                Intent(Intents.ACTION_START_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(1)
-            .build()
-
-        val stop = ShortcutInfoCompat.Builder(this, "stop_clash")
-            .setShortLabel(getString(R.string.shortcut_stop_short))
-            .setLongLabel(getString(R.string.shortcut_stop_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_off))
-            .setIntent(
-                Intent(Intents.ACTION_STOP_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(2)
-            .build()
-
-        ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+        applyDynamicShortcuts(uiStore.hideAppIcon)
     }
 
     private fun useDrawerNav(): Boolean {

@@ -20,7 +20,7 @@
     <string name="settings_core">Ядро</string>
     <string name="settings_active_profile">Активный профиль</string>
     <string name="proxy_group_auto_no_select">Данная группа является автоматической, в ней запрещён ручной выбор</string>
-    <string name="profile_delete_confirm">Удалить профиль «%s»?</string>
+    <string name="profile_delete_confirm">Удалить профиль «%s»? Его настройки и скачанная конфигурация будут стёрты, отмены нет.</string>
     <string name="help">Помощь</string>
     <string name="about">О программе</string>
 
@@ -430,6 +430,7 @@
     <string name="update_not_found_message">У вас установлена последняя версия.</string>
     <string name="update_error_title">Ошибка проверки обновлений</string>
 
+    <string name="shortcut_disabled">Значок приложения скрыт в настройках</string>
     <string name="shortcut_toggle_short">Вкл/выкл Clash</string>
     <string name="shortcut_toggle_long">Включить или выключить сервис Clash</string>
     <string name="shortcut_start_short">Запустить Clash</string>

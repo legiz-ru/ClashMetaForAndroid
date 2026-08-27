@@ -25,7 +25,7 @@
     <string name="settings_core">Core</string>
     <string name="settings_active_profile">Active profile</string>
     <string name="proxy_group_auto_no_select">This group is automatic; manual selection is not allowed.</string>
-    <string name="profile_delete_confirm">Delete profile \"%s\"?</string>
+    <string name="profile_delete_confirm">Delete profile \"%s\"? Its settings and downloaded configuration will be removed, there is no undo.</string>
     <string name="help">Help</string>
     <string name="about">About</string>
 
@@ -466,6 +466,7 @@
     <string name="update_not_found_message">You are using the latest version.</string>
     <string name="update_error_title">Update Check Failed</string>
 
+    <string name="shortcut_disabled">The app icon is hidden in settings</string>
     <string name="shortcut_toggle_short">Toggle Clash</string>
     <string name="shortcut_toggle_long">Toggle Clash service on/off</string>
     <string name="shortcut_start_short">Start Clash</string>
