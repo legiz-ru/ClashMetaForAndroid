@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
@@ -210,6 +211,12 @@ func HealthCheckProxy(group, name string) {
 // is skipped — which is correct, a Smart group picks per connection and has no
 // single current node to probe.
 func ProbeCurrentNodes() {
+	// Give the network a moment before trusting a failed probe — see
+	// settle.go. The only caller of this function is the network-change/
+	// -ready/screen-on handling in NetworkObserveModule, so waiting
+	// unconditionally at the top is always the right call here.
+	waitNetworkSettled()
+
 	proxies := tunnel.Proxies()
 	seen := make(map[string]bool, len(proxies))
 
@@ -256,6 +263,146 @@ func ProbeCurrentNodes() {
 		}(target, url, expectedStatus)
 	}
 }
+
+// recoverCooldown keeps RecoverDeadNodes from re-probing the same graveyard
+// every few seconds when several triggers (network-ready, screen-on) land
+// close together.
+const recoverCooldown = 20 * time.Second
+
+var (
+	recoverBusy   atomic.Bool
+	recoverLastAt atomic.Int64
+)
+
+type deadTarget struct {
+	proxy    C.Proxy
+	url      string
+	expected utils.IntRanges[uint16]
+}
+
+// groupMembers returns the proxies a group holds, for both the regular
+// outboundgroup.ProxyGroup shape and the Smart one — which does not implement
+// that interface but still has a member list via GetProxies (see proxies.go).
+func groupMembers(g checkableGroup) []C.Proxy {
+	if sg, ok := g.(*outboundgroup.Smart); ok {
+		return sg.GetProxies(false)
+	}
+
+	if pg, ok := g.(outboundgroup.ProxyGroup); ok {
+		return pg.Proxies()
+	}
+
+	return nil
+}
+
+// RecoverDeadNodes re-probes every proxy currently marked dead for its
+// group's test URL.
+//
+// Called after the network comes back — see NetworkObserveModule — on the
+// idea that a node that failed while the connection was down or mid-handover
+// isn't necessarily dead, just unlucky about when it was last checked; the
+// regular per-group health check only runs on a schedule or a tap, and could
+// leave a perfectly fine node marked dead for a long time otherwise.
+//
+// Unlike upstream's version of this feature (Mrvibecodic/clod-clash-android),
+// there is no core-side suppression of "just failed, don't mark it dead"
+// during the settle window here (see settle.go) — this function only makes
+// sure it does not itself run before the window closes; a probe from
+// somewhere else during that window is unaffected.
+func RecoverDeadNodes() {
+	if !recoverBusy.CompareAndSwap(false, true) {
+		return
+	}
+
+	defer recoverBusy.Store(false)
+
+	if time.Since(time.Unix(0, recoverLastAt.Load())) < recoverCooldown {
+		return
+	}
+
+	waitNetworkSettled()
+
+	targets := make([]deadTarget, 0)
+	seen := make(map[string]bool)
+
+	for _, p := range tunnel.Proxies() {
+		g, ok := p.Adapter().(checkableGroup)
+		if !ok {
+			continue
+		}
+
+		url, expected := groupCheckOptions(g)
+		if url == "" {
+			continue
+		}
+
+		for _, member := range groupMembers(g) {
+			if _, isGroup := member.Adapter().(checkableGroup); isGroup {
+				continue
+			}
+
+			if member.AliveForTestUrl(url) {
+				continue
+			}
+
+			key := member.Name() + "|" + url
+			if seen[key] {
+				continue
+			}
+
+			seen[key] = true
+
+			targets = append(targets, deadTarget{member, url, expected})
+		}
+	}
+
+	if len(targets) == 0 {
+		return
+	}
+
+	recoverLastAt.Store(time.Now().UnixNano())
+
+	log.Infoln("Recover dead nodes: %d to re-probe", len(targets))
+
+	// A concurrency cap, not a total-time budget: unlike ProbeCurrentNodes
+	// (one probe per group), this can be dozens of nodes at once — no cap
+	// would mean dozens of simultaneous connections through the outbound
+	// right when the network just came back.
+	sem := make(chan struct{}, recoverConcurrency)
+
+	wg := &sync.WaitGroup{}
+
+	var revived atomic.Int32
+
+	for _, t := range targets {
+		wg.Add(1)
+
+		go func(t deadTarget) {
+			defer wg.Done()
+
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+			defer cancel()
+
+			delay, err := t.proxy.URLTest(ctx, t.url, t.expected)
+			if err != nil {
+				return
+			}
+
+			revived.Add(1)
+
+			log.Infoln("Recover dead nodes: %s alive, %d ms", t.proxy.Name(), delay)
+		}(t)
+	}
+
+	wg.Wait()
+
+	log.Infoln("Recover dead nodes: %d of %d revived", revived.Load(), len(targets))
+}
+
+const recoverConcurrency = 8
 
 func HealthCheckAll() {
 	for _, g := range QueryProxyGroupNames(false) {

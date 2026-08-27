@@ -10,6 +10,15 @@
     <string name="update_failure">Не удалось обновить</string>
     <string name="format_update_complete">Обновление %s завершено</string>
     <string name="format_update_failure">Обновление %1$s: %2$s</string>
+    <string name="fetch_no_connectivity">нет подключения к интернету</string>
+    <string name="fetch_host_unreachable">сервер недоступен</string>
+    <string name="fetch_timeout">сервер не ответил вовремя</string>
+    <string name="fetch_tls_error">не удалось установить защищённое соединение</string>
+    <string name="fetch_http_error">сервер вернул ошибку %1$d</string>
+    <string name="fetch_unknown">не удалось получить подписку</string>
+    <string name="hwid_not_supported_short">требуется передача HWID</string>
+    <string name="hwid_max_devices_short">достигнут лимит устройств</string>
+    <string name="age_key_required_short">зашифрованный конфиг, нужен ключ</string>
     <string name="running">Работает</string>
     <string name="loading">Загружается</string>
     <string name="clash_meta_for_android">Prizrak-Box</string>
@@ -18,4 +27,14 @@
     <string name="provider_files">Файлы провайдера</string>
     <string name="profile_updater">Обновление профиля</string>
     <string name="profile_updating">Профиль обновляется</string>
+
+    <string name="subscription_alert_channel">Срок и трафик подписки</string>
+    <string name="subscription_expired">Подписка истекла</string>
+    <string name="subscription_traffic_used">Израсходовано %1$d%% трафика</string>
+    <plurals name="subscription_expires_in_days">
+        <item quantity="one">Подписка истекает через %d день</item>
+        <item quantity="few">Подписка истекает через %d дня</item>
+        <item quantity="many">Подписка истекает через %d дней</item>
+        <item quantity="other">Подписка истекает через %d дня</item>
+    </plurals>
 </resources>

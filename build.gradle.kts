@@ -12,6 +12,7 @@ buildscript {
         maven("https://raw.githubusercontent.com/MetaCubeX/maven-backup/main/releases")
     }
     dependencies {
+        classpath(libs.build.r8)
         classpath(libs.build.android)
         classpath(libs.build.kotlin.common)
         classpath(libs.build.kotlin.serialization)
@@ -68,7 +69,7 @@ subprojects {
                 else "com.github.kr328.clash.$name"
             }
 
-            minSdk = 21
+            minSdk = 23
             targetSdk = 35
 
             versionName = "1.1"

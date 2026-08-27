@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.Build
+import androidx.core.app.NotificationManagerCompat
 import com.github.kr328.clash.common.compat.pendingIntentFlags
 import com.github.kr328.clash.common.constants.Components
 import com.github.kr328.clash.common.log.Log
@@ -103,6 +104,18 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         return super.onStartCommand(intent, flags, startId)
     }
 
+    /**
+     * The system revoked our VPN — another app took over as the active VPN,
+     * or the user disabled it from system settings. VpnService does not stop
+     * itself on its own; without this the service (and its foreground
+     * notification) would keep running as a ghost after losing the tun fd.
+     */
+    override fun onRevoke() {
+        Log.i("TunService revoked")
+
+        stopSelf()
+    }
+
     override fun onDestroy() {
         TunModule.requestStop()
 
@@ -111,6 +124,8 @@ class TunService : VpnService(), CoroutineScope by CoroutineScope(Dispatchers.De
         sendClashStopped(reason)
 
         cancelAndJoinBlocking()
+
+        NotificationManagerCompat.from(this).cancel(R.id.nf_clash_status)
 
         Log.i("TunService destroyed: ${reason ?: "successfully"}")
 

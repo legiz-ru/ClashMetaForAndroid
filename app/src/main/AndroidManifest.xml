@@ -177,6 +177,11 @@
             android:exported="false"
             android:label="@string/app" />
         <activity
+            android:name=".NotificationSettingsActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/notifications" />
+        <activity
             android:name=".OverrideSettingsActivity"
             android:configChanges="uiMode"
             android:exported="false"

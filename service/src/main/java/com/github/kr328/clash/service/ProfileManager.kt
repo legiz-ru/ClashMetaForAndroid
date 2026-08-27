@@ -300,6 +300,7 @@ class ProfileManager(private val context: Context) : IProfileManager,
             pending != null,
             hdrs.supportUrl,
             hdrs.profileWebPageUrl,
+            hdrs.renewUrl,
             hdrs.profileTitle,
             hdrs.profileLogo,
             hdrs.profileUpdateInterval,
@@ -312,6 +313,9 @@ class ProfileManager(private val context: Context) : IProfileManager,
             hdrs.rpMp,
             hdrs.simpleMode,
             ageSecretKey = ageSecretKey,
+            clockSkewMillis = hdrs.clockSkewMillis(),
+            notifyExpireDays = hdrs.notifyExpireDays,
+            notifyTrafficPercent = hdrs.notifyTrafficPercent,
         )
     }
 

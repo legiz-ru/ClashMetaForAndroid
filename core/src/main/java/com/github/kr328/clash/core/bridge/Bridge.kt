@@ -34,6 +34,8 @@ object Bridge {
     external fun nativeHealthCheckAll()
     external fun nativeNotifyNetworkChanged(closeConnections: Boolean)
     external fun nativeProbeCurrentNodes()
+    external fun nativeNotifyNetworkReady()
+    external fun nativeRecoverDeadNodes()
     external fun nativePatchSelector(selector: String, name: String): Boolean
     external fun nativeFetchAndValid(
         completable: FetchCallback,

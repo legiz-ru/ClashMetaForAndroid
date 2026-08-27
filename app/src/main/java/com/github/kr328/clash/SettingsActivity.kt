@@ -26,8 +26,12 @@ class SettingsActivity : BaseActivity() {
     private val hasProfilesFlow = MutableStateFlow(true)
 
     override suspend fun main() {
-        hasProfilesFlow.value = withProfile { queryAll().isNotEmpty() }
-
+        // setContent() first, data after: querying profiles is a suspend
+        // IPC call, and running it before setContent() left the activity's
+        // window visible with nothing drawn into it yet — a blank flash
+        // between window-shown and first Compose frame. Filling in the flow
+        // once content is already on screen just recomposes, same as it
+        // already does on ProfileChanged/ActivityStart below.
         setContent {
             val isRunning by running.collectAsStateWithLifecycle()
             val hasProfiles by hasProfilesFlow.collectAsStateWithLifecycle()
@@ -43,6 +47,8 @@ class SettingsActivity : BaseActivity() {
                 )
             }
         }
+
+        hasProfilesFlow.value = withProfile { queryAll().isNotEmpty() }
 
         while (isActive) {
             when (events.receive()) {

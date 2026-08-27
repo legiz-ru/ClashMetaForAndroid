@@ -85,4 +85,46 @@ class ServiceStore(context: Context) {
         key = "dynamic_notification",
         defaultValue = true
     )
+
+    /**
+     * The transient "Updating <profile>" notification shown while a
+     * subscription update is in flight (service/clash/module unrelated —
+     * posted directly by ProfileWorker, not tied to any foreground-service
+     * contract, so unlike the tunnel status notification this one really can
+     * be turned off). Off by default: a subscription refreshes in the
+     * background every few hours, and a notification for each pass is more
+     * noise than signal for most people.
+     */
+    var notifySubscriptionProgress by store.boolean(
+        key = "notify_subscription_progress",
+        defaultValue = false
+    )
+
+    /**
+     * The "Update failed" notification, posted when a scheduled or manual
+     * subscription update errors out. Off by default: a single failed refresh
+     * is usually transient (the panel was briefly unreachable, the network
+     * changed mid-request) and resolves itself on the next scheduled attempt,
+     * so alerting on every one of them is more noise than signal. Someone who
+     * wants to know can turn it on here.
+     */
+    var notifySubscriptionErrors by store.boolean(
+        key = "notify_subscription_errors",
+        defaultValue = false
+    )
+
+    /**
+     * Expiry and traffic reminders — "expires in N days", "expired",
+     * "N% of traffic used" — thresholds set by the panel via the
+     * `notify-expire-days`/`notify-traffic-percent` headers (see
+     * SubscriptionAlerts). One switch, not three: all three are the same
+     * underlying thing — the subscription's state needs attention — and the
+     * panel already controls which of them fire at all by what thresholds it
+     * sends (or "off" for none). Splitting the local switch further on top of
+     * that would be control over a distinction nobody asked for.
+     */
+    var notifySubscriptionAlerts by store.boolean(
+        key = "notify_subscription_alerts",
+        defaultValue = true
+    )
 }

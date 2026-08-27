@@ -25,7 +25,7 @@
     <string name="settings_core">Core</string>
     <string name="settings_active_profile">Active profile</string>
     <string name="proxy_group_auto_no_select">This group is automatic; manual selection is not allowed.</string>
-    <string name="profile_delete_confirm">Delete profile \"%s\"?</string>
+    <string name="profile_delete_confirm">Delete profile \"%s\"? Its settings and downloaded configuration will be removed, there is no undo.</string>
     <string name="help">Help</string>
     <string name="about">About</string>
 
@@ -466,6 +466,7 @@
     <string name="update_not_found_message">You are using the latest version.</string>
     <string name="update_error_title">Update Check Failed</string>
 
+    <string name="shortcut_disabled">The app icon is hidden in settings</string>
     <string name="shortcut_toggle_short">Toggle Clash</string>
     <string name="shortcut_toggle_long">Toggle Clash service on/off</string>
     <string name="shortcut_start_short">Start Clash</string>
@@ -564,6 +565,21 @@
     <string name="hwid_max_devices_title">Device limit reached</string>
     <string name="hwid_max_devices_msg">You have reached the maximum number of devices for this subscription.</string>
     <string name="hwid_support_btn">Support</string>
+    <string name="hwid_docs_btn">Learn more</string>
+    <string name="subscription_alert_info_title">Subscription reminders</string>
+    <string name="subscription_alert_info_body">This profile has expiry/traffic reminders configured by the subscription panel.</string>
+    <string name="subscription_alert_info_expire">Expiry reminder: %1$s days before the subscription expires.</string>
+    <string name="subscription_alert_info_traffic">Traffic reminder: at %1$s%% of traffic used.</string>
+    <string name="subscription_alert_info_disabled_locally">Showing these reminders is currently turned off in the app\'s notification settings.</string>
+    <string name="renew_subscription">Renew subscription</string>
+    <string name="fetch_error_title">Update failed</string>
+    <string name="fetch_no_connectivity">No internet connection. Check your connection and try again.</string>
+    <string name="fetch_host_unreachable">The server could not be reached. It may be temporarily unavailable, or blocked on this network.</string>
+    <string name="fetch_timeout">The server took too long to respond. Try again later.</string>
+    <string name="fetch_tls_error">A secure connection to the server could not be established.</string>
+    <string name="fetch_http_error">The server returned an error (code %1$d).</string>
+    <string name="fetch_unknown">The subscription could not be fetched.</string>
+    <string name="fetch_error_detail">Details: %1$s</string>
 
     <!-- Profile card shortcut icons -->
     <string name="mode_selector_title">Connection Mode</string>
@@ -596,4 +612,25 @@
     <string name="access_control_apps">Apps</string>
     <string name="access_control_apps_summary">Access control — which apps go through the tunnel</string>
     <string name="access_control_all_hint">All apps go through the tunnel — the checkboxes below change nothing until you pick another mode.</string>
+    <string name="notifications">Notifications</string>
+    <string name="notifications_summary">Manage what the app can notify you about</string>
+    <string name="notifications_tunnel_status">Tunnel status</string>
+    <string name="notifications_tunnel_status_locked">The ongoing notification itself can\'t be turned off — Android requires it while the VPN is running.</string>
+    <string name="notifications_subscription_updates">Subscription updates</string>
+    <string name="show_update_progress">Show update progress</string>
+    <string name="show_update_progress_summary">A transient notification while a subscription update is running</string>
+    <string name="show_update_errors">Show update errors</string>
+    <string name="show_update_errors_summary">The only way to notice a subscription that silently stopped updating</string>
+    <string name="notifications_subscription_alerts">Subscription alerts</string>
+    <string name="notify_subscription_alerts">Expiry and traffic alerts</string>
+    <string name="notify_subscription_alerts_summary">Remind before the subscription runs out, once it has, and when traffic use crosses a threshold — all set by the panel</string>
+    <string name="notifications_subscription_alerts_hint">Requires the panel to send expiry/traffic reminder headers; if it never sends any, no reminders are shown, regardless of this switch.</string>
+    <string name="open_channel_settings">Sound and vibration for this notification</string>
+    <string name="notification_permission_ask_title">Show notifications?</string>
+    <string name="notification_permission_ask_later">Not now</string>
+    <string name="notification_permission_ask_text">The app needs the notification permission to show the tunnel status and subscription warnings.</string>
+    <string name="notification_permission_ask_allow">Allow</string>
+    <string name="notification_permission_blocked">Notifications are blocked in system settings — nothing below will actually show up until this is fixed.</string>
+    <string name="notification_open_settings">Open settings</string>
+    <string name="notification_permission_blocked_short">Blocked in system settings</string>
 </resources>

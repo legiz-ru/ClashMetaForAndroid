@@ -164,6 +164,28 @@ object Clash {
         Bridge.nativeProbeCurrentNodes()
     }
 
+    /**
+     * Tell the core the network the phone is currently using has confirmed it
+     * has internet — shortens the settle window that holds [probeCurrentNodes]
+     * and [recoverDeadNodes] back after a network change, instead of waiting
+     * out the full window when the network is already known good.
+     */
+    fun notifyNetworkReady() {
+        Bridge.nativeNotifyNetworkReady()
+    }
+
+    /**
+     * Re-probe every proxy currently marked dead for its group's test URL.
+     *
+     * Meant to run once the network is back: a node that failed a probe while
+     * the connection was down, or mid-handover, isn't necessarily dead — just
+     * unlucky about when it was last checked — and the regular per-group
+     * health check only runs on a schedule or a tap.
+     */
+    fun recoverDeadNodes() {
+        Bridge.nativeRecoverDeadNodes()
+    }
+
     fun patchSelector(selector: String, name: String): Boolean {
         return Bridge.nativePatchSelector(selector, name)
     }

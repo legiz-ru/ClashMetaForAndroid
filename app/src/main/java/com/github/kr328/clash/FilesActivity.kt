@@ -54,7 +54,9 @@ class FilesActivity : BaseActivity() {
         val root = uuid.toString()
 
         val client = FilesClient(this)
-        val stack = Stack<String>()
+        // Retained: the folder the user drilled into shouldn't reset to the
+        // root just because the screen rotated.
+        val stack = retainedValue("files_stack") { Stack<String>() }
         val configurationEditable = profile.type != Profile.Type.Url
 
         fetch(client, stack, root)

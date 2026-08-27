@@ -97,6 +97,7 @@ class ProfilesActivity : BaseActivity() {
                     onProfileAnnounce = ::showAnnounce,
                     onProfileSupport = { openUrl(it.supportUrl) },
                     onProfileWebPage = { openUrl(it.profileWebPageUrl) },
+                    onProfileRenew = { openUrl(it.renewUrl) },
                     onProfileEdit = { startActivity(PropertiesActivity::class.intent.setUUID(it.uuid)) },
                     onProfileDelete = ::confirmDelete,
                     onNavigate = ::navigate,
@@ -308,8 +309,10 @@ class ProfilesActivity : BaseActivity() {
         updatingFlow.value = updatingFlow.value - uuid
         launch {
             val name = withProfile { queryByUUID(uuid)?.name }
+            val friendlyReason = com.github.kr328.clash.service.ProfileProcessor
+                .describeFetchFailureReason(this@ProfilesActivity, reason)
             MaterialAlertDialogBuilder(this@ProfilesActivity)
-                .setMessage(getString(R.string.toast_profile_updated_failed, name, reason))
+                .setMessage(getString(R.string.toast_profile_updated_failed, name, friendlyReason))
                 .setPositiveButton(R.string.edit) { _, _ ->
                     startActivity(PropertiesActivity::class.intent.setUUID(uuid))
                 }

@@ -23,7 +23,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.github.kr328.clash.service.subscription.SubscriptionAlerts
 import android.provider.Settings
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -32,11 +34,105 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object ProfileProcessor {
-    class HwidNotSupportedException : IOException("HWID_NOT_SUPPORTED")
+    class HwidNotSupportedException(val supportUrl: String = "") : IOException("HWID_NOT_SUPPORTED")
     class HwidMaxDevicesReachedException(val supportUrl: String = "") : IOException("HWID_MAX_DEVICES_REACHED")
 
     /** Thrown when a fetched config is age-encrypted but the profile has no age-secret-key set. */
     class AgeKeyRequiredException : IOException("AGE_KEY_REQUIRED")
+
+    /**
+     * A subscription fetch failed for a distinguishable reason.
+     *
+     * [message] is a short code, not prose — same convention as
+     * [HwidNotSupportedException]/[AgeKeyRequiredException]: `sendProfileUpdateFailed`
+     * carries only a plain `String` across the service boundary, so the type
+     * information these classes give directly is only available to a caller
+     * standing right next to the throw (e.g. PropertiesActivity's own update
+     * button); everyone else has to recover the reason from the message text,
+     * hence a fixed code rather than a sentence. [detail] is the underlying
+     * exception's own message, kept separate so callers can show it as a
+     * secondary, technical line without it drowning out the plain-language one.
+     */
+    open class FetchFailedException(message: String, val detail: String? = null) : IOException(message)
+
+    /** No active network at all — checked before the request is even attempted. */
+    class FetchNoConnectivityException : FetchFailedException("FETCH_NO_CONNECTIVITY")
+
+    /** DNS didn't resolve, or the connection was refused/unreachable. */
+    class FetchHostUnreachableException(detail: String?) : FetchFailedException("FETCH_HOST_UNREACHABLE", detail)
+
+    /** Connect or read timed out. */
+    class FetchTimeoutException(detail: String?) : FetchFailedException("FETCH_TIMEOUT", detail)
+
+    /** TLS handshake or certificate validation failed. */
+    class FetchTlsErrorException(detail: String?) : FetchFailedException("FETCH_TLS_ERROR", detail)
+
+    /** The server answered, but not with 2xx. [code] is folded into the message
+     *  (`FETCH_HTTP_ERROR:404`) since it has to survive the same string-only
+     *  boundary as the rest of this hierarchy. */
+    class FetchHttpErrorException(val code: Int) : FetchFailedException("FETCH_HTTP_ERROR:$code")
+
+    /** Catch-all for a failure that doesn't fit any of the above. */
+    class FetchUnknownException(detail: String?) : FetchFailedException("FETCH_UNKNOWN", detail)
+
+    /**
+     * Whether the device currently has a network with general internet access.
+     *
+     * Checked before a subscription fetch so "you're offline" can be reported
+     * as itself, distinct from what a request over a dead connection would
+     * otherwise surface (a timeout, or a DNS failure once the OS falls back to
+     * a cached/no resolver) — both technically true, neither as useful to read
+     * as "no connection" would be.
+     *
+     * Deliberately not conditioned on `NET_CAPABILITY_VALIDATED`: that flag
+     * changes on its own timeline (see NetworkObserveModule) and a network that
+     * simply hasn't been re-validated yet is not the same claim as "offline" —
+     * a request over it should be allowed to run and fail on its own terms.
+     */
+    private fun hasActiveConnectivity(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            ?: return true // Fail open: don't block a fetch on our own uncertainty about the API.
+        val network = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /**
+     * Turns the coded [reason] string carried by a failed-update broadcast
+     * (`FETCH_*`, `HWID_*`, `AGE_KEY_REQUIRED`, or an arbitrary raw message
+     * from before these codes existed) into a short, human-readable phrase
+     * for the "Update failed" notification. Unknown codes and plain messages
+     * pass through unchanged.
+     */
+    fun describeFetchFailureReason(context: Context, reason: String?): String {
+        val r = reason.orEmpty()
+        if (r == "FETCH_NO_CONNECTIVITY") return context.getString(R.string.fetch_no_connectivity)
+        if (r == "HWID_NOT_SUPPORTED") return context.getString(R.string.hwid_not_supported_short)
+        if (r == "HWID_MAX_DEVICES_REACHED") return context.getString(R.string.hwid_max_devices_short)
+        if (r == "AGE_KEY_REQUIRED") return context.getString(R.string.age_key_required_short)
+        if (r.startsWith("FETCH_HOST_UNREACHABLE")) return context.getString(R.string.fetch_host_unreachable)
+        if (r.startsWith("FETCH_TIMEOUT")) return context.getString(R.string.fetch_timeout)
+        if (r.startsWith("FETCH_TLS_ERROR")) return context.getString(R.string.fetch_tls_error)
+        if (r.startsWith("FETCH_HTTP_ERROR")) {
+            val code = r.substringAfter(":", "").toIntOrNull() ?: 0
+            return context.getString(R.string.fetch_http_error, code)
+        }
+        if (r.startsWith("FETCH_UNKNOWN")) return context.getString(R.string.fetch_unknown)
+        return r
+    }
+
+    /** Maps an exception caught around an OkHttp call to the typed reason it represents. */
+    private fun classifyFetchException(e: Exception): FetchFailedException {
+        return when (e) {
+            is FetchFailedException -> e
+            is java.net.UnknownHostException, is java.net.ConnectException ->
+                FetchHostUnreachableException(e.message)
+            is java.net.SocketTimeoutException -> FetchTimeoutException(e.message)
+            is javax.net.ssl.SSLException -> FetchTlsErrorException(e.message)
+            else -> FetchUnknownException(e.message)
+        }
+    }
 
     /**
      * Detects whether [content] is an age-encrypted payload (ASCII-armored or binary header).
@@ -53,9 +149,29 @@ object ProfileProcessor {
         return headers[name]?.trim()?.equals("true", ignoreCase = true) == true
     }
 
+    // RFC 1123 ("EEE, dd MMM yyyy HH:mm:ss zzz") is the format the standard
+    // `Date` response header is sent in. Parsed by hand instead of via
+    // okhttp3.Headers.date(name) so this doesn't depend on that Kotlin-only
+    // API resolving correctly across OkHttp/Kotlin toolchain combinations;
+    // java.time is avoided since it needs desugaring below API 26.
+    private val httpDateFormat = ThreadLocal.withInitial {
+        java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("GMT")
+        }
+    }
+
+    private fun parseHttpDateMillis(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            httpDateFormat.get()!!.parse(value)?.time
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun throwIfHwidBlocked(headers: okhttp3.Headers) {
         if (isHeaderTrue(headers, "x-hwid-not-supported")) {
-            throw HwidNotSupportedException()
+            throw HwidNotSupportedException(headers["support-url"]?.trim() ?: "")
         }
 
         if (isHeaderTrue(headers, "x-hwid-max-devices-reached")) {
@@ -91,7 +207,6 @@ object ProfileProcessor {
     // -------------------------------------------------------------------------
 
     private data class PrefetchResult(
-        val success: Boolean,
         val headers: okhttp3.Headers? = null,
     )
 
@@ -113,7 +228,11 @@ object ProfileProcessor {
     // -------------------------------------------------------------------------
 
     private fun prefetchProfileConfig(context: Context, source: String, targetConfigFile: File): PrefetchResult {
-        return try {
+        if (!hasActiveConnectivity(context)) {
+            throw FetchNoConnectivityException()
+        }
+
+        try {
             val request = buildProfileRequest(context, source)
             val client = OkHttpClient.Builder()
                 .connectTimeout(20, TimeUnit.SECONDS)
@@ -123,21 +242,25 @@ object ProfileProcessor {
             client.newCall(request).execute().use { response ->
                 throwIfHwidBlocked(response.headers)
 
-                if (!response.isSuccessful) return PrefetchResult(false)
+                if (!response.isSuccessful) throw FetchHttpErrorException(response.code)
 
-                val body = response.body ?: return PrefetchResult(false)
+                val body = response.body ?: throw FetchUnknownException("Empty response body")
                 targetConfigFile.parentFile?.mkdirs()
                 targetConfigFile.outputStream().use { output ->
                     body.byteStream().use { input ->
                         input.copyTo(output)
                     }
                 }
-                PrefetchResult(true, response.headers)
+                return PrefetchResult(response.headers)
             }
-        } catch (_: IOException) {
-            PrefetchResult(false)
-        } catch (_: Exception) {
-            PrefetchResult(false)
+        } catch (e: HwidNotSupportedException) {
+            throw e
+        } catch (e: HwidMaxDevicesReachedException) {
+            throw e
+        } catch (e: FetchFailedException) {
+            throw e
+        } catch (e: Exception) {
+            throw classifyFetchException(e)
         }
     }
 
@@ -152,23 +275,38 @@ object ProfileProcessor {
         ) {
             return FetchedSource(source) // Direct proxy-link text, no headers
         }
-        val request = buildProfileRequest(context, source)
-        val client = OkHttpClient.Builder()
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
-        client.newCall(request).execute().use { response ->
-            throwIfHwidBlocked(response.headers)
 
-            if (!response.isSuccessful) {
-                throw IOException("Failed to fetch profile: HTTP ${response.code}")
+        if (!hasActiveConnectivity(context)) {
+            throw FetchNoConnectivityException()
+        }
+
+        try {
+            val request = buildProfileRequest(context, source)
+            val client = OkHttpClient.Builder()
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .build()
+            client.newCall(request).execute().use { response ->
+                throwIfHwidBlocked(response.headers)
+
+                if (!response.isSuccessful) {
+                    throw FetchHttpErrorException(response.code)
+                }
+                val body = response.body?.string() ?: throw FetchUnknownException("Empty response body")
+                val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
+                val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
+                // Template selection is allowed unless the server locks it via pxa-template.
+                val allowTemplateSelection = pxaTemplateUrl == null && pxaTemplateScheme == null
+                return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme, headersAvailable = true, rawHeaders = response.headers)
             }
-            val body = response.body?.string() ?: throw IOException("Empty response body")
-            val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
-            val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
-            // Template selection is allowed unless the server locks it via pxa-template.
-            val allowTemplateSelection = pxaTemplateUrl == null && pxaTemplateScheme == null
-            return FetchedSource(body, pxaTemplateUrl, allowTemplateSelection, pxaTemplateScheme, headersAvailable = true, rawHeaders = response.headers)
+        } catch (e: HwidNotSupportedException) {
+            throw e
+        } catch (e: HwidMaxDevicesReachedException) {
+            throw e
+        } catch (e: FetchFailedException) {
+            throw e
+        } catch (e: Exception) {
+            throw classifyFetchException(e)
         }
     }
 
@@ -643,10 +781,7 @@ object ProfileProcessor {
         if (type == Profile.Type.Url && isHttpUrl) {
             if (!alreadyPrefetched) {
                 val localConfig = context.processingDir.resolve("config.yaml")
-                val result = prefetchProfileConfig(context, downloadUrlOverride ?: source, localConfig)
-                if (!result.success) {
-                    throw IOException("Unable to fetch url profile with HWID headers")
-                }
+                prefetchProfileConfig(context, downloadUrlOverride ?: source, localConfig)
             }
             return FetchTarget(context.processingDir.resolve("config.yaml").toURI().toString(), false)
         }
@@ -746,9 +881,6 @@ object ProfileProcessor {
                 ) {
                     val localConfig = context.processingDir.resolve("config.yaml")
                     val prefetchResult = prefetchProfileConfig(context, downloadUrl ?: snapshot.source, localConfig)
-                    if (!prefetchResult.success) {
-                        throw IOException("Unable to fetch url profile with HWID headers")
-                    }
                     alreadyPrefetched = true
 
                     if (localConfig.exists()) {
@@ -1131,6 +1263,8 @@ object ProfileProcessor {
     data class ProfileHeaders(
         val supportUrl: String = "",
         val profileWebPageUrl: String = "",
+        /** `subscription-renew-url` — where to send the user to renew this subscription. */
+        val renewUrl: String = "",
         val profileTitle: String = "",
         val profileLogo: String = "",
         val profileUpdateInterval: Int = 0,
@@ -1143,13 +1277,106 @@ object ProfileProcessor {
         val simpleMode: Boolean = false,
         val fallbackUrl: String = "",
         val fallbackDomain: String = "",
-    )
+        /**
+         * Reminder thresholds from `notify-expire-days`/`notify-traffic-percent`.
+         *
+         * `null` and `emptyList()` mean different things and must stay
+         * distinguishable: `null` is "the panel sent no header for this kind of
+         * reminder at all" — this panel doesn't opt in, so no reminder of this
+         * kind fires, full stop; an empty list is "the panel explicitly turned
+         * this kind of reminder off" via an empty list value. Neither one falls
+         * back to [SubscriptionAlerts.DEFAULT_EXPIRE_DAYS] /
+         * [SubscriptionAlerts.DEFAULT_TRAFFIC_PERCENT] — those only fill in
+         * thresholds for the bare `notification-subs-expire: true` toggle,
+         * which is itself a header the panel had to send.
+         */
+        val notifyExpireDays: List<Int>? = null,
+        val notifyTrafficPercent: List<Int>? = null,
+        /**
+         * How far the panel's clock is ahead of the device's, in seconds, and
+         * when that was measured (device time). See [clockSkewMillis].
+         */
+        val clockSkewSeconds: Long = 0,
+        val clockSkewAtSeconds: Long = 0,
+    ) {
+        /**
+         * The clock-skew correction in milliseconds, or 0 when there is none to
+         * apply.
+         *
+         * A measurement older than 30 days is discarded rather than used: what
+         * is dangerous is not crystal drift (seconds a month) but the device
+         * clock having been corrected since — by the user, or by time sync after
+         * a reboot — which turns a stale correction into an error of its own
+         * size. A negative age (measured "in the future") means the same thing
+         * and is discarded the same way.
+         */
+        fun clockSkewMillis(): Long {
+            if (clockSkewSeconds == 0L || clockSkewAtSeconds == 0L) return 0
+
+            val ageSeconds = System.currentTimeMillis() / 1000 - clockSkewAtSeconds
+
+            return if (ageSeconds in 0..MAX_CLOCK_SKEW_AGE_SECONDS) clockSkewSeconds * 1000 else 0
+        }
+    }
+
+    private const val MAX_CLOCK_SKEW_AGE_SECONDS = 30L * 24 * 60 * 60
+
+    /**
+     * Parses a comma-separated list of reminder thresholds, e.g. `"7,3,1"`.
+     *
+     * Returns `null` when the panel said nothing usable (header absent, blank,
+     * or unparseable) — the caller should fall back to its own defaults then.
+     * Returns an ([lo]..[hi])-bounded, deduplicated, sorted, size-capped list
+     * otherwise, or an explicit empty list for `"off"`/`"false"` — the panel
+     * turning this kind of reminder off on purpose, not the same as staying
+     * silent about it.
+     */
+    private fun parseThresholds(raw: String?, lo: Int, hi: Int): List<Int>? {
+        val trimmed = raw?.trim().orEmpty()
+        if (trimmed.isEmpty()) return null
+
+        if (trimmed.equals("off", ignoreCase = true) || trimmed.equals("false", ignoreCase = true)) {
+            return emptyList()
+        }
+
+        val values = trimmed.split(",")
+            .mapNotNull { it.trim().toIntOrNull() }
+            .filter { it in lo..hi }
+            .distinct()
+            .sorted()
+
+        if (values.isEmpty()) return null
+
+        // A malformed or hostile panel listing a thousand thresholds is a
+        // thousand notifications, not a courtesy — cap it.
+        return values.take(MAX_THRESHOLDS)
+    }
+
+    private const val MAX_THRESHOLDS = 10
 
     fun saveProfileHeaders(profileDir: File, headers: okhttp3.Headers) {
         try {
+            val file = profileDir.resolve("profile_links.json")
+
+            // Unlike every other field below, an absent `Date` header does not
+            // mean "clear the clock-skew correction" — it means this particular
+            // response said nothing about the server's clock, and the last real
+            // measurement (if any) is still the best one available.
+            val previousSkew = if (file.exists()) {
+                try {
+                    val prev = JSONObject(file.readText())
+                    prev.optLong("clock_skew", 0) to prev.optLong("clock_skew_at", 0)
+                } catch (_: Exception) {
+                    0L to 0L
+                }
+            } else {
+                0L to 0L
+            }
+
             val json = JSONObject()
             headers["support-url"]?.let { if (it.isNotBlank()) json.put("support_url", it) }
             headers["profile-web-page-url"]?.let { if (it.isNotBlank()) json.put("profile_web_page_url", it) }
+            headers["subscription-renew-url"]?.let { if (it.isNotBlank()) json.put("renew_url", it) }
             headers["profile-title"]?.let { if (it.isNotBlank()) json.put("profile_title", decodeHeaderValue(it)) }
             headers["profile-logo"]?.let { if (it.isNotBlank()) json.put("profile_logo", it) }
             headers["profile-update-interval"]?.let {
@@ -1175,7 +1402,38 @@ object ProfileProcessor {
             // Subscription fallback endpoints (absent header => not written => cleared on read).
             headers["fallback-url"]?.trim()?.let { if (it.isNotBlank()) json.put("fallback_url", it) }
             headers["fallback-domain"]?.trim()?.let { if (it.isNotBlank()) json.put("fallback_domain", it) }
-            profileDir.resolve("profile_links.json").writeText(json.toString())
+
+            // Reminder thresholds. Written WITHOUT the isNotBlank()-style skip used
+            // above: null (key absent) and [] (empty array) mean different things
+            // here and both must be representable — see ProfileHeaders' kdoc.
+            var expireDays = parseThresholds(headers["notify-expire-days"], 1, 365)
+            if (expireDays == null && isHeaderTrue(headers, "notification-subs-expire")) {
+                // Bare toggle, no explicit list — Happ-style panels only send
+                // this. Falling back to our own defaults keeps them working.
+                expireDays = SubscriptionAlerts.DEFAULT_EXPIRE_DAYS
+            }
+            if (expireDays != null) {
+                json.put("notify_expire_days", JSONArray(expireDays))
+            }
+
+            val trafficPercent = parseThresholds(headers["notify-traffic-percent"], 1, 100)
+            if (trafficPercent != null) {
+                json.put("notify_traffic_percent", JSONArray(trafficPercent))
+            }
+
+            // `Date` is a standard header, so no suffix search or base64 decoding
+            // (the way most other panel headers are read) applies to it.
+            val servedAt = parseHttpDateMillis(headers["Date"])
+            if (servedAt != null) {
+                val nowSeconds = System.currentTimeMillis() / 1000
+                json.put("clock_skew", servedAt / 1000 - nowSeconds)
+                json.put("clock_skew_at", nowSeconds)
+            } else if (previousSkew.first != 0L || previousSkew.second != 0L) {
+                json.put("clock_skew", previousSkew.first)
+                json.put("clock_skew_at", previousSkew.second)
+            }
+
+            file.writeText(json.toString())
         } catch (_: Exception) {}
     }
 
@@ -1187,6 +1445,7 @@ object ProfileProcessor {
                 ProfileHeaders(
                     supportUrl = json.optString("support_url", ""),
                     profileWebPageUrl = json.optString("profile_web_page_url", ""),
+                    renewUrl = json.optString("renew_url", ""),
                     profileTitle = json.optString("profile_title", ""),
                     profileLogo = json.optString("profile_logo", ""),
                     profileUpdateInterval = json.optInt("profile_update_interval", 0),
@@ -1199,10 +1458,23 @@ object ProfileProcessor {
                     simpleMode = json.optBoolean("pxa_simple_mode", false),
                     fallbackUrl = json.optString("fallback_url", ""),
                     fallbackDomain = json.optString("fallback_domain", ""),
+                    // has() before reading: an absent key must come back null
+                    // (caller falls back to its own defaults), not [] (caller
+                    // stays silent) — see ProfileHeaders' kdoc.
+                    notifyExpireDays = if (json.has("notify_expire_days")) {
+                        json.getJSONArray("notify_expire_days").toIntList()
+                    } else null,
+                    notifyTrafficPercent = if (json.has("notify_traffic_percent")) {
+                        json.getJSONArray("notify_traffic_percent").toIntList()
+                    } else null,
+                    clockSkewSeconds = json.optLong("clock_skew", 0),
+                    clockSkewAtSeconds = json.optLong("clock_skew_at", 0),
                 )
             } else ProfileHeaders()
         } catch (_: Exception) { ProfileHeaders() }
     }
+
+    private fun JSONArray.toIntList(): List<Int> = List(length()) { getInt(it) }
 
     data class UrlHeaders(
         val title: String = "",

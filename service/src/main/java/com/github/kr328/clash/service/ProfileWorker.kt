@@ -1,6 +1,7 @@
 package com.github.kr328.clash.service
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
@@ -16,11 +17,40 @@ import com.github.kr328.clash.common.id.UndefinedIds
 import com.github.kr328.clash.common.util.setUUID
 import com.github.kr328.clash.common.util.uuid
 import com.github.kr328.clash.service.data.ImportedDao
+import com.github.kr328.clash.service.store.ServiceStore
+import com.github.kr328.clash.service.subscription.reportSubscriptionAlerts
 import com.github.kr328.clash.service.util.sendProfileUpdateCompleted
 import com.github.kr328.clash.service.util.sendProfileUpdateFailed
 import kotlinx.coroutines.*
 import java.util.*
 import java.util.concurrent.TimeUnit
+
+/**
+ * Channels for [ProfileWorker]'s non-foreground notifications, created eagerly
+ * at app startup (see MainApplication) rather than lazily on first use: the
+ * per-channel "open settings" shortcut in the notification settings screen
+ * uses `ACTION_CHANNEL_NOTIFICATION_SETTINGS`, which needs the channel to
+ * already exist — someone opening that screen before ever updating a
+ * subscription would otherwise get a blank or missing settings page.
+ */
+fun Context.createProfileWorkerChannels() {
+    NotificationManagerCompat.from(this).createNotificationChannelsCompat(
+        listOf(
+            NotificationChannelCompat.Builder(
+                ProfileWorker.SERVICE_CHANNEL,
+                NotificationManagerCompat.IMPORTANCE_LOW
+            ).setName(getString(R.string.profile_service_status)).build(),
+            NotificationChannelCompat.Builder(
+                ProfileWorker.STATUS_CHANNEL,
+                NotificationManagerCompat.IMPORTANCE_LOW
+            ).setName(getString(R.string.profile_process_status)).build(),
+            NotificationChannelCompat.Builder(
+                ProfileWorker.RESULT_CHANNEL,
+                NotificationManagerCompat.IMPORTANCE_DEFAULT
+            ).setName(getString(R.string.profile_process_result)).build()
+        )
+    )
+}
 
 class ProfileWorker : BaseService() {
     private val service: ProfileWorker
@@ -31,7 +61,7 @@ class ProfileWorker : BaseService() {
     override fun onCreate() {
         super.onCreate()
 
-        createChannels()
+        createProfileWorkerChannels()
 
         foreground()
 
@@ -93,25 +123,14 @@ class ProfileWorker : BaseService() {
         } catch (e: Exception) {
             failed(imported.uuid, imported.name, e.message ?: "Unknown")
         }
-    }
 
-    private fun createChannels() {
-        NotificationManagerCompat.from(this).createNotificationChannelsCompat(
-            listOf(
-                NotificationChannelCompat.Builder(
-                    SERVICE_CHANNEL,
-                    NotificationManagerCompat.IMPORTANCE_LOW
-                ).setName(getString(R.string.profile_service_status)).build(),
-                NotificationChannelCompat.Builder(
-                    STATUS_CHANNEL,
-                    NotificationManagerCompat.IMPORTANCE_LOW
-                ).setName(getString(R.string.profile_process_status)).build(),
-                NotificationChannelCompat.Builder(
-                    RESULT_CHANNEL,
-                    NotificationManagerCompat.IMPORTANCE_DEFAULT
-                ).setName(getString(R.string.profile_process_result)).build()
-            )
-        )
+        // Expiry/traffic thresholds are evaluated against numbers already on
+        // disk and the device clock (corrected for the panel's), not against
+        // anything this update fetched — so this runs whether the update above
+        // just succeeded or failed. A failing update is often exactly the
+        // moment a subscription ran out, and that's the one time this must not
+        // stay silent.
+        reportSubscriptionAlerts(uuid)
     }
 
     private fun foreground() {
@@ -128,26 +147,34 @@ class ProfileWorker : BaseService() {
     }
 
     private suspend inline fun processing(name: String, block: () -> Unit) {
-        val id = UndefinedIds.next()
+        // Purely cosmetic — unlike the SERVICE_CHANNEL notification posted in
+        // foreground(), this one is a plain notify(), not tied to the foreground
+        // service contract, so it is fine to skip posting it altogether.
+        val showProgress = ServiceStore(applicationContext).notifySubscriptionProgress
+        val id = if (showProgress) UndefinedIds.next() else 0
 
-        val notification = NotificationCompat.Builder(this, STATUS_CHANNEL)
-            .setContentTitle(getString(R.string.profile_updating))
-            .setContentText(name)
-            .setColor(getColorCompat(R.color.color_clash))
-            .setSmallIcon(R.drawable.ic_logo_service)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setGroup(STATUS_CHANNEL)
-            .build()
+        if (showProgress) {
+            val notification = NotificationCompat.Builder(this, STATUS_CHANNEL)
+                .setContentTitle(getString(R.string.profile_updating))
+                .setContentText(name)
+                .setColor(getColorCompat(R.color.color_clash))
+                .setSmallIcon(R.drawable.ic_logo_service)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setGroup(STATUS_CHANNEL)
+                .build()
 
-        NotificationManagerCompat.from(applicationContext)
-            .notify(id, notification)
+            NotificationManagerCompat.from(applicationContext)
+                .notify(id, notification)
+        }
         try {
             block()
         } finally {
-            withContext(NonCancellable) {
-                NotificationManagerCompat.from(applicationContext)
-                    .cancel(id)
+            if (showProgress) {
+                withContext(NonCancellable) {
+                    NotificationManagerCompat.from(applicationContext)
+                        .cancel(id)
+                }
             }
         }
     }
@@ -174,26 +201,32 @@ class ProfileWorker : BaseService() {
     }
 
     private fun failed(uuid: UUID, name: String, reason: String) {
-        val id = UndefinedIds.next()
+        if (ServiceStore(this).notifySubscriptionErrors) {
+            val id = UndefinedIds.next()
 
-        val content = getString(R.string.format_update_failure, name, reason)
+            val content = getString(
+                R.string.format_update_failure,
+                name,
+                ProfileProcessor.describeFetchFailureReason(this, reason)
+            )
 
-        val notification = resultBuilder(id, uuid)
-            .setContentTitle(getString(R.string.update_failure))
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-            .build()
+            val notification = resultBuilder(id, uuid)
+                .setContentTitle(getString(R.string.update_failure))
+                .setContentText(content)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+                .build()
 
-        NotificationManagerCompat.from(this)
-            .notify(id, notification)
+            NotificationManagerCompat.from(this)
+                .notify(id, notification)
+        }
 
         sendProfileUpdateFailed(uuid, reason)
     }
 
     companion object {
-        private const val SERVICE_CHANNEL = "profile_service_channel"
-        private const val STATUS_CHANNEL = "profile_status_channel"
-        private const val RESULT_CHANNEL = "profile_result_channel"
+        const val SERVICE_CHANNEL = "profile_service_channel"
+        const val STATUS_CHANNEL = "profile_status_channel"
+        const val RESULT_CHANNEL = "profile_result_channel"
     }
 
     override fun onBind(intent: Intent?): IBinder {

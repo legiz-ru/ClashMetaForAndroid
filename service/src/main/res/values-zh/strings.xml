@@ -4,6 +4,15 @@
     <string name="running">正在运行</string>
     <string name="format_update_complete">更新 %s 成功</string>
     <string name="format_update_failure">"更新 %1$s: %2$s "</string>
+    <string name="fetch_no_connectivity">无网络连接</string>
+    <string name="fetch_host_unreachable">无法连接到服务器</string>
+    <string name="fetch_timeout">服务器响应超时</string>
+    <string name="fetch_tls_error">无法建立安全连接</string>
+    <string name="fetch_http_error">服务器返回错误 %1$d</string>
+    <string name="fetch_unknown">获取订阅失败</string>
+    <string name="hwid_not_supported_short">需要发送 HWID</string>
+    <string name="hwid_max_devices_short">已达设备数量上限</string>
+    <string name="age_key_required_short">配置已加密，需要密钥</string>
     <string name="clash_meta_for_android">Prizrak-Box for Android</string>
     <string name="profiles_and_providers">配置文件和外部资源</string>
     <string name="configuration_yaml">配置文件.yaml</string>
@@ -16,4 +25,11 @@
     <string name="profile_updating">配置更新中</string>
     <string name="profile_service_status">配置文件服务状态</string>
     <string name="profile_process_result">配置文件处理结果</string>
+
+    <string name="subscription_alert_channel">到期与流量提醒</string>
+    <string name="subscription_expired">订阅已到期</string>
+    <string name="subscription_traffic_used">已使用 %1$d%% 流量</string>
+    <plurals name="subscription_expires_in_days">
+        <item quantity="other">订阅将在 %d 天后到期</item>
+    </plurals>
 </resources>

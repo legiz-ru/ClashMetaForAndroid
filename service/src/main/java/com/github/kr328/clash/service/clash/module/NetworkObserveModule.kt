@@ -11,8 +11,12 @@ import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.core.Clash
 import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.asSocketAddressText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import java.net.InetAddress
@@ -52,12 +56,26 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     private val networkChanges: Channel<Unit> = Channel(Channel.CONFLATED)
 
     /**
+     * The current network confirmed it has internet — the callbacks drop a
+     * signal in here, same conflated-channel shape as [networkChanges].
+     */
+    private val networkReady: Channel<Unit> = Channel(Channel.CONFLATED)
+
+    /**
      * The network we consider current. Compared by object: the system hands out
      * a new [Network] for every connection, so even coming back to the same
      * Wi-Fi after a drop is a network change and cannot skip the reset.
      */
     @Volatile
     private var currentNetwork: Network? = null
+
+    /**
+     * Whether [currentNetwork] has been seen validated since it became current.
+     * Reset alongside it — a network's own validation says nothing about the
+     * next one's.
+     */
+    @Volatile
+    private var currentValidatedSeen = false
 
     /**
      * The first network we see is not a change: there is nothing to tear down
@@ -74,6 +92,14 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     /** The screen was off at the moment of the change — the probe has to catch up. */
     @Volatile
     private var probePending = false
+
+    /** A change landed inside the throttle window — a retry at its close is already scheduled. */
+    @Volatile
+    private var retriggerScheduled = false
+
+    /** A dead-node recovery pass is already scheduled — no need for a second one. */
+    @Volatile
+    private var recoverScheduled = false
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -101,6 +127,10 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             }
 
             onNetworkMaybeChanged(network)
+
+            if (network == currentNetwork) {
+                networkReady.trySend(Unit)
+            }
         }
 
         override fun onLosing(network: Network, maxMsToLive: Int) {
@@ -164,6 +194,22 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
         return false
     }
 
+    /**
+     * Penalty for a network that hasn't confirmed it has internet behind it.
+     *
+     * Wi-Fi stuck behind a captive portal (or a router that fell over) stays
+     * connected and, transport-for-transport, still outranks cellular — even
+     * though the phone has been routing through LTE for a while. On API 28+
+     * such a network is usually pushed to the background by the system itself
+     * and we get an `onLost` via the `FOREGROUND` capability, but that
+     * capability isn't requested below 28 — and without this penalty a dead
+     * network would keep being treated as current there: no reset, and DNS
+     * still taken from it.
+     */
+    private fun unvalidatedPenalty(capabilities: NetworkCapabilities): Int {
+        return if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) 0 else 10
+    }
+
     private fun networkToInt(entry: Map.Entry<Network, NetworkInfo>): Int {
         val capabilities = connectivity.getNetworkCapabilities(entry.key)
         // calculate priority based on transport type, available state
@@ -180,7 +226,8 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_SATELLITE) -> 5
             // TRANSPORT_LOWPAN / TRANSPORT_THREAD / TRANSPORT_WIFI_AWARE are not for general internet access, which will not set as default route.
             else -> 20
-        } + (if (entry.value.isAvailable()) 0 else 10)
+        } + (if (entry.value.isAvailable()) 0 else 10) +
+            (if (capabilities == null) 0 else unvalidatedPenalty(capabilities))
     }
 
     /**
@@ -200,6 +247,7 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
         }
 
         currentNetwork = network
+        currentValidatedSeen = false
 
         if (!networkKnown) {
             networkKnown = true
@@ -220,10 +268,29 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
      * costs a request, so with the screen off it is deferred until it turns on:
      * waking the radio for a number nobody is there to see is pointless.
      */
-    private fun handleNetworkChanged() {
+    private fun handleNetworkChanged(scope: CoroutineScope) {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastResetAt < RESET_THROTTLE_MS) {
-            Log.d("NetworkObserve reset throttled")
+        val sinceReset = now - lastResetAt
+        if (sinceReset < RESET_THROTTLE_MS) {
+            // A change landing inside the throttle window used to be lost for
+            // good. A move between networks is rarely one step: the system
+            // announces an intermediate network, the real one shows up a couple
+            // seconds later — and the network the phone actually ends up on
+            // never got its reset at all. So the window now has a trailing
+            // edge: the signal is redelivered once it closes.
+            if (!retriggerScheduled) {
+                retriggerScheduled = true
+
+                scope.launch {
+                    delay(RESET_THROTTLE_MS - sinceReset)
+
+                    retriggerScheduled = false
+
+                    networkChanges.trySend(Unit)
+                }
+            }
+
+            Log.d("NetworkObserve reset throttled, retry after window")
 
             return
         }
@@ -232,8 +299,20 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
 
         Clash.notifyNetworkChanged(store.resetConnectionsOnNetworkChange)
 
+        // Already validated by the time the reset ran (the common case: a
+        // network that was already up when it became preferred) — shorten the
+        // core's settle window instead of making the probe below sit out the
+        // full five seconds for nothing.
+        if (isCurrentNetworkValidated()) {
+            currentValidatedSeen = true
+
+            Clash.notifyNetworkReady()
+        }
+
         if (isInteractive()) {
             Clash.probeCurrentNodes()
+
+            scheduleRecover(scope)
         } else {
             probePending = true
         }
@@ -241,6 +320,36 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
 
     private fun isInteractive(): Boolean =
         service.getSystemService<PowerManager>()?.isInteractive ?: true
+
+    private fun isCurrentNetworkValidated(): Boolean {
+        val network = currentNetwork ?: return false
+        val capabilities = connectivity.getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    /**
+     * A dead node isn't necessarily dead — it may just have been unlucky about
+     * when it was last checked, mid network handover. Scheduled once per
+     * change/ready cycle, [RECOVER_DELAY_MS] after the network is confirmed:
+     * long enough that routes and DNS have had a moment too, on top of the
+     * core's own settle window (see settle.go on the Go side).
+     */
+    private fun scheduleRecover(scope: CoroutineScope) {
+        if (recoverScheduled) return
+
+        recoverScheduled = true
+
+        scope.launch {
+            delay(RECOVER_DELAY_MS)
+
+            recoverScheduled = false
+
+            if (isInteractive()) {
+                Clash.recoverDeadNodes()
+            }
+        }
+    }
 
     /**
      * The network the phone is using right now: the one with the lowest weight
@@ -250,9 +359,33 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     private fun preferredNetwork(): Network? =
         networkInfos.asSequence().minByOrNull { networkToInt(it) }?.key
 
+    /**
+     * System resolvers to hand the core, from the FIRST-by-priority network
+     * that actually has a non-empty list — not simply the highest-priority one.
+     *
+     * The difference shows up exactly when it matters most: a new network is
+     * already up, but its `onLinkPropertiesChanged` hasn't arrived yet (or the
+     * carrier never hands out resolvers at all). Taking the top network's list
+     * unconditionally would come back empty, the update below would be
+     * dropped by its own guard, and the core would keep the departed
+     * network's resolvers until the next callback — domains routed DIRECT by
+     * rule don't resolve at all in the meantime.
+     *
+     * The `isNotEmpty` guard itself must stay: an empty list zeroes the core's
+     * `systemResolver`, which falls back to 114.114.114.114 and 8.8.8.8 for
+     * that case (`dns/system.go`) — a guaranteed timeout instead of a resolve
+     * for this audience.
+     */
+    private fun preferredDnsList(): List<InetAddress> {
+        return networkInfos.asSequence()
+            .sortedBy { networkToInt(it) }
+            .map { it.value.dnsList }
+            .firstOrNull { it.isNotEmpty() }
+            ?: emptyList()
+    }
+
     private fun notifyDnsChange() {
-        val dnsList = (networkInfos.asSequence().minByOrNull { networkToInt(it) }?.value?.dnsList
-            ?: emptyList()).map { x -> x.asSocketAddressText(53) }
+        val dnsList = preferredDnsList().map { x -> x.asSocketAddressText(53) }
         val prevDnsList = curDnsList
         if (dnsList.isNotEmpty() && prevDnsList != dnsList) {
             Log.i("notifyDnsChange $prevDnsList -> $dnsList")
@@ -269,21 +402,46 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
         }
 
         try {
-            while (true) {
-                select<Unit> {
-                    networks.onReceive {
-                        enqueueEvent(it)
-                    }
-                    networkChanges.onReceive {
-                        handleNetworkChanged()
-                    }
-                    screenOn.onReceive {
-                        if (probePending) {
-                            probePending = false
+            coroutineScope {
+                val scope = this
 
-                            Log.i("NetworkObserve deferred probe after screen on")
+                while (true) {
+                    select<Unit> {
+                        networks.onReceive {
+                            enqueueEvent(it)
+                        }
+                        networkChanges.onReceive {
+                            handleNetworkChanged(scope)
+                        }
+                        networkReady.onReceive {
+                            Clash.notifyNetworkReady()
 
-                            Clash.probeCurrentNodes()
+                            // The reset already ran (handleNetworkChanged), but the
+                            // network wasn't validated yet at that point — this is
+                            // the catch-up: it came alive a beat later, and the
+                            // probe that was skipped back then runs now instead.
+                            if (!currentValidatedSeen) {
+                                currentValidatedSeen = true
+
+                                if (isInteractive()) {
+                                    Clash.probeCurrentNodes()
+
+                                    scheduleRecover(scope)
+                                } else {
+                                    probePending = true
+                                }
+                            }
+                        }
+                        screenOn.onReceive {
+                            if (probePending) {
+                                probePending = false
+
+                                Log.i("NetworkObserve deferred probe after screen on")
+
+                                Clash.probeCurrentNodes()
+                            }
+
+                            Clash.recoverDeadNodes()
                         }
                     }
                 }
@@ -301,10 +459,20 @@ class NetworkObserveModule(service: Service) : Module<Network>(service) {
     companion object {
         /**
          * The system shows a move from network to network as a burst of
-         * callbacks within a fraction of a second. Five seconds on the leading
-         * edge: the first signal fires right away, the rest of the burst is
-         * skipped.
+         * callbacks within a fraction of a second. Five seconds: the first
+         * signal fires right away, the rest of the burst collapses into one
+         * redelivery once the window closes — so a burst doesn't turn into
+         * five resets in a row, but a real change landing inside the window
+         * doesn't get lost either.
          */
         private const val RESET_THROTTLE_MS = 5_000L
+
+        /**
+         * Delay before [Clash.recoverDeadNodes] after a change/ready cycle —
+         * long enough for the post-network-change probe above to have already
+         * cleared the easy cases, so recovery only has to deal with nodes that
+         * are still down.
+         */
+        private const val RECOVER_DELAY_MS = 5_000L
     }
 }

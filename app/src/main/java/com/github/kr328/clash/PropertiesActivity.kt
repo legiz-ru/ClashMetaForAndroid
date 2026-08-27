@@ -27,6 +27,7 @@ import com.github.kr328.clash.design.util.ValidatorNotBlank
 import com.github.kr328.clash.service.ProfileProcessor
 import com.github.kr328.clash.service.TemplateManager
 import com.github.kr328.clash.service.model.Profile
+import com.github.kr328.clash.service.store.ServiceStore
 import com.github.kr328.clash.service.util.pendingDir
 import com.github.kr328.clash.util.GetContentCompat
 import com.github.kr328.clash.util.withProfile
@@ -44,10 +45,16 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 class PropertiesActivity : BaseActivity() {
+    companion object {
+        private const val HWID_DOCS_URL = "https://docs.rw/features/hwid-device-limit#hwid-headers-sent-by-remnawave"
+    }
+
     private var canceled: Boolean = false
     private lateinit var original: Profile
 
-    private val profileFlow = MutableStateFlow<Profile?>(null)
+    // Survives rotation: an in-progress, unsaved edit shouldn't vanish just
+    // because the screen turned.
+    private val profileFlow = retainedStateFlow<Profile?>("profile_draft") { null }
     private val proxyLinksFlow = MutableStateFlow<List<String>>(emptyList())
     private val processingFlow = MutableStateFlow(false)
 
@@ -71,7 +78,12 @@ class PropertiesActivity : BaseActivity() {
 
         original = withProfile { queryByUUID(uuid) } ?: return finish()
 
-        updateProfile(original)
+        // Only seed from the freshly-loaded profile the first time — a
+        // retained draft from before a configuration change must not be
+        // clobbered by it.
+        if (profileFlow.value == null) {
+            updateProfile(original)
+        }
 
         setContent {
             ClashTheme(variant = currentThemeVariant()) {
@@ -89,6 +101,8 @@ class PropertiesActivity : BaseActivity() {
                         onEditUrl = { launch { inputUrl() } },
                         onEditInterval = { launch { inputInterval() } },
                         onEditAgeKey = { launch { inputAgeKey() } },
+                        onShowSubscriptionAlertInfo = { showSubscriptionAlertInfoDialog(p) },
+                        onRenewSubscription = { openUrl(p.renewUrl) },
                         onBrowseFiles = { startActivity(FilesActivity::class.intent.setUUID(uuid)) },
                         onSelectTemplate = { launch { selectAndApplyTemplate() } },
                         onAddProxyLinks = { launch { addProxyLinks() } },
@@ -422,9 +436,16 @@ class PropertiesActivity : BaseActivity() {
                     } else {
                         val (issue, supportUrl) = resolveHwidIssue(e)
                         when (issue) {
-                            HwidIssue.NotSupported -> showHwidNotSupportedDialog()
+                            HwidIssue.NotSupported -> showHwidNotSupportedDialog(supportUrl)
                             HwidIssue.MaxDevicesReached -> showHwidMaxDevicesDialog(supportUrl)
-                            HwidIssue.None -> Toast.makeText(this, e.message ?: "Unknown", Toast.LENGTH_LONG).show()
+                            HwidIssue.None -> {
+                                val fetchIssue = resolveFetchIssue(e)
+                                if (fetchIssue != FetchIssue.None) {
+                                    showFetchErrorDialog(fetchIssue)
+                                } else {
+                                    Toast.makeText(this, e.message ?: "Unknown", Toast.LENGTH_LONG).show()
+                                }
+                            }
                         }
                     }
                 }
@@ -462,12 +483,53 @@ class PropertiesActivity : BaseActivity() {
         }
     }
 
+    private fun openUrl(url: String) {
+        if (url.isEmpty()) return
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * The bell icon in [PropertiesScreen]'s top bar is shown only when the
+     * panel opted this profile into expiry/traffic reminders (see
+     * [Profile.notifyExpireDays]/[Profile.notifyTrafficPercent]) — this
+     * dialog just explains what that means and, when relevant, that the
+     * local switch for showing them is currently off.
+     */
+    private fun showSubscriptionAlertInfoDialog(profile: Profile) {
+        val lines = mutableListOf(getString(R.string.subscription_alert_info_body))
+
+        profile.notifyExpireDays?.takeIf { it.isNotEmpty() }?.let { days ->
+            lines += getString(
+                R.string.subscription_alert_info_expire,
+                days.sorted().joinToString(", "),
+            )
+        }
+        profile.notifyTrafficPercent?.takeIf { it.isNotEmpty() }?.let { percents ->
+            lines += getString(
+                R.string.subscription_alert_info_traffic,
+                percents.sorted().joinToString(", "),
+            )
+        }
+        if (!ServiceStore(this).notifySubscriptionAlerts) {
+            lines += getString(R.string.subscription_alert_info_disabled_locally)
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.subscription_alert_info_title)
+            .setMessage(lines.joinToString("\n\n"))
+            .setPositiveButton(R.string.ok, null)
+            .show()
+    }
+
     private fun resolveHwidIssue(exception: Throwable): Pair<HwidIssue, String> {
         var current: Throwable? = exception
 
         while (current != null) {
             when (current) {
-                is ProfileProcessor.HwidNotSupportedException -> return HwidIssue.NotSupported to ""
+                is ProfileProcessor.HwidNotSupportedException -> return HwidIssue.NotSupported to current.supportUrl
                 is ProfileProcessor.HwidMaxDevicesReachedException -> return HwidIssue.MaxDevicesReached to current.supportUrl
             }
 
@@ -486,14 +548,105 @@ class PropertiesActivity : BaseActivity() {
         return HwidIssue.None to ""
     }
 
-    private suspend fun showHwidNotSupportedDialog() {
+    private suspend fun showHwidNotSupportedDialog(supportUrl: String) {
         withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { cont ->
+                val linkUrl = supportUrl.ifEmpty { HWID_DOCS_URL }
                 val dialog = MaterialAlertDialogBuilder(this@PropertiesActivity)
                     .setTitle(R.string.hwid_not_supported_title)
                     .setMessage(R.string.hwid_not_supported_msg)
                     .setPositiveButton(R.string.ok) { _, _ -> cont.resume(Unit) }
                     .setNegativeButton(R.string.cancel) { _, _ -> cont.resume(Unit) }
+                    .setNeutralButton(if (supportUrl.isEmpty()) R.string.hwid_docs_btn else R.string.hwid_support_btn) { _, _ ->
+                        cont.resume(Unit)
+                        try {
+                            startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(linkUrl))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } catch (_: Exception) {}
+                    }
+                    .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
+                    .show()
+
+                cont.invokeOnCancellation { dialog.dismiss() }
+            }
+        }
+    }
+
+    private sealed class FetchIssue {
+        object None : FetchIssue()
+        object NoConnectivity : FetchIssue()
+        data class HostUnreachable(val detail: String?) : FetchIssue()
+        data class Timeout(val detail: String?) : FetchIssue()
+        data class TlsError(val detail: String?) : FetchIssue()
+        data class HttpError(val code: Int) : FetchIssue()
+        data class Unknown(val detail: String?) : FetchIssue()
+    }
+
+    private fun resolveFetchIssue(exception: Throwable): FetchIssue {
+        var current: Throwable? = exception
+
+        while (current != null) {
+            when (current) {
+                is ProfileProcessor.FetchNoConnectivityException -> return FetchIssue.NoConnectivity
+                is ProfileProcessor.FetchHostUnreachableException -> return FetchIssue.HostUnreachable(current.detail)
+                is ProfileProcessor.FetchTimeoutException -> return FetchIssue.Timeout(current.detail)
+                is ProfileProcessor.FetchTlsErrorException -> return FetchIssue.TlsError(current.detail)
+                is ProfileProcessor.FetchHttpErrorException -> return FetchIssue.HttpError(current.code)
+                is ProfileProcessor.FetchUnknownException -> return FetchIssue.Unknown(current.detail)
+            }
+
+            val message = current.message.orEmpty()
+            when {
+                message.equals("FETCH_NO_CONNECTIVITY", ignoreCase = true) -> return FetchIssue.NoConnectivity
+                message.startsWith("FETCH_HOST_UNREACHABLE", ignoreCase = true) -> return FetchIssue.HostUnreachable(null)
+                message.startsWith("FETCH_TIMEOUT", ignoreCase = true) -> return FetchIssue.Timeout(null)
+                message.startsWith("FETCH_TLS_ERROR", ignoreCase = true) -> return FetchIssue.TlsError(null)
+                message.startsWith("FETCH_HTTP_ERROR", ignoreCase = true) -> {
+                    val code = message.substringAfter(":", "").toIntOrNull() ?: 0
+                    return FetchIssue.HttpError(code)
+                }
+                message.startsWith("FETCH_UNKNOWN", ignoreCase = true) -> return FetchIssue.Unknown(null)
+            }
+
+            current = current.cause
+        }
+
+        return FetchIssue.None
+    }
+
+    private suspend fun showFetchErrorDialog(issue: FetchIssue) {
+        if (issue is FetchIssue.None) return
+
+        val message = when (issue) {
+            FetchIssue.NoConnectivity -> getString(R.string.fetch_no_connectivity)
+            is FetchIssue.HostUnreachable -> getString(R.string.fetch_host_unreachable)
+            is FetchIssue.Timeout -> getString(R.string.fetch_timeout)
+            is FetchIssue.TlsError -> getString(R.string.fetch_tls_error)
+            is FetchIssue.HttpError -> getString(R.string.fetch_http_error, issue.code)
+            is FetchIssue.Unknown -> getString(R.string.fetch_unknown)
+            FetchIssue.None -> return
+        }
+        val detail = when (issue) {
+            is FetchIssue.HostUnreachable -> issue.detail
+            is FetchIssue.Timeout -> issue.detail
+            is FetchIssue.TlsError -> issue.detail
+            is FetchIssue.Unknown -> issue.detail
+            else -> null
+        }
+        val fullMessage = if (!detail.isNullOrBlank()) {
+            message + "\n\n" + getString(R.string.fetch_error_detail, detail)
+        } else {
+            message
+        }
+
+        withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine<Unit> { cont ->
+                val dialog = MaterialAlertDialogBuilder(this@PropertiesActivity)
+                    .setTitle(R.string.fetch_error_title)
+                    .setMessage(fullMessage)
+                    .setPositiveButton(R.string.ok) { _, _ -> cont.resume(Unit) }
                     .setOnCancelListener { if (cont.isActive) cont.resume(Unit) }
                     .show()
 

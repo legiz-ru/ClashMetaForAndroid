@@ -13,6 +13,8 @@ import com.github.kr328.clash.common.compat.currentProcessName
 import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.log.Log
 import com.github.kr328.clash.remote.Remote
+import com.github.kr328.clash.service.createProfileWorkerChannels
+import com.github.kr328.clash.service.subscription.createSubscriptionAlertChannels
 import com.github.kr328.clash.service.util.sendServiceRecreated
 import com.github.kr328.clash.update.UpdateChecker
 import com.github.kr328.clash.util.clashDir
@@ -41,6 +43,13 @@ class MainApplication : Application() {
             Remote.launch()
             setupShortcuts()
             UpdateChecker.createNotificationChannel(this)
+            // Created eagerly, not on first use: the per-notification "open
+            // channel settings" shortcut in the app's notification settings
+            // needs each channel to already exist, and someone can open that
+            // screen before ever running a subscription update or seeing an
+            // alert.
+            createProfileWorkerChannels()
+            createSubscriptionAlertChannels()
         } else {
             sendServiceRecreated()
         }

@@ -19,7 +19,7 @@ import (
 // is gone keep waiting for the OS timeout: minutes for TCP, up to a minute for
 // UDP. The user sees it as "the internet is back but everything hangs".
 //
-// This is not a core patch: all three calls below are public mihomo functions,
+// This is not a core patch: all calls below are public mihomo functions,
 // and they are exactly the ones the core itself makes in its DELETE /connections
 // handler (hub/route/connections.go).
 //
@@ -29,6 +29,11 @@ import (
 // without resume support "now" means a broken download, so the decision is left
 // to the user via a toggle.
 func OnNetworkChanged(closeConnections bool) {
+	// Hold off the probes this change is about to trigger (ProbeCurrentNodes,
+	// RecoverDeadNodes) until the network has had a moment to settle — see
+	// settle.go for what this does and doesn't cover.
+	NoteNetworkChange()
+
 	// The interface cache lives for twenty seconds, and all that time the core
 	// resolves routes over an interface that no longer exists.
 	iface.FlushCache()
@@ -37,8 +42,25 @@ func OnNetworkChanged(closeConnections bool) {
 	// a network change just as badly: names stop resolving before anything else.
 	resolver.ResetConnection()
 
+	// Resetting the transports and clearing the answer CACHE are different
+	// things. An address that resolved fine over home Wi-Fi may not answer
+	// at all through the carrier — the user sees "site won't load", and a
+	// page reload (by which point the record has expired on its own) makes
+	// it work again. Most visible on domains routed DIRECT by rule: proxied
+	// names are resolved by the outbound node, so the local cache never gets
+	// in their way there.
+	//
+	// Without this, the cache only got cleared as a side effect of the
+	// system resolvers actually changing (see below) — i.e. NOT cleared
+	// when both networks happened to hand out the same resolver list, or
+	// when the new network hadn't reported its resolvers yet.
+	//
+	// Does not touch the fake-ip pool: ClearCache only drops answer records
+	// (dns/resolver.go); fake-ip lives separately.
+	resolver.ClearCache()
+
 	if !closeConnections {
-		log.Infoln("Network changed: interface cache and DNS connections reset")
+		log.Infoln("Network changed: interface cache, DNS cache and DNS connections reset")
 
 		return
 	}
@@ -53,5 +75,5 @@ func OnNetworkChanged(closeConnections bool) {
 		return true
 	})
 
-	log.Infoln("Network changed: interface cache and DNS connections reset, %d connection(s) closed", closed)
+	log.Infoln("Network changed: interface cache, DNS cache and DNS connections reset, %d connection(s) closed", closed)
 }

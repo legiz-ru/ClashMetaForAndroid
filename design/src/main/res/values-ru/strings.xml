@@ -20,7 +20,7 @@
     <string name="settings_core">Ядро</string>
     <string name="settings_active_profile">Активный профиль</string>
     <string name="proxy_group_auto_no_select">Данная группа является автоматической, в ней запрещён ручной выбор</string>
-    <string name="profile_delete_confirm">Удалить профиль «%s»?</string>
+    <string name="profile_delete_confirm">Удалить профиль «%s»? Его настройки и скачанная конфигурация будут стёрты, отмены нет.</string>
     <string name="help">Помощь</string>
     <string name="about">О программе</string>
 
@@ -430,6 +430,7 @@
     <string name="update_not_found_message">У вас установлена последняя версия.</string>
     <string name="update_error_title">Ошибка проверки обновлений</string>
 
+    <string name="shortcut_disabled">Значок приложения скрыт в настройках</string>
     <string name="shortcut_toggle_short">Вкл/выкл Clash</string>
     <string name="shortcut_toggle_long">Включить или выключить сервис Clash</string>
     <string name="shortcut_start_short">Запустить Clash</string>
@@ -528,6 +529,21 @@
     <string name="hwid_max_devices_title">Достигнут лимит устройств</string>
     <string name="hwid_max_devices_msg">Вы достигли максимального количества устройств для этой подписки.</string>
     <string name="hwid_support_btn">Поддержка</string>
+    <string name="hwid_docs_btn">Подробнее</string>
+    <string name="subscription_alert_info_title">Напоминания о подписке</string>
+    <string name="subscription_alert_info_body">У этого профиля настроены напоминания об истечении подписки/трафике со стороны продавца.</string>
+    <string name="subscription_alert_info_expire">Напоминание об истечении: за %1$s дней до истечения подписки.</string>
+    <string name="subscription_alert_info_traffic">Напоминание о трафике: при использовании %1$s%% трафика.</string>
+    <string name="subscription_alert_info_disabled_locally">Показ таких уведомлений сейчас выключен в настройках приложения.</string>
+    <string name="renew_subscription">Продлить подписку</string>
+    <string name="fetch_error_title">Не удалось обновить</string>
+    <string name="fetch_no_connectivity">Нет подключения к интернету. Проверьте соединение и попробуйте снова.</string>
+    <string name="fetch_host_unreachable">Не удалось подключиться к серверу. Возможно, он временно недоступен или заблокирован в этой сети.</string>
+    <string name="fetch_timeout">Сервер не ответил вовремя. Попробуйте позже.</string>
+    <string name="fetch_tls_error">Не удалось установить защищённое соединение с сервером.</string>
+    <string name="fetch_http_error">Сервер вернул ошибку (код %1$d).</string>
+    <string name="fetch_unknown">Не удалось получить подписку.</string>
+    <string name="fetch_error_detail">Подробности: %1$s</string>
 
     <!-- Profile card shortcut icons -->
     <string name="mode_selector_title">Режим подключения</string>
@@ -560,4 +576,25 @@
     <string name="access_control_apps">Приложения</string>
     <string name="access_control_apps_summary">Контроль доступа — какие приложения идут через туннель</string>
     <string name="access_control_all_hint">Через туннель идут все приложения — отметки ниже ни на что не влияют, пока не выбран другой режим.</string>
+    <string name="notifications">Уведомления</string>
+    <string name="notifications_summary">Управление тем, о чём приложение может уведомлять</string>
+    <string name="notifications_tunnel_status">Статус туннеля</string>
+    <string name="notifications_tunnel_status_locked">Само постоянное уведомление отключить нельзя — Android требует его, пока работает VPN.</string>
+    <string name="notifications_subscription_updates">Обновление подписки</string>
+    <string name="show_update_progress">Показывать процесс обновления</string>
+    <string name="show_update_progress_summary">Кратковременное уведомление на время обновления подписки</string>
+    <string name="show_update_errors">Показывать ошибки обновления</string>
+    <string name="show_update_errors_summary">Единственный способ заметить, что подписка молча перестала обновляться</string>
+    <string name="notifications_subscription_alerts">Напоминания о подписке</string>
+    <string name="notify_subscription_alerts">Срок и трафик</string>
+    <string name="notify_subscription_alerts_summary">Напоминания о скором и фактическом окончании подписки и о расходе трафика — пороги задаёт панель</string>
+    <string name="notifications_subscription_alerts_hint">Работает только если панель подписки присылает заголовки напоминаний об истечении/трафике; если она их не отправляет, напоминаний не будет вне зависимости от этого переключателя.</string>
+    <string name="open_channel_settings">Звук и вибрация для этого уведомления</string>
+    <string name="notification_permission_ask_title">Показывать уведомления?</string>
+    <string name="notification_permission_ask_later">Не сейчас</string>
+    <string name="notification_permission_ask_text">Приложению нужно разрешение на уведомления, чтобы показывать статус туннеля и предупреждения о подписке.</string>
+    <string name="notification_permission_ask_allow">Разрешить</string>
+    <string name="notification_permission_blocked">Уведомления заблокированы в системных настройках — пока это не исправлено, ничего из перечисленного ниже не покажется.</string>
+    <string name="notification_open_settings">Открыть настройки</string>
+    <string name="notification_permission_blocked_short">Заблокировано в системных настройках</string>
 </resources>

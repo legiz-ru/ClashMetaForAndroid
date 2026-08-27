@@ -11,14 +11,15 @@ import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
-import androidx.core.content.pm.ShortcutInfoCompat
-import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.github.kr328.clash.common.constants.Intents
 import com.github.kr328.clash.common.util.TvUtils
 import com.github.kr328.clash.common.util.intent
 import com.github.kr328.clash.common.util.setUUID
@@ -35,6 +36,11 @@ import com.github.kr328.clash.design.compose.theme.ClashThemeVariant
 import com.github.kr328.clash.design.model.DarkMode
 import com.github.kr328.clash.service.model.Profile
 import com.github.kr328.clash.update.UpdateChecker
+import com.github.kr328.clash.service.data.ImportedDao
+import com.github.kr328.clash.service.subscription.EXTRA_SUBSCRIPTION_ALERT_KIND
+import com.github.kr328.clash.service.subscription.EXTRA_SUBSCRIPTION_ALERT_UUID
+import com.github.kr328.clash.service.subscription.reportSubscriptionAlerts
+import com.github.kr328.clash.util.applyDynamicShortcuts
 import com.github.kr328.clash.util.importProfileFromUrl
 import com.github.kr328.clash.util.startClashService
 import com.github.kr328.clash.util.stopClashService
@@ -43,11 +49,36 @@ import com.github.kr328.clash.util.withProfile
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.github.g00fy2.quickie.QRResult
 import io.github.g00fy2.quickie.ScanQRCode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import java.util.UUID
 import java.util.concurrent.TimeUnit
+
+@Composable
+private fun NotificationPermissionDialog(
+    onAllow: () -> Unit,
+    onSkip: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.notification_permission_ask_title)) },
+        text = { Text(stringResource(R.string.notification_permission_ask_text)) },
+        confirmButton = {
+            TextButton(onClick = onAllow) {
+                Text(stringResource(R.string.notification_permission_ask_allow))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onSkip) {
+                Text(stringResource(R.string.notification_permission_ask_later))
+            }
+        },
+    )
+}
 
 class MainActivity : BaseActivity() {
     private val isLoadingFlow = MutableStateFlow(true)
@@ -67,6 +98,9 @@ class MainActivity : BaseActivity() {
      * same node shown in two groups is the same measurement.
      */
     private val testingProxiesFlow = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Shows the in-app "why we need this" dialog ahead of the system permission prompt. */
+    private val notificationPromptFlow = MutableStateFlow(false)
 
     private fun extractInstallConfigUrl(intent: Intent?): String? {
         if (intent?.action != Intent.ACTION_VIEW) return null
@@ -107,8 +141,16 @@ class MainActivity : BaseActivity() {
             val proxyGroups by proxyGroupsFlow.collectAsStateWithLifecycle()
             val useDots by useDotsFlow.collectAsStateWithLifecycle()
             val testingProxies by testingProxiesFlow.collectAsStateWithLifecycle()
+            val notificationPrompt by notificationPromptFlow.collectAsStateWithLifecycle()
 
             ClashTheme(variant = currentThemeVariant()) {
+                if (notificationPrompt) {
+                    NotificationPermissionDialog(
+                        onAllow = ::allowNotifications,
+                        onSkip = ::skipNotifications,
+                        onDismiss = { notificationPromptFlow.value = false },
+                    )
+                }
                 MainScreen(
                     expanded = useDrawerNav(),
                     isTv = TvUtils.isTv(this),
@@ -130,6 +172,7 @@ class MainActivity : BaseActivity() {
                     onOpenProviders = { startActivity(ProvidersActivity::class.intent) },
                     onOpenSupport = ::openUrl,
                     onOpenWebPage = ::openUrl,
+                    onOpenRenew = ::openUrl,
                     onAdd = ::add,
                     onNavigate = ::navigate,
                     onLatencyTest = ::latencyTestSimpleMode,
@@ -144,10 +187,23 @@ class MainActivity : BaseActivity() {
 
         fetch()
 
+        // The other trigger (ProfileWorker, after every subscription update)
+        // misses profiles whose update interval is set to manual — there is no
+        // alarm for those at all. Opening the app is what's left to catch a
+        // subscription that quietly expired or ran out of traffic in the
+        // meantime. No dedicated alarm of our own: waking the device just to
+        // check a date isn't worth it, and this already happens often enough.
+        launch(Dispatchers.IO) {
+            for (uuid in ImportedDao().queryAllUUIDs()) {
+                reportSubscriptionAlerts(uuid)
+            }
+        }
+
         extractInstallConfigUrl(intent)?.let {
             importProfileFromUrl(it, forceAutoImport = true)
         }
         intent?.let { handleUpdateIntent(it) }
+        intent?.let { handleSubscriptionAlertIntent(it) }
         if (UpdateChecker.shouldCheck(this)) {
             launch { runUpdateCheckSilent() }
         }
@@ -296,6 +352,17 @@ class MainActivity : BaseActivity() {
     }
 
     private suspend fun startClash() {
+        // Asked here — at the first real connect attempt — rather than
+        // unconditionally in onCreate() on every cold start: this is the
+        // moment the permission actually matters (the ongoing tunnel-status
+        // notification is about to appear), so it's the moment to explain why,
+        // instead of an unexplained system popup before the user did anything.
+        if (shouldAskNotifications()) {
+            notificationPromptFlow.value = true
+
+            return
+        }
+
         val active = withProfile { queryActive() }
         if (active == null || !active.imported) {
             toast(R.string.no_profile_selected)
@@ -466,9 +533,49 @@ class MainActivity : BaseActivity() {
             .show()
     }
 
+    private fun handleSubscriptionAlertIntent(intent: Intent) {
+        val uuid = intent.getStringExtra(EXTRA_SUBSCRIPTION_ALERT_UUID)?.let {
+            try { UUID.fromString(it) } catch (_: Exception) { null }
+        } ?: return
+        val kind = intent.getStringExtra(EXTRA_SUBSCRIPTION_ALERT_KIND) ?: return
+        launch { showSubscriptionAlertDialog(uuid, kind) }
+    }
+
+    private suspend fun showSubscriptionAlertDialog(uuid: UUID, kind: String) {
+        val profile = withProfile { queryByUUID(uuid) } ?: return
+
+        val message = when {
+            kind == "EXPIRED" ->
+                getString(com.github.kr328.clash.service.R.string.subscription_expired)
+            kind.startsWith("EXPIRES_IN:") -> {
+                val days = kind.removePrefix("EXPIRES_IN:").toIntOrNull() ?: return
+                resources.getQuantityString(
+                    com.github.kr328.clash.service.R.plurals.subscription_expires_in_days,
+                    days,
+                    days,
+                )
+            }
+            kind.startsWith("TRAFFIC_USED:") -> {
+                val percent = kind.removePrefix("TRAFFIC_USED:").toIntOrNull() ?: return
+                getString(com.github.kr328.clash.service.R.string.subscription_traffic_used, percent)
+            }
+            else -> return
+        }
+
+        val builder = MaterialAlertDialogBuilder(this)
+            .setTitle(profile.name)
+            .setMessage(message)
+            .setNegativeButton(R.string.ok, null)
+        if (profile.renewUrl.isNotEmpty()) {
+            builder.setPositiveButton(R.string.renew_subscription) { _, _ -> openUrl(profile.renewUrl) }
+        }
+        builder.show()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleSubscriptionAlertIntent(intent)
         val url = extractInstallConfigUrl(intent) ?: return
         lifecycleScope.launch {
             importProfileFromUrl(url, forceAutoImport = true)
@@ -477,65 +584,55 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val requestPermissionLauncher =
-                registerForActivityResult(RequestPermission()) { _: Boolean -> }
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
 
         setupShortcuts()
     }
 
+    /** Ask at most once (see UiStore.notificationsAsked), and only on Tiramisu+. */
+    private fun shouldAskNotifications(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
+        if (uiStore.notificationsAsked) return false
+
+        return ContextCompat.checkSelfPermission(
+            this,
+            android.Manifest.permission.POST_NOTIFICATIONS,
+        ) != PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun allowNotifications() {
+        notificationPromptFlow.value = false
+
+        launch {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    startActivityForResult(
+                        RequestPermission(),
+                        android.Manifest.permission.POST_NOTIFICATIONS,
+                    )
+                } catch (e: Exception) {
+                    com.github.kr328.clash.common.log.Log.w("Request notifications: $e", e)
+                }
+            }
+
+            // Set on both Allow and Skip, never on a plain dismiss: this marks
+            // "we asked", not "the user said yes" — either answer means the
+            // question shouldn't come back on the next connect attempt.
+            uiStore.notificationsAsked = true
+
+            startClash()
+        }
+    }
+
+    private fun skipNotifications() {
+        uiStore.notificationsAsked = true
+
+        notificationPromptFlow.value = false
+
+        launch { startClash() }
+    }
+
     private fun setupShortcuts() {
-        if (uiStore.hideAppIcon) return
-
-        val flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-            Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
-            Intent.FLAG_ACTIVITY_NO_ANIMATION
-
-        val toggle = ShortcutInfoCompat.Builder(this, "toggle_clash")
-            .setShortLabel(getString(R.string.shortcut_toggle_short))
-            .setLongLabel(getString(R.string.shortcut_toggle_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_all))
-            .setIntent(
-                Intent(Intents.ACTION_TOGGLE_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(0)
-            .build()
-
-        val start = ShortcutInfoCompat.Builder(this, "start_clash")
-            .setShortLabel(getString(R.string.shortcut_start_short))
-            .setLongLabel(getString(R.string.shortcut_start_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_on))
-            .setIntent(
-                Intent(Intents.ACTION_START_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(1)
-            .build()
-
-        val stop = ShortcutInfoCompat.Builder(this, "stop_clash")
-            .setShortLabel(getString(R.string.shortcut_stop_short))
-            .setLongLabel(getString(R.string.shortcut_stop_long))
-            .setIcon(IconCompat.createWithResource(this, R.drawable.ic_toggle_off))
-            .setIntent(
-                Intent(Intents.ACTION_STOP_CLASH)
-                    .setClassName(this, ExternalControlActivity::class.java.name)
-                    .addFlags(flags)
-            )
-            .setRank(2)
-            .build()
-
-        ShortcutManagerCompat.setDynamicShortcuts(this, listOf(toggle, start, stop))
+        applyDynamicShortcuts(uiStore.hideAppIcon)
     }
 
     private fun useDrawerNav(): Boolean {

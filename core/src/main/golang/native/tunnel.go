@@ -71,6 +71,8 @@ func healthCheck(completable unsafe.Pointer, name C.c_string) {
 		tunnel.HealthCheck(name)
 
 		C.complete(completable, nil)
+
+		C.release_object(completable)
 	}(C.GoString(name))
 }
 
@@ -80,6 +82,8 @@ func healthCheckProxy(completable unsafe.Pointer, group, name C.c_string) {
 		tunnel.HealthCheckProxy(group, name)
 
 		C.complete(completable, nil)
+
+		C.release_object(completable)
 	}(C.GoString(group), C.GoString(name))
 }
 
@@ -96,6 +100,16 @@ func notifyNetworkChanged(closeConnections C.int) {
 //export probeCurrentNodes
 func probeCurrentNodes() {
 	tunnel.ProbeCurrentNodes()
+}
+
+//export notifyNetworkReady
+func notifyNetworkReady() {
+	tunnel.NoteNetworkReady()
+}
+
+//export recoverDeadNodes
+func recoverDeadNodes() {
+	go tunnel.RecoverDeadNodes()
 }
 
 //export patchSelector
