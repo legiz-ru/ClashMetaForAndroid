@@ -52,7 +52,9 @@ class PropertiesActivity : BaseActivity() {
     private var canceled: Boolean = false
     private lateinit var original: Profile
 
-    private val profileFlow = MutableStateFlow<Profile?>(null)
+    // Survives rotation: an in-progress, unsaved edit shouldn't vanish just
+    // because the screen turned.
+    private val profileFlow = retainedStateFlow<Profile?>("profile_draft") { null }
     private val proxyLinksFlow = MutableStateFlow<List<String>>(emptyList())
     private val processingFlow = MutableStateFlow(false)
 
@@ -76,7 +78,12 @@ class PropertiesActivity : BaseActivity() {
 
         original = withProfile { queryByUUID(uuid) } ?: return finish()
 
-        updateProfile(original)
+        // Only seed from the freshly-loaded profile the first time — a
+        // retained draft from before a configuration change must not be
+        // clobbered by it.
+        if (profileFlow.value == null) {
+            updateProfile(original)
+        }
 
         setContent {
             ClashTheme(variant = currentThemeVariant()) {

@@ -23,6 +23,7 @@ import com.github.kr328.clash.util.ActivityResultLifecycle
 import com.github.kr328.clash.util.ApplicationObserver
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
@@ -43,6 +44,42 @@ abstract class BaseActivity : AppCompatActivity(),
     private var deferRunning = false
     private val nextRequestKey = AtomicInteger(0)
     private var dayNight: DayNight = DayNight.Day
+
+    private class RetainedBag {
+        val values = HashMap<String, Any?>()
+    }
+
+    // Plain platform API, no ViewModel dependency needed: an object handed
+    // back verbatim across a configuration-change recreation (rotation,
+    // locale/font-scale change, …), never across a real finish. Lazy because
+    // getLastCustomNonConfigurationInstance() is only meaningful once
+    // Activity.attach() has run — a raw property initializer would read it
+    // too early, before the previous instance's retained bag is wired up.
+    private val retainedBag: RetainedBag by lazy {
+        @Suppress("DEPRECATION")
+        (lastCustomNonConfigurationInstance as? RetainedBag) ?: RetainedBag()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onRetainCustomNonConfigurationInstance(): Any = retainedBag
+
+    /**
+     * Ephemeral, unsaved UI state (a draft edit, a navigation stack, a set of
+     * picks) that would otherwise reset to [initial] every time this screen's
+     * Activity instance is recreated by a configuration change — reuses the
+     * same object across the recreation instead. Call once per field, from a
+     * property initializer, with a [key] unique within the Activity; the
+     * value survives rotation but not a real finish() / process death.
+     */
+    @Suppress("UNCHECKED_CAST")
+    protected fun <T> retainedValue(key: String, initial: () -> T): T {
+        return retainedBag.values.getOrPut(key, initial) as T
+    }
+
+    /** [retainedValue] specialised for the common MutableStateFlow(default) field pattern. */
+    protected fun <T> retainedStateFlow(key: String, initial: () -> T): MutableStateFlow<T> {
+        return retainedValue(key) { MutableStateFlow(initial()) }
+    }
 
     protected abstract suspend fun main()
 

@@ -31,8 +31,15 @@ import kotlinx.coroutines.withContext
 
 class AccessControlActivity : BaseActivity() {
     private val appsFlow = MutableStateFlow<List<AppInfo>>(emptyList())
-    private val selectedFlow = MutableStateFlow<Set<String>>(emptySet())
-    private val modeFlow = MutableStateFlow(AccessControlMode.AcceptAll)
+
+    // Retained: unlike sort/reverse/systemApps below (written straight to
+    // UiStore on every change), the access-control picks and mode are only
+    // persisted to ServiceStore in the defer{} block at a real finish() — a
+    // configuration change must not silently discard an in-progress edit.
+    private val selectedFlow = retainedStateFlow<Set<String>>("access_control_selected") { emptySet() }
+    private val modeFlow = retainedStateFlow("access_control_mode") { AccessControlMode.AcceptAll }
+    private val selectedSeeded = retainedValue("access_control_seeded") { booleanArrayOf(false) }
+
     private val sortFlow = MutableStateFlow(AppInfoSort.Label)
     private val reverseFlow = MutableStateFlow(false)
     private val systemAppsFlow = MutableStateFlow(false)
@@ -44,9 +51,13 @@ class AccessControlActivity : BaseActivity() {
         reverseFlow.value = uiStore.accessControlReverse
         systemAppsFlow.value = uiStore.accessControlSystemApp
 
-        withContext(Dispatchers.IO) {
-            selectedFlow.value = service.accessControlPackages.toSet()
-            modeFlow.value = service.accessControlMode
+        if (!selectedSeeded[0]) {
+            selectedSeeded[0] = true
+
+            withContext(Dispatchers.IO) {
+                selectedFlow.value = service.accessControlPackages.toSet()
+                modeFlow.value = service.accessControlMode
+            }
         }
 
         defer {
