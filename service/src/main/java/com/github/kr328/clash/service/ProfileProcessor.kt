@@ -227,6 +227,35 @@ object ProfileProcessor {
     // Fetch helpers
     // -------------------------------------------------------------------------
 
+    /** Caps subscription/config downloads so a misbehaving server can't exhaust storage or memory. */
+    private const val MAX_PROFILE_RESPONSE_BYTES = 32L shl 20 // 32 MiB
+
+    /**
+     * Copies [input] to [output] like [java.io.InputStream.copyTo], but aborts once more than
+     * [limit] bytes have been read — protects against an unbounded or lying Content-Length.
+     */
+    private fun copyLimited(input: java.io.InputStream, output: java.io.OutputStream, limit: Long) {
+        val buffer = ByteArray(8192)
+        var total = 0L
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > limit) throw FetchUnknownException("Response larger than $limit bytes")
+            output.write(buffer, 0, read)
+        }
+    }
+
+    /**
+     * Reads [body] fully into a String like [okhttp3.ResponseBody.string], but aborts once more
+     * than [limit] bytes have been read.
+     */
+    private fun stringLimited(body: okhttp3.ResponseBody, limit: Long): String {
+        val out = java.io.ByteArrayOutputStream()
+        body.byteStream().use { input -> copyLimited(input, out, limit) }
+        return out.toString(body.contentType()?.charset(Charsets.UTF_8)?.name() ?: "UTF-8")
+    }
+
     private fun prefetchProfileConfig(context: Context, source: String, targetConfigFile: File): PrefetchResult {
         if (!hasActiveConnectivity(context)) {
             throw FetchNoConnectivityException()
@@ -248,7 +277,7 @@ object ProfileProcessor {
                 targetConfigFile.parentFile?.mkdirs()
                 targetConfigFile.outputStream().use { output ->
                     body.byteStream().use { input ->
-                        input.copyTo(output)
+                        copyLimited(input, output, MAX_PROFILE_RESPONSE_BYTES)
                     }
                 }
                 return PrefetchResult(response.headers)
@@ -292,7 +321,8 @@ object ProfileProcessor {
                 if (!response.isSuccessful) {
                     throw FetchHttpErrorException(response.code)
                 }
-                val body = response.body?.string() ?: throw FetchUnknownException("Empty response body")
+                val responseBody = response.body ?: throw FetchUnknownException("Empty response body")
+                val body = stringLimited(responseBody, MAX_PROFILE_RESPONSE_BYTES)
                 val pxaTemplateUrl = response.headers["pxa-template"]?.trim()?.ifBlank { null }
                 val pxaTemplateScheme = response.headers["pxa-template-scheme"]?.trim()?.ifBlank { null }
                 // Template selection is allowed unless the server locks it via pxa-template.
