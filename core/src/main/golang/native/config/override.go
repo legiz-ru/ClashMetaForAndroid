@@ -47,12 +47,30 @@ func ReadOverride(slot OverrideSlot) string {
 func WriteOverride(slot OverrideSlot, content string) {
 	switch slot {
 	case OverrideSlotPersist:
-		file, err := os.OpenFile(overridePersistPath(), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
+		// Write to a temp file and rename over the target so a crash or write
+		// failure mid-write can never leave override.json truncated: the
+		// O_TRUNC+write pattern this replaced zeroed the file before writing,
+		// so anything that killed the process between truncate and write
+		// (including a write error) left ReadOverride reading garbage/empty
+		// JSON on the next launch. Rename within the same directory is atomic.
+		path := overridePersistPath()
+		tmp := path + ".tmp"
+
+		file, err := os.OpenFile(tmp, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
 		if err != nil {
 			return
 		}
 
 		_, err = file.Write([]byte(content))
+		closeErr := file.Close()
+		if err != nil || closeErr != nil {
+			_ = os.Remove(tmp)
+			return
+		}
+
+		if err := os.Rename(tmp, path); err != nil {
+			_ = os.Remove(tmp)
+		}
 	case OverrideSlotSession:
 		sessionOverride = content
 	}
