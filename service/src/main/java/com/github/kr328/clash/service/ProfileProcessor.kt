@@ -107,18 +107,18 @@ object ProfileProcessor {
      */
     fun describeFetchFailureReason(context: Context, reason: String?): String {
         val r = reason.orEmpty()
-        if (r == "FETCH_NO_CONNECTIVITY") return context.getString(R.string.fetch_no_connectivity)
+        if (r == "FETCH_NO_CONNECTIVITY") return context.getString(R.string.fetch_no_connectivity_short)
         if (r == "HWID_NOT_SUPPORTED") return context.getString(R.string.hwid_not_supported_short)
         if (r == "HWID_MAX_DEVICES_REACHED") return context.getString(R.string.hwid_max_devices_short)
         if (r == "AGE_KEY_REQUIRED") return context.getString(R.string.age_key_required_short)
-        if (r.startsWith("FETCH_HOST_UNREACHABLE")) return context.getString(R.string.fetch_host_unreachable)
-        if (r.startsWith("FETCH_TIMEOUT")) return context.getString(R.string.fetch_timeout)
-        if (r.startsWith("FETCH_TLS_ERROR")) return context.getString(R.string.fetch_tls_error)
+        if (r.startsWith("FETCH_HOST_UNREACHABLE")) return context.getString(R.string.fetch_host_unreachable_short)
+        if (r.startsWith("FETCH_TIMEOUT")) return context.getString(R.string.fetch_timeout_short)
+        if (r.startsWith("FETCH_TLS_ERROR")) return context.getString(R.string.fetch_tls_error_short)
         if (r.startsWith("FETCH_HTTP_ERROR")) {
             val code = r.substringAfter(":", "").toIntOrNull() ?: 0
-            return context.getString(R.string.fetch_http_error, code)
+            return context.getString(R.string.fetch_http_error_short, code)
         }
-        if (r.startsWith("FETCH_UNKNOWN")) return context.getString(R.string.fetch_unknown)
+        if (r.startsWith("FETCH_UNKNOWN")) return context.getString(R.string.fetch_unknown_short)
         return r
     }
 

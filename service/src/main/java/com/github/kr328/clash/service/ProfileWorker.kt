@@ -136,7 +136,7 @@ class ProfileWorker : BaseService() {
     private fun foreground() {
         val notification = NotificationCompat.Builder(this, SERVICE_CHANNEL)
             .setContentTitle(getString(R.string.profile_updater))
-            .setContentText(getString(R.string.running))
+            .setContentText(getString(R.string.service_running))
             .setColor(getColorCompat(R.color.color_clash))
             .setSmallIcon(R.drawable.ic_logo_service)
             .setOngoing(true)
