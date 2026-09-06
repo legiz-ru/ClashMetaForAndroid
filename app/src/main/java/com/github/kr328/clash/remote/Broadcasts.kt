@@ -23,6 +23,17 @@ class Broadcasts(private val context: Application) {
 
     var clashRunning: Boolean = false
 
+    /**
+     * A service-recreated/stopped broadcast can race with a fresh start that
+     * fires around the same moment (e.g. the service died and was already
+     * restarting) — trusting the broadcast alone as "stopped" can leave
+     * [clashRunning] out of sync with reality. Ask the service directly
+     * instead of assuming.
+     */
+    private fun refreshRunning() {
+        clashRunning = StatusClient(context).currentProfile() != null
+    }
+
     private var registered = false
     private val receivers = mutableListOf<Observer>()
     private val broadcastReceiver = object : BroadcastReceiver() {
@@ -32,7 +43,7 @@ class Broadcasts(private val context: Application) {
 
             when (intent?.action) {
                 Intents.ACTION_SERVICE_RECREATED -> {
-                    clashRunning = false
+                    refreshRunning()
 
                     receivers.forEach {
                         it.onServiceRecreated()
@@ -46,7 +57,7 @@ class Broadcasts(private val context: Application) {
                     }
                 }
                 Intents.ACTION_CLASH_STOPPED -> {
-                    clashRunning = false
+                    refreshRunning()
 
                     receivers.forEach {
                         it.onStopped(intent.getStringExtra(Intents.EXTRA_STOP_REASON))
@@ -99,7 +110,7 @@ class Broadcasts(private val context: Application) {
                 addAction(Intents.ACTION_PROFILE_LOADED)
             })
 
-            clashRunning = StatusClient(context).currentProfile() != null
+            refreshRunning()
 
             registered = true
         } catch (e: Exception) {

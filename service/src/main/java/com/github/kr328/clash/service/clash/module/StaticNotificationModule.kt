@@ -45,7 +45,7 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
 
             val notification = builder
                 .setContentTitle(profileName)
-                .setContentText(service.getText(R.string.running))
+                .setContentText(service.getText(R.string.service_running))
                 .build()
 
             service.startForegroundCompat(R.id.nf_clash_status, notification)
@@ -72,7 +72,7 @@ class StaticNotificationModule(service: Service) : Module<Unit>(service) {
                     .setColor(service.getColorCompat(R.color.color_clash))
                     .setOnlyAlertOnce(true)
                     .setShowWhen(false)
-                    .setContentTitle(service.getText(R.string.loading))
+                    .setContentTitle(service.getText(R.string.service_loading))
                     .build()
 
             service.startForegroundCompat(R.id.nf_clash_status, notification)
