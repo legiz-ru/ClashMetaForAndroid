@@ -435,6 +435,23 @@
     <string name="proxies_smart_rarely_used_tip">Rarely used connection — weight: %d</string>
     <string name="proxies_smart_no_data">Stability information not yet available</string>
 
+    <!-- Proxy type badge tooltips (group/service families; protocols show their own name) -->
+    <string name="proxies_type_selector">Selector — pick a proxy manually</string>
+    <string name="proxies_type_urltest">URL test — automatically picks the fastest proxy</string>
+    <string name="proxies_type_fallback">Fallback — uses the first available proxy, in order</string>
+    <string name="proxies_type_loadbalance">Load balance — spreads connections across proxies</string>
+    <string name="proxies_type_relay">Relay — chains proxies together</string>
+    <string name="proxies_type_smart">Smart — picks a proxy based on recent performance</string>
+    <string name="proxies_type_direct">Direct — connects without a proxy</string>
+    <string name="proxies_type_reject">Reject — blocks the connection</string>
+    <string name="proxies_type_rejectdrop">Reject (drop) — blocks the connection without a response</string>
+    <string name="proxies_type_pass">Pass — skips remaining rules for this connection</string>
+    <string name="proxies_type_passrule">Pass rule — skips remaining rules for this rule set</string>
+    <string name="proxies_type_rematch">Rematch — re-evaluates the rules from the top</string>
+    <string name="proxies_type_dns">DNS — resolves the request instead of proxying it</string>
+    <string name="proxies_type_compatible">Compatible — passes through unchanged</string>
+    <string name="proxies_type_unknown">Unknown type</string>
+
     <!-- Converted profile / template selection -->
     <string name="select_template">Select Template</string>
     <string name="select_template_desc">Choose a routing template for this profile</string>

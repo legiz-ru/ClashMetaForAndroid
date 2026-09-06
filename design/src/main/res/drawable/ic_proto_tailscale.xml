@@ -1,0 +1,85 @@
+<vector
+    android:tint="?attr/colorControlNormal" xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M14.43 12A2.43 2.43 0 0 1 12 14.43 2.43 2.43 0 0 1 9.57 12 2.43 2.43 0 0 1 12 9.57 2.43 2.43 0 0 1 14.43 12Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22 12a2.43 2.43 0 0 1-2.43 2.43A2.43 2.43 0 0 1 17.13 12a2.43 2.43 0 0 1 2.44-2.43A2.43 2.43 0 0 1 22 12Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22 4.43a2.43 2.43 0 0 1-2.43 2.43 2.43 2.43 0 0 1-2.44-2.43A2.43 2.43 0 0 1 19.57 2 2.43 2.43 0 0 1 22 4.43Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M14.43 4.43A2.43 2.43 0 0 1 12 6.86a2.43 2.43 0 0 1-2.43-2.43A2.43 2.43 0 0 1 12 2a2.43 2.43 0 0 1 2.43 2.43Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M6.86 4.43a2.43 2.43 0 0 1-2.43 2.43A2.43 2.43 0 0 1 2 4.43 2.43 2.43 0 0 1 4.43 2a2.43 2.43 0 0 1 2.43 2.43Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M6.86 12a2.43 2.43 0 0 1-2.43 2.43A2.43 2.43 0 0 1 2 12a2.43 2.43 0 0 1 2.43-2.43A2.43 2.43 0 0 1 6.86 12Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M6.86 19.57A2.43 2.43 0 0 1 4.43 22 2.43 2.43 0 0 1 2 19.57a2.43 2.43 0 0 1 2.43-2.44 2.43 2.43 0 0 1 2.43 2.44Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M14.43 19.57A2.43 2.43 0 0 1 12 22a2.43 2.43 0 0 1-2.43-2.43A2.43 2.43 0 0 1 12 17.13a2.43 2.43 0 0 1 2.43 2.44Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22 19.57A2.43 2.43 0 0 1 19.57 22a2.43 2.43 0 0 1-2.44-2.43 2.43 2.43 0 0 1 2.44-2.44A2.43 2.43 0 0 1 22 19.57Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M13.08 19.57A1.08 1.08 0 0 1 12 20.65a1.08 1.08 0 0 1-1.08-1.08A1.08 1.08 0 0 1 12 18.48a1.08 1.08 0 0 1 1.08 1.09Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M13.08 12A1.08 1.08 0 0 1 12 13.08 1.08 1.08 0 0 1 10.92 12 1.08 1.08 0 0 1 12 10.92 1.08 1.08 0 0 1 13.08 12Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5.51 12a1.08 1.08 0 0 1-1.08 1.08A1.08 1.08 0 0 1 3.35 12a1.08 1.08 0 0 1 1.08-1.08A1.08 1.08 0 0 1 5.51 12Z"/>
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M20.65 12a1.08 1.08 0 0 1-1.08 1.08A1.08 1.08 0 0 1 18.48 12a1.08 1.08 0 0 1 1.09-1.08A1.08 1.08 0 0 1 20.65 12Z"/>
+</vector>

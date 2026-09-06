@@ -399,6 +399,23 @@
     <string name="proxies_smart_rarely_used_tip">Редко используемое подключение — вес: %d</string>
     <string name="proxies_smart_no_data">Информация о стабильности подключения ещё не получена</string>
 
+    <!-- Подсказки значка типа прокси (группы/сервисы; протоколы показывают своё имя) -->
+    <string name="proxies_type_selector">Selector — ручной выбор прокси</string>
+    <string name="proxies_type_urltest">URL test — автоматически выбирает самый быстрый прокси</string>
+    <string name="proxies_type_fallback">Fallback — использует первый доступный прокси по порядку</string>
+    <string name="proxies_type_loadbalance">Load balance — распределяет соединения между прокси</string>
+    <string name="proxies_type_relay">Relay — соединяет прокси цепочкой</string>
+    <string name="proxies_type_smart">Smart — выбирает прокси по недавней производительности</string>
+    <string name="proxies_type_direct">Direct — соединение напрямую, без прокси</string>
+    <string name="proxies_type_reject">Reject — блокирует соединение</string>
+    <string name="proxies_type_rejectdrop">Reject (drop) — блокирует соединение без ответа</string>
+    <string name="proxies_type_pass">Pass — пропускает оставшиеся правила для этого соединения</string>
+    <string name="proxies_type_passrule">Pass rule — пропускает оставшиеся правила этого набора</string>
+    <string name="proxies_type_rematch">Rematch — заново проверяет правила с начала</string>
+    <string name="proxies_type_dns">DNS — обрабатывает запрос как DNS, а не проксирует его</string>
+    <string name="proxies_type_compatible">Compatible — пропускает без изменений</string>
+    <string name="proxies_type_unknown">Неизвестный тип</string>
+
     <!-- Converted profile / template selection -->
     <string name="select_template">Выбрать шаблон</string>
     <string name="select_template_desc">Выберите шаблон маршрутизации для этого профиля</string>
